@@ -11,5 +11,5 @@ jobs:
   build-oneplus-8-series-oos13-a13-xtd:
     strategy:
       fail-fast: true
-    uses: ./.github/workflows/devices/build-oneplus-8-series-oos13-a13-xtd.yml
+    uses: ./.github/workflows/build-oneplus-8-series-oos13-a13-xtd.yml
     secrets: inherit
