@@ -1,0 +1,17 @@
+name: Release Kernel
+
+on:
+  workflow_call:
+
+jobs:
+  build-kernel:
+    name: Build Kernel
+    runs-on: ubuntu-latest
+    env:
+      CCACHE_COMPILERCHECK: "%compiler% -dumpmachine; %compiler% -dumpversion"
+      CCACHE_NOHASHDIR: "true"
+      CCACHE_HARDLINK: "true"
+
+    steps:
+        - name: Checkout repository
+          uses: actions/checkout@v4
