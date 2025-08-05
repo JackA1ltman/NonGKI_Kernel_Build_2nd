@@ -18,7 +18,6 @@ jobs:
 
         - name: Execuate common process
           uses: ./Bin/Install.sh
-          secrets: inherit
 
         - name: Build
           run: |
