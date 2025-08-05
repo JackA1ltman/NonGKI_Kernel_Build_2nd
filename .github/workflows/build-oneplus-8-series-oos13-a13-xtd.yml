@@ -13,8 +13,11 @@ jobs:
       CCACHE_HARDLINK: "true"
 
     steps:
+        - name: Checkout repository
+          uses: actions/checkout@v4
+
         - name: Execuate common process
-          uses: ./.github/workflows/build/build-paration.yml
+          uses: ./Bin/Install.sh
           secrets: inherit
 
         - name: Build
