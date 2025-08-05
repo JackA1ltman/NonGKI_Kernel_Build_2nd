@@ -1,0 +1,38 @@
+name: Build and Release Kernel
+
+permissions:
+  contents: write
+  actions: write
+
+on:
+  workflow_dispatch:
+    inputs:
+      build-kernel:
+        description: 'Build Kernel ?'
+        required: true
+        type: boolean
+        default: true
+
+      release-kernel:
+        description: 'Release Kernel ?'
+        required: true
+        type: boolean
+        default: true
+
+    schedule:
+        - cron: '0 3 * * 3'
+
+jobs:
+  build-kernel:
+    uses: ./.github/workflows/build-kernel.yml
+    secrets: inherit
+    strategy:
+      fail-fast: true
+    if: ${{ inputs.build-kernel }}
+
+  release-kernel:
+    uses: ./.github/workflows/release-kernel.yml
+    secrets: inherit
+    strategy:
+      fail-fast: true
+    if: ${{ inputs.release-kernel }}

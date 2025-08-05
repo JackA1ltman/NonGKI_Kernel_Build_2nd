@@ -1,0 +1,24 @@
+name: Build Onelus 8 Series (OxygenOS 13 A13) (XTD Kernel)
+
+on:
+  workflow_call:
+
+jobs:
+  build-kernel:
+    name: Build Kernel
+    runs-on: ubuntu-latest
+    env:
+      CCACHE_COMPILERCHECK: "%compiler% -dumpmachine; %compiler% -dumpversion"
+      CCACHE_NOHASHDIR: "true"
+      CCACHE_HARDLINK: "true"
+
+    steps:
+        - name: Execuate common process
+          uses: ./.github/workflows/build/build-paration.yml
+          secrets: inherit
+
+        - name: Build
+          run: |
+            cd kernel_test
+            ls al ./
+            false
