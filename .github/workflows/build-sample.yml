@@ -9,7 +9,7 @@ env:
   DEVICE_CODENAME : "device_codename"
 
   CUSTOM_CMDS : "CLANG_TRIPLE=aarch64-linux-gnu-"
-  EXTRA_CMDS : "LD:ld.lld LLVM=1 LLVM_IAS=1"
+  EXTRA_CMDS : "LD=ld.lld LLVM=1 LLVM_IAS=1"
 
   KERNEL_SOURCE : "https://github.com/kernel_author/android_kernel_codename.git"
   KERNEL_BRANCH : "system_os"
