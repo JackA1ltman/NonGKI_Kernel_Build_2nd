@@ -109,7 +109,7 @@ runs:
           cd $GITHUB_WORKSPACE
 
           # Copy Shell
-          cp /tmp/Tools/found_gcc.sh ./
+          cp /tmp/Bin/found_gcc.sh ./
 
           # Set GCC Aarch64
           if [[ "${{ env.CLANG_SOURCE }}" == *proton* ]]; then
