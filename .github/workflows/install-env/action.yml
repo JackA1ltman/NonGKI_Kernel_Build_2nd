@@ -11,15 +11,15 @@ runs:
 
           if [ "$ID" = "ubuntu" ]; then
               if [ "$VERSION_ID" = "22.04" ] || [ "$VERSION_ID" = "20.04" ]; then
-                  echo "SYSTEM_VERSION=older" >> $GITHUB_ENV
+                  echo "$SYSTEM_VERSION=older" >> $GITHUB_ENV
               elif [ "$VERSION_ID" = "24.04" ]; then
-                  echo "SYSTEM_VERSION=newer" >> $GITHUB_ENV
+                  echo "$SYSTEM_VERSION=newer" >> $GITHUB_ENV
               else
                   echo "Not Supported: $VERSION_ID"
                   false
               fi
           elif [ "$ID" = "arch" ]; then
-              echo "SYSTEM_VERSION=arch" >> $GITHUB_ENV
+              echo "$SYSTEM_VERSION=arch" >> $GITHUB_ENV
           else
               echo "Not Supported: $PRETTY_NAME"
               false
