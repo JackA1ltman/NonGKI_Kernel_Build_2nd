@@ -1,0 +1,146 @@
+diff --git a/fs/susfs.c b/fs/susfs.c
+index 5e32604..9b92d50 100644
+--- a/fs/susfs.c
++++ b/fs/susfs.c
+@@ -1034,6 +1034,106 @@ struct filename* susfs_get_redirected_path(unsigned long ino) {
+ }
+ #endif // #ifdef CONFIG_KSU_SUSFS_OPEN_REDIRECT
+ 
++static int copy_config_to_buf(const char *config_string, char *buf_ptr, size_t *copied_size, size_t bufsize) {
++	size_t tmp_size = strlen(config_string);
++
++	*copied_size += tmp_size;
++	if (*copied_size >= bufsize) {
++		SUSFS_LOGE("bufsize is not big enough to hold the string.\n");
++		return -EINVAL;
++	}
++	strncpy(buf_ptr, config_string, tmp_size);
++	return 0;
++}
++
++int susfs_get_enabled_features(char __user* buf, size_t bufsize) {
++	char *kbuf = NULL, *buf_ptr = NULL;
++	size_t copied_size = 0;
++	int err = 0;
++
++	kbuf = kzalloc(bufsize, GFP_KERNEL);
++	if (!kbuf) {
++		return -ENOMEM;
++	}
++
++	buf_ptr = kbuf;
++#ifdef CONFIG_KSU_SUSFS_SUS_PATH
++	err = copy_config_to_buf("CONFIG_KSU_SUSFS_SUS_PATH\n", buf_ptr, &copied_size, bufsize);
++	if (err) goto out_kfree_kbuf;
++	buf_ptr = kbuf + copied_size;
++#endif
++#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
++	err = copy_config_to_buf("CONFIG_KSU_SUSFS_SUS_MOUNT\n", buf_ptr, &copied_size, bufsize);
++	if (err) goto out_kfree_kbuf;
++	buf_ptr = kbuf + copied_size;
++#endif
++#ifdef CONFIG_KSU_SUSFS_AUTO_ADD_SUS_KSU_DEFAULT_MOUNT
++	err = copy_config_to_buf("CONFIG_KSU_SUSFS_AUTO_ADD_SUS_KSU_DEFAULT_MOUNT\n", buf_ptr, &copied_size, bufsize);
++	if (err) goto out_kfree_kbuf;
++	buf_ptr = kbuf + copied_size;
++#endif
++#ifdef CONFIG_KSU_SUSFS_AUTO_ADD_SUS_BIND_MOUNT
++	err = copy_config_to_buf("CONFIG_KSU_SUSFS_AUTO_ADD_SUS_BIND_MOUNT\n", buf_ptr, &copied_size, bufsize);
++	if (err) goto out_kfree_kbuf;
++	buf_ptr = kbuf + copied_size;
++#endif
++#ifdef CONFIG_KSU_SUSFS_SUS_KSTAT
++	err = copy_config_to_buf("CONFIG_KSU_SUSFS_SUS_KSTAT\n", buf_ptr, &copied_size, bufsize);
++	if (err) goto out_kfree_kbuf;
++	buf_ptr = kbuf + copied_size;
++#endif
++#ifdef CONFIG_KSU_SUSFS_TRY_UMOUNT
++	err = copy_config_to_buf("CONFIG_KSU_SUSFS_TRY_UMOUNT\n", buf_ptr, &copied_size, bufsize);
++	if (err) goto out_kfree_kbuf;
++	buf_ptr = kbuf + copied_size;
++#endif
++#ifdef CONFIG_KSU_SUSFS_AUTO_ADD_TRY_UMOUNT_FOR_BIND_MOUNT
++	err = copy_config_to_buf("CONFIG_KSU_SUSFS_AUTO_ADD_TRY_UMOUNT_FOR_BIND_MOUNT\n", buf_ptr, &copied_size, bufsize);
++	if (err) goto out_kfree_kbuf;
++	buf_ptr = kbuf + copied_size;
++#endif
++#ifdef CONFIG_KSU_SUSFS_SPOOF_UNAME
++	err = copy_config_to_buf("CONFIG_KSU_SUSFS_SPOOF_UNAME\n", buf_ptr, &copied_size, bufsize);
++	if (err) goto out_kfree_kbuf;
++	buf_ptr = kbuf + copied_size;
++#endif
++#ifdef CONFIG_KSU_SUSFS_ENABLE_LOG
++	err = copy_config_to_buf("CONFIG_KSU_SUSFS_ENABLE_LOG\n", buf_ptr, &copied_size, bufsize);
++	if (err) goto out_kfree_kbuf;
++	buf_ptr = kbuf + copied_size;
++#endif
++#ifdef CONFIG_KSU_SUSFS_HIDE_KSU_SUSFS_SYMBOLS
++	err = copy_config_to_buf("CONFIG_KSU_SUSFS_HIDE_KSU_SUSFS_SYMBOLS\n", buf_ptr, &copied_size, bufsize);
++	if (err) goto out_kfree_kbuf;
++	buf_ptr = kbuf + copied_size;
++#endif
++#ifdef CONFIG_KSU_SUSFS_SPOOF_CMDLINE_OR_BOOTCONFIG
++	err = copy_config_to_buf("CONFIG_KSU_SUSFS_SPOOF_CMDLINE_OR_BOOTCONFIG\n", buf_ptr, &copied_size, bufsize);
++	if (err) goto out_kfree_kbuf;
++	buf_ptr = kbuf + copied_size;
++#endif
++#ifdef CONFIG_KSU_SUSFS_OPEN_REDIRECT
++	err = copy_config_to_buf("CONFIG_KSU_SUSFS_OPEN_REDIRECT\n", buf_ptr, &copied_size, bufsize);
++	if (err) goto out_kfree_kbuf;
++	buf_ptr = kbuf + copied_size;
++#endif
++#ifdef CONFIG_KSU_SUSFS_SUS_SU
++	err = copy_config_to_buf("CONFIG_KSU_SUSFS_SUS_SU\n", buf_ptr, &copied_size, bufsize);
++	if (err) goto out_kfree_kbuf;
++	buf_ptr = kbuf + copied_size;
++#endif
++#ifdef CONFIG_KSU_SUSFS_HAS_MAGIC_MOUNT
++	err = copy_config_to_buf("CONFIG_KSU_SUSFS_HAS_MAGIC_MOUNT\n", buf_ptr, &copied_size, bufsize);
++	if (err) goto out_kfree_kbuf;
++	buf_ptr = kbuf + copied_size;
++#endif
++	err = copy_to_user((void __user*)buf, (void *)kbuf, bufsize);
++out_kfree_kbuf:
++	kfree(kbuf);
++	return err;
++}
++
++
+ /* susfs_init */
+ void susfs_init(void) {
+ 	spin_lock_init(&susfs_spin_lock);
+diff --git a/include/linux/susfs.h b/include/linux/susfs.h
+index 85ceaf9..a22c4e4 100644
+--- a/include/linux/susfs.h
++++ b/include/linux/susfs.h
+@@ -8,7 +8,7 @@
+ #include <linux/path.h>
+ #include <linux/susfs_def.h>
+ 
+-#define SUSFS_VERSION "v1.5.8"
++#define SUSFS_VERSION "v1.5.9"
+ #if LINUX_VERSION_CODE < KERNEL_VERSION(5,0,0)
+ #define SUSFS_VARIANT "NON-GKI"
+ #else
+@@ -180,6 +180,9 @@ int susfs_spoof_cmdline_or_bootconfig(struct seq_file *m);
+ int susfs_add_open_redirect(struct st_susfs_open_redirect* __user user_info);
+ struct filename* susfs_get_redirected_path(unsigned long ino);
+ #endif
++
++int susfs_get_enabled_features(char __user* buf, size_t bufsize);
++
+ /* susfs_init */
+ void susfs_init(void);
+ 
+diff --git a/include/linux/susfs_def.h b/include/linux/susfs_def.h
+index 1ac0e52..3fcd878 100644
+--- a/include/linux/susfs_def.h
++++ b/include/linux/susfs_def.h
+@@ -38,7 +38,6 @@
+ /*
+  * inode->i_state => storing flag 'INODE_STATE_'
+  * mount->mnt.susfs_mnt_id_backup => storing original mnt_id of normal mounts or custom sus mnt_id of sus mounts
+- * task_struct->susfs_last_fake_mnt_id => storing last valid fake mnt_id
+  * task_struct->susfs_task_state => storing flag 'TASK_STRUCT_'
+  */
+ 

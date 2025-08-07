@@ -1,0 +1,868 @@
+diff --git a/arch/mips/kernel/elf.c b/arch/mips/kernel/elf.c
+index 5c429d7..0828d6d 100644
+--- a/arch/mips/kernel/elf.c
++++ b/arch/mips/kernel/elf.c
+@@ -87,6 +87,7 @@ int arch_elf_pt_proc(void *_ehdr, void *_phdr, struct file *elf,
+ 	bool elf32;
+ 	u32 flags;
+ 	int ret;
++	loff_t pos;
+ 
+ 	elf32 = ehdr->e32.e_ident[EI_CLASS] == ELFCLASS32;
+ 	flags = elf32 ? ehdr->e32.e_flags : ehdr->e64.e_flags;
+@@ -108,21 +109,16 @@ int arch_elf_pt_proc(void *_ehdr, void *_phdr, struct file *elf,
+ 
+ 		if (phdr32->p_filesz < sizeof(abiflags))
+ 			return -EINVAL;
+-
+-		ret = kernel_read(elf, phdr32->p_offset,
+-				  (char *)&abiflags,
+-				  sizeof(abiflags));
++		pos = phdr32->p_offset;
+ 	} else {
+ 		if (phdr64->p_type != PT_MIPS_ABIFLAGS)
+ 			return 0;
+ 		if (phdr64->p_filesz < sizeof(abiflags))
+ 			return -EINVAL;
+-
+-		ret = kernel_read(elf, phdr64->p_offset,
+-				  (char *)&abiflags,
+-				  sizeof(abiflags));
++		pos = phdr64->p_offset;
+ 	}
+ 
++	ret = kernel_read(elf, &abiflags, sizeof(abiflags), &pos);
+ 	if (ret < 0)
+ 		return ret;
+ 	if (ret != sizeof(abiflags))
+diff --git a/arch/x86/ia32/ia32_aout.c b/arch/x86/ia32/ia32_aout.c
+index 555c002..aade822 100644
+--- a/arch/x86/ia32/ia32_aout.c
++++ b/arch/x86/ia32/ia32_aout.c
+@@ -408,10 +408,10 @@ static int load_aout_library(struct file *file)
+ 	unsigned long bss, start_addr, len, error;
+ 	int retval;
+ 	struct exec ex;
+-
++	loff_t pos = 0;
+ 
+ 	retval = -ENOEXEC;
+-	error = kernel_read(file, 0, (char *) &ex, sizeof(ex));
++	error = kernel_read(file, &ex, sizeof(ex), &pos);
+ 	if (error != sizeof(ex))
+ 		goto out;
+ 
+diff --git a/drivers/media/pci/cx25821/cx25821-audio-upstream.c b/drivers/media/pci/cx25821/cx25821-audio-upstream.c
+index 7c8edb6..3986786 100644
+--- a/drivers/media/pci/cx25821/cx25821-audio-upstream.c
++++ b/drivers/media/pci/cx25821/cx25821-audio-upstream.c
+@@ -281,7 +281,7 @@ static int cx25821_get_audio_data(struct cx25821_dev *dev,
+ 		p = (char *)dev->_audiodata_buf_virt_addr + frame_offset;
+ 
+ 	for (i = 0; i < dev->_audio_lines_count; i++) {
+-		int n = kernel_read(file, file_offset, mybuf, AUDIO_LINE_SIZE);
++		int n = kernel_read(file, mybuf, AUDIO_LINE_SIZE, &file_offset);
+ 		if (n < AUDIO_LINE_SIZE) {
+ 			pr_info("Done: exit %s() since no more bytes to read from Audio file\n",
+ 				__func__);
+@@ -294,7 +294,6 @@ static int cx25821_get_audio_data(struct cx25821_dev *dev,
+ 			memcpy(p, mybuf, n);
+ 			p += n;
+ 		}
+-		file_offset += n;
+ 	}
+ 	dev->_audioframe_count++;
+ 	fput(file);
+@@ -322,7 +321,7 @@ static int cx25821_openfile_audio(struct cx25821_dev *dev,
+ {
+ 	char *p = (void *)dev->_audiodata_buf_virt_addr;
+ 	struct file *file;
+-	loff_t offset;
++	loff_t file_offset = 0;
+ 	int i, j;
+ 
+ 	file = filp_open(dev->_audiofilename, O_RDONLY | O_LARGEFILE, 0);
+@@ -332,11 +331,11 @@ static int cx25821_openfile_audio(struct cx25821_dev *dev,
+ 		return PTR_ERR(file);
+ 	}
+ 
+-	for (j = 0, offset = 0; j < NUM_AUDIO_FRAMES; j++) {
++	for (j = 0; j < NUM_AUDIO_FRAMES; j++) {
+ 		for (i = 0; i < dev->_audio_lines_count; i++) {
+ 			char buf[AUDIO_LINE_SIZE];
+-			int n = kernel_read(file, offset, buf,
+-						AUDIO_LINE_SIZE);
++			loff_t offset = file_offset;
++			int n = kernel_read(file, buf, AUDIO_LINE_SIZE, &file_offset);
+ 
+ 			if (n < AUDIO_LINE_SIZE) {
+ 				pr_info("Done: exit %s() since no more bytes to read from Audio file\n",
+@@ -348,8 +347,6 @@ static int cx25821_openfile_audio(struct cx25821_dev *dev,
+ 
+ 			if (p)
+ 				memcpy(p + offset, buf, n);
+-
+-			offset += n;
+ 		}
+ 		dev->_audioframe_count++;
+ 	}
+diff --git a/drivers/mtd/nand/nandsim.c b/drivers/mtd/nand/nandsim.c
+index fe593f2..5381a28 100644
+--- a/drivers/mtd/nand/nandsim.c
++++ b/drivers/mtd/nand/nandsim.c
+@@ -1396,7 +1396,7 @@ static ssize_t read_file(struct nandsim *ns, struct file *file, void *buf, size_
+ 	if (err)
+ 		return err;
+ 	memalloc = set_memalloc();
+-	tx = kernel_read(file, pos, buf, count);
++	tx = kernel_read(file, buf, count, &pos);
+ 	clear_memalloc(memalloc);
+ 	put_pages(ns);
+ 	return tx;
+@@ -1411,7 +1411,7 @@ static ssize_t write_file(struct nandsim *ns, struct file *file, void *buf, size
+ 	if (err)
+ 		return err;
+ 	memalloc = set_memalloc();
+-	tx = kernel_write(file, buf, count, pos);
++	tx = kernel_write(file, buf, count, &pos);
+ 	clear_memalloc(memalloc);
+ 	put_pages(ns);
+ 	return tx;
+diff --git a/drivers/target/target_core_alua.c b/drivers/target/target_core_alua.c
+index fa28fd8..a5fce75 100644
+--- a/drivers/target/target_core_alua.c
++++ b/drivers/target/target_core_alua.c
+@@ -891,13 +891,14 @@ static int core_alua_write_tpg_metadata(
+ 	u32 md_buf_len)
+ {
+ 	struct file *file = filp_open(path, O_RDWR | O_CREAT | O_TRUNC, 0600);
++	loff_t pos = 0;
+ 	int ret;
+ 
+ 	if (IS_ERR(file)) {
+ 		pr_err("filp_open(%s) for ALUA metadata failed\n", path);
+ 		return -ENODEV;
+ 	}
+-	ret = kernel_write(file, md_buf, md_buf_len, 0);
++	ret = kernel_write(file, md_buf, md_buf_len, &pos);
+ 	if (ret < 0)
+ 		pr_err("Error writing ALUA metadata file: %s\n", path);
+ 	fput(file);
+diff --git a/drivers/target/target_core_file.c b/drivers/target/target_core_file.c
+index 57a3d39..c1b6e8c 100644
+--- a/drivers/target/target_core_file.c
++++ b/drivers/target/target_core_file.c
+@@ -438,7 +438,7 @@ fd_do_prot_fill(struct se_device *se_dev, sector_t lba, sector_t nolb,
+ 
+ 	for (prot = 0; prot < prot_length;) {
+ 		sector_t len = min_t(sector_t, bufsize, prot_length - prot);
+-		ssize_t ret = kernel_write(prot_fd, buf, len, pos + prot);
++		ssize_t ret = kernel_write(prot_fd, buf, len, &pos);
+ 
+ 		if (ret != len) {
+ 			pr_err("vfs_write to prot file failed: %zd\n", ret);
+diff --git a/drivers/target/target_core_pr.c b/drivers/target/target_core_pr.c
+index df20921..1208ce0 100644
+--- a/drivers/target/target_core_pr.c
++++ b/drivers/target/target_core_pr.c
+@@ -1978,6 +1978,7 @@ static int __core_scsi3_write_aptpl_to_file(
+ 	char path[512];
+ 	u32 pr_aptpl_buf_len;
+ 	int ret;
++	loff_t pos = 0;
+ 
+ 	memset(path, 0, 512);
+ 
+@@ -1997,7 +1998,7 @@ static int __core_scsi3_write_aptpl_to_file(
+ 
+ 	pr_aptpl_buf_len = (strlen(buf) + 1); /* Add extra for NULL */
+ 
+-	ret = kernel_write(file, buf, pr_aptpl_buf_len, 0);
++	ret = kernel_write(file, buf, pr_aptpl_buf_len, &pos);
+ 
+ 	if (ret < 0)
+ 		pr_debug("Error writing APTPL metadata file: %s\n", path);
+diff --git a/fs/binfmt_aout.c b/fs/binfmt_aout.c
+index ae1b540..c581ca3 100644
+--- a/fs/binfmt_aout.c
++++ b/fs/binfmt_aout.c
+@@ -340,11 +340,12 @@ static int load_aout_library(struct file *file)
+ 	unsigned long error;
+ 	int retval;
+ 	struct exec ex;
++	loff_t pos = 0;
+ 
+ 	inode = file_inode(file);
+ 
+ 	retval = -ENOEXEC;
+-	error = kernel_read(file, 0, (char *) &ex, sizeof(ex));
++	error = kernel_read(file, &ex, sizeof(ex), &pos);
+ 	if (error != sizeof(ex))
+ 		goto out;
+ 
+diff --git a/fs/binfmt_elf.c b/fs/binfmt_elf.c
+index 73cd748..cfccadf 100644
+--- a/fs/binfmt_elf.c
++++ b/fs/binfmt_elf.c
+@@ -401,6 +401,7 @@ static struct elf_phdr *load_elf_phdrs(struct elfhdr *elf_ex,
+ {
+ 	struct elf_phdr *elf_phdata = NULL;
+ 	int retval, size, err = -1;
++	loff_t pos = elf_ex->e_phoff;
+ 
+ 	/*
+ 	 * If the size of this structure has changed, then punt, since
+@@ -424,8 +425,7 @@ static struct elf_phdr *load_elf_phdrs(struct elfhdr *elf_ex,
+ 		goto out;
+ 
+ 	/* Read in the program headers */
+-	retval = kernel_read(elf_file, elf_ex->e_phoff,
+-			     (char *)elf_phdata, size);
++	retval = kernel_read(elf_file, elf_phdata, size, &pos);
+ 	if (retval != size) {
+ 		err = (retval < 0) ? retval : -EIO;
+ 		goto out;
+@@ -686,6 +686,7 @@ static int load_elf_binary(struct linux_binprm *bprm)
+ 		struct elfhdr interp_elf_ex;
+ 	} *loc;
+ 	struct arch_elf_state arch_state = INIT_ARCH_ELF_STATE;
++	loff_t pos;
+ 
+ 	loc = kmalloc(sizeof(*loc), GFP_KERNEL);
+ 	if (!loc) {
+@@ -738,9 +739,9 @@ static int load_elf_binary(struct linux_binprm *bprm)
+ 			if (!elf_interpreter)
+ 				goto out_free_ph;
+ 
+-			retval = kernel_read(bprm->file, elf_ppnt->p_offset,
+-					     elf_interpreter,
+-					     elf_ppnt->p_filesz);
++			pos = elf_ppnt->p_offset;
++			retval = kernel_read(bprm->file, elf_interpreter,
++					     elf_ppnt->p_filesz, &pos);
+ 			if (retval != elf_ppnt->p_filesz) {
+ 				if (retval >= 0)
+ 					retval = -EIO;
+@@ -764,9 +765,9 @@ static int load_elf_binary(struct linux_binprm *bprm)
+ 			would_dump(bprm, interpreter);
+ 
+ 			/* Get the exec headers */
+-			retval = kernel_read(interpreter, 0,
+-					     (void *)&loc->interp_elf_ex,
+-					     sizeof(loc->interp_elf_ex));
++			pos = 0;
++			retval = kernel_read(interpreter, &loc->interp_elf_ex,
++					     sizeof(loc->interp_elf_ex), &pos);
+ 			if (retval != sizeof(loc->interp_elf_ex)) {
+ 				if (retval >= 0)
+ 					retval = -EIO;
+@@ -1172,9 +1173,10 @@ static int load_elf_library(struct file *file)
+ 	unsigned long elf_bss, bss, len;
+ 	int retval, error, i, j;
+ 	struct elfhdr elf_ex;
++	loff_t pos = 0;
+ 
+ 	error = -ENOEXEC;
+-	retval = kernel_read(file, 0, (char *)&elf_ex, sizeof(elf_ex));
++	retval = kernel_read(file, &elf_ex, sizeof(elf_ex), &pos);
+ 	if (retval != sizeof(elf_ex))
+ 		goto out;
+ 
+@@ -1198,7 +1200,8 @@ static int load_elf_library(struct file *file)
+ 
+ 	eppnt = elf_phdata;
+ 	error = -ENOEXEC;
+-	retval = kernel_read(file, elf_ex.e_phoff, (char *)eppnt, j);
++	pos =  elf_ex.e_phoff;
++	retval = kernel_read(file, eppnt, j, &pos);
+ 	if (retval != j)
+ 		goto out_free_ph;
+ 
+diff --git a/fs/binfmt_elf_fdpic.c b/fs/binfmt_elf_fdpic.c
+index 464a972..2f130e7 100644
+--- a/fs/binfmt_elf_fdpic.c
++++ b/fs/binfmt_elf_fdpic.c
+@@ -142,6 +142,7 @@ static int elf_fdpic_fetch_phdrs(struct elf_fdpic_params *params,
+ 	struct elf32_phdr *phdr;
+ 	unsigned long size;
+ 	int retval, loop;
++	loff_t pos = params->hdr.e_phoff;
+ 
+ 	if (params->hdr.e_phentsize != sizeof(struct elf_phdr))
+ 		return -ENOMEM;
+@@ -153,8 +154,7 @@ static int elf_fdpic_fetch_phdrs(struct elf_fdpic_params *params,
+ 	if (!params->phdrs)
+ 		return -ENOMEM;
+ 
+-	retval = kernel_read(file, params->hdr.e_phoff,
+-			     (char *) params->phdrs, size);
++	retval = kernel_read(file, params->phdrs, size, &pos);
+ 	if (unlikely(retval != size))
+ 		return retval < 0 ? retval : -ENOEXEC;
+ 
+@@ -196,6 +196,7 @@ static int load_elf_fdpic_binary(struct linux_binprm *bprm)
+ 	char *interpreter_name = NULL;
+ 	int executable_stack;
+ 	int retval, i;
++	loff_t pos;
+ 
+ 	kdebug("____ LOAD %d ____", current->pid);
+ 
+@@ -243,10 +244,9 @@ static int load_elf_fdpic_binary(struct linux_binprm *bprm)
+ 			if (!interpreter_name)
+ 				goto error;
+ 
+-			retval = kernel_read(bprm->file,
+-					     phdr->p_offset,
+-					     interpreter_name,
+-					     phdr->p_filesz);
++			pos = phdr->p_offset;
++			retval = kernel_read(bprm->file, interpreter_name,
++					     phdr->p_filesz, &pos);
+ 			if (unlikely(retval != phdr->p_filesz)) {
+ 				if (retval >= 0)
+ 					retval = -ENOEXEC;
+@@ -274,8 +274,9 @@ static int load_elf_fdpic_binary(struct linux_binprm *bprm)
+ 			 */
+ 			would_dump(bprm, interpreter);
+ 
+-			retval = kernel_read(interpreter, 0, bprm->buf,
+-					     BINPRM_BUF_SIZE);
++			pos = 0;
++			retval = kernel_read(interpreter, bprm->buf,
++					BINPRM_BUF_SIZE, &pos);
+ 			if (unlikely(retval != BINPRM_BUF_SIZE)) {
+ 				if (retval >= 0)
+ 					retval = -ENOEXEC;
+diff --git a/fs/binfmt_flat.c b/fs/binfmt_flat.c
+index b18543b..0fb0b59 100644
+--- a/fs/binfmt_flat.c
++++ b/fs/binfmt_flat.c
+@@ -175,19 +175,14 @@ static int create_flat_tables(struct linux_binprm *bprm, unsigned long arg_start
+ #define ENCRYPTED    0x20 /* bit 5 set: file is encrypted */
+ #define RESERVED     0xC0 /* bit 6,7:   reserved */
+ 
+-static int decompress_exec(
+-	struct linux_binprm *bprm,
+-	unsigned long offset,
+-	char *dst,
+-	long len,
+-	int fd)
++static int decompress_exec(struct linux_binprm *bprm, loff_t fpos, char *dst,
++		long len, int fd)
+ {
+ 	unsigned char *buf;
+ 	z_stream strm;
+-	loff_t fpos;
+ 	int ret, retval;
+ 
+-	pr_debug("decompress_exec(offset=%lx,buf=%p,len=%lx)\n", offset, dst, len);
++	pr_debug("decompress_exec(offset=%llx,buf=%p,len=%lx)\n", fpos, dst, len);
+ 
+ 	memset(&strm, 0, sizeof(strm));
+ 	strm.workspace = kmalloc(zlib_inflate_workspacesize(), GFP_KERNEL);
+@@ -203,13 +198,11 @@ static int decompress_exec(
+ 	}
+ 
+ 	/* Read in first chunk of data and parse gzip header. */
+-	fpos = offset;
+-	ret = kernel_read(bprm->file, offset, buf, LBUFSIZE);
++	ret = kernel_read(bprm->file, buf, LBUFSIZE, &fpos);
+ 
+ 	strm.next_in = buf;
+ 	strm.avail_in = ret;
+ 	strm.total_in = 0;
+-	fpos += ret;
+ 
+ 	retval = -ENOEXEC;
+ 
+@@ -275,7 +268,7 @@ static int decompress_exec(
+ 	}
+ 
+ 	while ((ret = zlib_inflate(&strm, Z_NO_FLUSH)) == Z_OK) {
+-		ret = kernel_read(bprm->file, fpos, buf, LBUFSIZE);
++		ret = kernel_read(bprm->file, buf, LBUFSIZE, &fpos);
+ 		if (ret <= 0)
+ 			break;
+ 		len -= ret;
+@@ -283,7 +276,6 @@ static int decompress_exec(
+ 		strm.next_in = buf;
+ 		strm.avail_in = ret;
+ 		strm.total_in = 0;
+-		fpos += ret;
+ 	}
+ 
+ 	if (ret < 0) {
+diff --git a/fs/binfmt_misc.c b/fs/binfmt_misc.c
+index 558e400..44783f6 100644
+--- a/fs/binfmt_misc.c
++++ b/fs/binfmt_misc.c
+@@ -218,12 +218,15 @@ static int load_misc_binary(struct linux_binprm *bprm)
+ 
+ 	bprm->file = interp_file;
+ 	if (fmt->flags & MISC_FMT_CREDENTIALS) {
++		loff_t pos = 0;
++
+ 		/*
+ 		 * No need to call prepare_binprm(), it's already been
+ 		 * done.  bprm->buf is stale, update from interp_file.
+ 		 */
+ 		memset(bprm->buf, 0, BINPRM_BUF_SIZE);
+-		retval = kernel_read(bprm->file, 0, bprm->buf, BINPRM_BUF_SIZE);
++		retval = kernel_read(bprm->file, bprm->buf, BINPRM_BUF_SIZE,
++				&pos);
+ 	} else
+ 		retval = prepare_binprm(bprm);
+ 
+diff --git a/fs/coda/dir.c b/fs/coda/dir.c
+index c0474ac..274ab55 100644
+--- a/fs/coda/dir.c
++++ b/fs/coda/dir.c
+@@ -368,9 +368,10 @@ static int coda_venus_readdir(struct file *coda_file, struct dir_context *ctx)
+ 		goto out;
+ 
+ 	while (1) {
++		loff_t pos = ctx->pos - 2;
++
+ 		/* read entries from the directory file */
+-		ret = kernel_read(host_file, ctx->pos - 2, (char *)vdir,
+-				  sizeof(*vdir));
++		ret = kernel_read(host_file, vdir, sizeof(*vdir), &pos);
+ 		if (ret < 0) {
+ 			pr_err("%s: read dir %s failed %d\n",
+ 			       __func__, coda_f2s(&cii->c_fid), ret);
+diff --git a/fs/ecryptfs/read_write.c b/fs/ecryptfs/read_write.c
+index 158a3a3..a013474 100644
+--- a/fs/ecryptfs/read_write.c
++++ b/fs/ecryptfs/read_write.c
+@@ -45,7 +45,7 @@ int ecryptfs_write_lower(struct inode *ecryptfs_inode, char *data,
+ 	lower_file = ecryptfs_inode_to_private(ecryptfs_inode)->lower_file;
+ 	if (!lower_file)
+ 		return -EIO;
+-	rc = kernel_write(lower_file, data, size, offset);
++	rc = kernel_write(lower_file, data, size, &offset);
+ 	mark_inode_dirty_sync(ecryptfs_inode);
+ 	return rc;
+ }
+@@ -235,7 +235,7 @@ int ecryptfs_read_lower(char *data, loff_t offset, size_t size,
+ 	lower_file = ecryptfs_inode_to_private(ecryptfs_inode)->lower_file;
+ 	if (!lower_file)
+ 		return -EIO;
+-	return kernel_read(lower_file, offset, data, size);
++	return kernel_read(lower_file, data, size, &offset);
+ }
+ 
+ /**
+diff --git a/fs/exec.c b/fs/exec.c
+index 5addf3b..08973e7 100644
+--- a/fs/exec.c
++++ b/fs/exec.c
+@@ -880,23 +880,6 @@ struct file *open_exec(const char *name)
+ }
+ EXPORT_SYMBOL(open_exec);
+ 
+-int kernel_read(struct file *file, loff_t offset,
+-		char *addr, unsigned long count)
+-{
+-	mm_segment_t old_fs;
+-	loff_t pos = offset;
+-	int result;
+-
+-	old_fs = get_fs();
+-	set_fs(get_ds());
+-	/* The cast to a user pointer is valid due to the set_fs() */
+-	result = vfs_read(file, (void __user *)addr, count, &pos);
+-	set_fs(old_fs);
+-	return result;
+-}
+-
+-EXPORT_SYMBOL(kernel_read);
+-
+ int kernel_read_file(struct file *file, void **buf, loff_t *size,
+ 		     loff_t max_size, enum kernel_read_file_id id)
+ {
+@@ -934,8 +917,7 @@ int kernel_read_file(struct file *file, void **buf, loff_t *size,
+ 
+ 	pos = 0;
+ 	while (pos < i_size) {
+-		bytes = kernel_read(file, pos, (char *)(*buf) + pos,
+-				    i_size - pos);
++		bytes = kernel_read(file, *buf + pos, i_size - pos, &pos);
+ 		if (bytes < 0) {
+ 			ret = bytes;
+ 			goto out_free;
+@@ -943,7 +925,6 @@ int kernel_read_file(struct file *file, void **buf, loff_t *size,
+ 
+ 		if (bytes == 0)
+ 			break;
+-		pos += bytes;
+ 	}
+ 
+ 	if (pos != i_size) {
+@@ -1538,6 +1519,7 @@ static void bprm_fill_uid(struct linux_binprm *bprm)
+ int prepare_binprm(struct linux_binprm *bprm)
+ {
+ 	int retval;
++	loff_t pos = 0;
+ 
+ 	bprm_fill_uid(bprm);
+ 
+@@ -1548,7 +1530,7 @@ int prepare_binprm(struct linux_binprm *bprm)
+ 	bprm->cred_prepared = 1;
+ 
+ 	memset(bprm->buf, 0, BINPRM_BUF_SIZE);
+-	return kernel_read(bprm->file, 0, bprm->buf, BINPRM_BUF_SIZE);
++	return kernel_read(bprm->file, bprm->buf, BINPRM_BUF_SIZE, &pos);
+ }
+ 
+ EXPORT_SYMBOL(prepare_binprm);
+diff --git a/fs/read_write.c b/fs/read_write.c
+index 9012312..4dc0f9c 100644
+--- a/fs/read_write.c
++++ b/fs/read_write.c
+@@ -456,6 +456,20 @@ ssize_t __vfs_read(struct file *file, char __user *buf, size_t count,
+ }
+ EXPORT_SYMBOL(__vfs_read);
+ 
++ssize_t kernel_read(struct file *file, void *buf, size_t count, loff_t *pos)
++{
++	mm_segment_t old_fs;
++	ssize_t result;
++
++	old_fs = get_fs();
++	set_fs(get_ds());
++	/* The cast to a user pointer is valid due to the set_fs() */
++	result = vfs_read(file, (void __user *)buf, count, pos);
++	set_fs(old_fs);
++	return result;
++}
++EXPORT_SYMBOL(kernel_read);
++
+ ssize_t vfs_read(struct file *file, char __user *buf, size_t count, loff_t *pos)
+ {
+ 	ssize_t ret;
+@@ -537,9 +551,24 @@ ssize_t __kernel_write(struct file *file, const char *buf, size_t count, loff_t
+ 	inc_syscw(current);
+ 	return ret;
+ }
+-
+ EXPORT_SYMBOL(__kernel_write);
+ 
++ssize_t kernel_write(struct file *file, const void *buf, size_t count,
++			    loff_t *pos)
++{
++	mm_segment_t old_fs;
++	ssize_t res;
++
++	old_fs = get_fs();
++	set_fs(get_ds());
++	/* The cast to a user pointer is valid due to the set_fs() */
++	res = vfs_write(file, (__force const char __user *)buf, count, pos);
++	set_fs(old_fs);
++
++	return res;
++}
++EXPORT_SYMBOL(kernel_write);
++
+ ssize_t vfs_write(struct file *file, const char __user *buf, size_t count, loff_t *pos)
+ {
+ 	ssize_t ret;
+diff --git a/fs/splice.c b/fs/splice.c
+index 8bfbc8a..734045d 100644
+--- a/fs/splice.c
++++ b/fs/splice.c
+@@ -366,22 +366,6 @@ static ssize_t kernel_readv(struct file *file, const struct kvec *vec,
+ 	return res;
+ }
+ 
+-ssize_t kernel_write(struct file *file, const char *buf, size_t count,
+-			    loff_t pos)
+-{
+-	mm_segment_t old_fs;
+-	ssize_t res;
+-
+-	old_fs = get_fs();
+-	set_fs(get_ds());
+-	/* The cast to a user pointer is valid due to the set_fs() */
+-	res = vfs_write(file, (__force const char __user *)buf, count, &pos);
+-	set_fs(old_fs);
+-
+-	return res;
+-}
+-EXPORT_SYMBOL(kernel_write);
+-
+ static ssize_t default_file_splice_read(struct file *in, loff_t *ppos,
+ 				 struct pipe_inode_info *pipe, size_t len,
+ 				 unsigned int flags)
+diff --git a/include/linux/fs.h b/include/linux/fs.h
+index 53979eb..177d41c 100644
+--- a/include/linux/fs.h
++++ b/include/linux/fs.h
+@@ -2760,14 +2760,14 @@ static inline const char *kernel_read_file_id_str(enum kernel_read_file_id id)
+ 	return kernel_read_file_str[id];
+ }
+ 
+-extern int kernel_read(struct file *, loff_t, char *, unsigned long);
+ extern int kernel_read_file(struct file *, void **, loff_t *, loff_t,
+ 			    enum kernel_read_file_id);
+ extern int kernel_read_file_from_path(char *, void **, loff_t *, loff_t,
+ 				      enum kernel_read_file_id);
+ extern int kernel_read_file_from_fd(int, void **, loff_t *, loff_t,
+ 				    enum kernel_read_file_id);
+-extern ssize_t kernel_write(struct file *, const char *, size_t, loff_t);
++extern ssize_t kernel_read(struct file *, void *, size_t, loff_t *);
++extern ssize_t kernel_write(struct file *, const void *, size_t, loff_t *);
+ extern ssize_t __kernel_write(struct file *, const char *, size_t, loff_t *);
+ extern struct file * open_exec(const char *);
+  
+diff --git a/kernel/sysctl_binary.c b/kernel/sysctl_binary.c
+index 8f79045..d60bb19 100644
+--- a/kernel/sysctl_binary.c
++++ b/kernel/sysctl_binary.c
+@@ -990,8 +990,9 @@ static ssize_t bin_intvec(struct file *file,
+ 		size_t length = oldlen / sizeof(*vec);
+ 		char *str, *end;
+ 		int i;
++		loff_t pos = 0;
+ 
+-		result = kernel_read(file, 0, buffer, BUFSZ - 1);
++		result = kernel_read(file, buffer, BUFSZ - 1, &pos);
+ 		if (result < 0)
+ 			goto out_kfree;
+ 
+@@ -1020,6 +1021,7 @@ static ssize_t bin_intvec(struct file *file,
+ 		size_t length = newlen / sizeof(*vec);
+ 		char *str, *end;
+ 		int i;
++		loff_t pos = 0;
+ 
+ 		str = buffer;
+ 		end = str + BUFSZ;
+@@ -1033,7 +1035,7 @@ static ssize_t bin_intvec(struct file *file,
+ 			str += scnprintf(str, end - str, "%lu\t", value);
+ 		}
+ 
+-		result = kernel_write(file, buffer, str - buffer, 0);
++		result = kernel_write(file, buffer, str - buffer, &pos);
+ 		if (result < 0)
+ 			goto out_kfree;
+ 	}
+@@ -1061,8 +1063,9 @@ static ssize_t bin_ulongvec(struct file *file,
+ 		size_t length = oldlen / sizeof(*vec);
+ 		char *str, *end;
+ 		int i;
++		loff_t pos = 0;
+ 
+-		result = kernel_read(file, 0, buffer, BUFSZ - 1);
++		result = kernel_read(file, buffer, BUFSZ - 1, &pos);
+ 		if (result < 0)
+ 			goto out_kfree;
+ 
+@@ -1091,6 +1094,7 @@ static ssize_t bin_ulongvec(struct file *file,
+ 		size_t length = newlen / sizeof(*vec);
+ 		char *str, *end;
+ 		int i;
++		loff_t pos = 0;
+ 
+ 		str = buffer;
+ 		end = str + BUFSZ;
+@@ -1104,7 +1108,7 @@ static ssize_t bin_ulongvec(struct file *file,
+ 			str += scnprintf(str, end - str, "%lu\t", value);
+ 		}
+ 
+-		result = kernel_write(file, buffer, str - buffer, 0);
++		result = kernel_write(file, buffer, str - buffer, &pos);
+ 		if (result < 0)
+ 			goto out_kfree;
+ 	}
+@@ -1125,7 +1129,7 @@ static ssize_t bin_uuid(struct file *file,
+ 		char buf[UUID_STRING_LEN + 1];
+ 		uuid_be uuid;
+ 
+-		result = kernel_read(file, 0, buf, sizeof(buf) - 1);
++		result = kernel_read(file, buf, sizeof(buf) - 1, &pos);
+ 		if (result < 0)
+ 			goto out;
+ 
+@@ -1158,8 +1162,9 @@ static ssize_t bin_dn_node_address(struct file *file,
+ 		char buf[15], *nodep;
+ 		unsigned long area, node;
+ 		__le16 dnaddr;
++		loff_t pos = 0;
+ 
+-		result = kernel_read(file, 0, buf, sizeof(buf) - 1);
++		result = kernel_read(file, buf, sizeof(buf) - 1, &pos);
+ 		if (result < 0)
+ 			goto out;
+ 
+@@ -1192,6 +1197,7 @@ static ssize_t bin_dn_node_address(struct file *file,
+ 		__le16 dnaddr;
+ 		char buf[15];
+ 		int len;
++		loff_t pos = 0;
+ 
+ 		result = -EINVAL;
+ 		if (newlen != sizeof(dnaddr))
+@@ -1205,7 +1211,7 @@ static ssize_t bin_dn_node_address(struct file *file,
+ 				le16_to_cpu(dnaddr) >> 10,
+ 				le16_to_cpu(dnaddr) & 0x3ff);
+ 
+-		result = kernel_write(file, buf, len, 0);
++		result = kernel_write(file, buf, len, &pos);
+ 		if (result < 0)
+ 			goto out;
+ 	}
+diff --git a/net/9p/trans_fd.c b/net/9p/trans_fd.c
+index 7e484f5..a19c7d9 100644
+--- a/net/9p/trans_fd.c
++++ b/net/9p/trans_fd.c
+@@ -272,6 +272,7 @@ static int p9_fd_read(struct p9_client *client, void *v, int len)
+ {
+ 	int ret;
+ 	struct p9_trans_fd *ts = NULL;
++	loff_t pos;
+ 
+ 	if (client && client->status != Disconnected)
+ 		ts = client->trans;
+@@ -282,7 +283,8 @@ static int p9_fd_read(struct p9_client *client, void *v, int len)
+ 	if (!(ts->rd->f_flags & O_NONBLOCK))
+ 		p9_debug(P9_DEBUG_ERROR, "blocking read ...\n");
+ 
+-	ret = kernel_read(ts->rd, ts->rd->f_pos, v, len);
++	pos = ts->rd->f_pos;
++	ret = kernel_read(ts->rd, v, len, &pos);
+ 	if (ret <= 0 && ret != -ERESTARTSYS && ret != -EAGAIN)
+ 		client->status = Disconnected;
+ 	return ret;
+diff --git a/security/keys/big_key.c b/security/keys/big_key.c
+index e628817..58d3d29 100644
+--- a/security/keys/big_key.c
++++ b/security/keys/big_key.c
+@@ -20,6 +20,7 @@
+ #include <linux/random.h>
+ #include <keys/user-type.h>
+ #include <keys/big_key-type.h>
++#include <crypto/rng.h>
+ #include <crypto/aead.h>
+ 
+ /*
+@@ -40,6 +41,14 @@ enum big_key_op {
+ 	BIG_KEY_DEC,
+ };
+ 
++/*
++ * Crypto operation with big_key data
++ */
++enum big_key_op {
++	BIG_KEY_ENC,
++	BIG_KEY_DEC,
++};
++
+ /*
+  * If the data is under this limit, there's no point creating a shm file to
+  * hold it as the permanently resident metadata for the shmem fs will be at
+@@ -47,6 +56,11 @@ enum big_key_op {
+  */
+ #define BIG_KEY_FILE_THRESHOLD (sizeof(struct inode) + sizeof(struct dentry))
+ 
++/*
++ * Key size for big_key data encryption
++ */
++#define ENC_KEY_SIZE	16
++
+ /*
+  * Key size for big_key data encryption
+  */
+@@ -57,6 +71,54 @@ enum big_key_op {
+  */
+ #define ENC_AUTHTAG_SIZE 16
+ 
++/*
++ * Crypto names for big_key data encryption
++ */
++static const char big_key_rng_name[] = "stdrng";
++static const char big_key_alg_name[] = "ecb(aes)";
++
++/*
++ * Crypto algorithms for big_key data encryption
++ */
++static struct crypto_rng *big_key_rng;
++static struct crypto_blkcipher *big_key_blkcipher;
++
++/*
++ * Generate random key to encrypt big_key data
++ */
++static inline int big_key_gen_enckey(u8 *key)
++{
++	return crypto_rng_get_bytes(big_key_rng, key, ENC_KEY_SIZE);
++}
++
++/*
++ * Encrypt/decrypt big_key data
++ */
++static int big_key_crypt(enum big_key_op op, u8 *data, size_t datalen, u8 *key)
++{
++	int ret = -EINVAL;
++	struct scatterlist sgio;
++	struct blkcipher_desc desc;
++
++	if (crypto_blkcipher_setkey(big_key_blkcipher, key, ENC_KEY_SIZE)) {
++		ret = -EAGAIN;
++		goto error;
++	}
++
++	desc.flags = 0;
++	desc.tfm = big_key_blkcipher;
++
++	sg_init_one(&sgio, data, datalen);
++
++	if (op == BIG_KEY_ENC)
++		ret = crypto_blkcipher_encrypt(&desc, &sgio, &sgio, datalen);
++	else
++		ret = crypto_blkcipher_decrypt(&desc, &sgio, &sgio, datalen);
++
++error:
++	return ret;
++}
++
+ /*
+  * big_key defined keys take an arbitrary string as the description and an
+  * arbitrary blob of data as the payload
+@@ -157,7 +219,8 @@ int big_key_preparse(struct key_preparsed_payload *prep)
+ 		 *
+ 		 * File content is stored encrypted with randomly generated key.
+ 		 */
+-		size_t enclen = datalen + ENC_AUTHTAG_SIZE;
++		size_t enclen = ALIGN(datalen, crypto_skcipher_blocksize(big_key_skcipher));
++		loff_t pos = 0;
+ 
+ 		data = kmalloc(enclen, GFP_KERNEL);
+ 		if (!data)
+@@ -185,7 +248,7 @@ int big_key_preparse(struct key_preparsed_payload *prep)
+ 			goto err_enckey;
+ 		}
+ 
+-		written = kernel_write(file, data, enclen, 0);
++		written = kernel_write(file, data, enclen, &pos);
+ 		if (written != enclen) {
+ 			ret = written;
+ 			if (written >= 0)
+@@ -300,7 +363,8 @@ long big_key_read(const struct key *key, char __user *buffer, size_t buflen)
+ 		struct file *file;
+ 		u8 *data;
+ 		u8 *enckey = (u8 *)key->payload.data[big_key_data];
+-		size_t enclen = datalen + ENC_AUTHTAG_SIZE;
++		size_t enclen = ALIGN(datalen, crypto_blkcipher_blocksize(big_key_blkcipher));
++		loff_t pos = 0;
+ 
+ 		data = kmalloc(enclen, GFP_KERNEL);
+ 		if (!data)
+@@ -313,7 +377,7 @@ long big_key_read(const struct key *key, char __user *buffer, size_t buflen)
+ 		}
+ 
+ 		/* read file to kernel and decrypt */
+-		ret = kernel_read(file, 0, data, enclen);
++		ret = kernel_read(file, data, enclen, &pos);
+ 		if (ret >= 0 && ret != enclen) {
+ 			ret = -EIO;
+ 			goto err_fput;
