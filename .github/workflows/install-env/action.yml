@@ -33,7 +33,7 @@ runs:
           df -h
 
       - name: Move Patch and Tools
-      shell: bash
+        shell: bash
         run: |
           # Move patch folder to tmp
           mv $GITHUB_WORKSPACE/Patches /tmp/
