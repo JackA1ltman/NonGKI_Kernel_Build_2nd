@@ -87,11 +87,14 @@ jobs:
       CCACHE_HARDLINK: "true"
 
     steps:
-        - name: ⌛️ Execuate common process
-          uses: ./.github/workflows/install-env
+      - name: ⏰ Checkout repository
+        uses: actions/checkout@v4
 
-        - name: Build
-          run: |
-            cd kernel_test
-            ls al ./
-            false
+      - name: ⌛️ Execuate common process
+        uses: ./.github/workflows/install-env
+
+      - name: Build
+        run: |
+          cd kernel_test
+          ls al ./
+          false
