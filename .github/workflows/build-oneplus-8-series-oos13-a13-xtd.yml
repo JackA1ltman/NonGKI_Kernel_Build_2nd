@@ -92,6 +92,17 @@ jobs:
       - name: ⌛️ Execuate common process
         uses: ./.github/workflows/install-env
 
+      - name: testing
+        run: |
+          cd $GITHUB_WORKSPACE
+          ls -al ./
+          echo "=============="
+          ls -al gcc-64/
+          echo "==============="
+          ls -al clang-custom/
+          echo "============="
+          false
+
       - name: ⚙️ Compilation preparation
         uses: ./.github/workflows/build-ready
 
