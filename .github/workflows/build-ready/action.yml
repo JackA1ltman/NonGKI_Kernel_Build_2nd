@@ -51,7 +51,7 @@ runs:
           echo "PACK_METHOD=${{ env.PACK_METHOD }}" >> $GITHUB_ENV
 
       - name: Get DEFCONFIG
-        if: env.DEFCONFIG_NAME != ''
+        if: env.DEFCONFIG_SOURCE != '' || env.DEFCONFIG_FROM_BOOT == 'true'
         shell: bash
         run: |
           cd $GITHUB_WORKSPACE/device_kernel
