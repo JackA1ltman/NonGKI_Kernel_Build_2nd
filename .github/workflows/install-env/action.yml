@@ -72,12 +72,12 @@ runs:
             sudo apt-get install libtinfo5 -y
             if [ "${{ env.PYTHON_VERSION }}" == "3" ]; then
                 sudo apt install python2 python3 -y
-                rm -rf /usr/bin/python
-                ln -s /usr/bin/python3 /usr/bin/python
+                sudo rm -rf /usr/bin/python
+                sudo ln -s /usr/bin/python3 /usr/bin/python
             elif [ "${{ env.PYTHON_VERSION }}" == "2" ]; then
                 sudo apt install python2 -y
-                rm -rf /usr/bin/python
-                ln -s /usr/bin/python2.7 /usr/bin/python
+                sudo rm -rf /usr/bin/python
+                sudo ln -s /usr/bin/python2.7 /usr/bin/python
             else
                 echo "You need choose a python version."
                 false
