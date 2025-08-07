@@ -3,6 +3,80 @@ name: Build Onelus 8 Series (OxygenOS 13 A13) (XTD Kernel)
 on:
   workflow_call:
 
+env:
+  # Device env
+  DEVICE_NAME : "device_name"
+  DEVICE_CODENAME : "device_codename"
+
+  CUSTOM_CMDS : "CLANG_TRIPLE=aarch64-linux-gnu-"
+  EXTRA_CMDS : "LD:ld.lld LLVM=1 LLVM_IAS=1"
+
+  KERNEL_SOURCE : "https://github.com/kernel_author/android_kernel_codename.git"
+  KERNEL_BRANCH : "system_os"
+
+  CLANG_SOURCE : "https://github.com/llvm/llvm-project/releases/download/llvmorg-19.1.7/LLVM-19.1.7-Linux-X64.tar.xz"
+  CLANG_BRANCH : ""
+
+  GCC_GNU : false
+  GCC_64_SOURCE : "https://android.googlesource.com/platform/prebuilts/gcc/linux-x86/aarch64/aarch64-linux-android-4.9.git"
+  GCC_64_BRANCH : "android12L-release"
+  GCC_32_SOURCE : "https://android.googlesource.com/platform/prebuilts/gcc/linux-x86/arm/arm-linux-androideabi-4.9.git"
+  GCC_32_BRANCH : "android12L-release"
+
+  DEFCONFIG_SOURCE: ""
+  DEFCONFIG_NAME : "codename_defconfig"
+  DEFCONFIG_ORIGIN_DEFCONFIG: ""
+
+  KERNELSU_SOURCE : "https://raw.githubusercontent.com/tiann/KernelSU/refs/heads/main/kernel/setup.sh"
+  KERNELSU_BRANCH : "v0.9.5"
+  KERNELSU_NAME : "KernelSU"
+
+  SUSFS_ENABLE : false
+  SUSFS_FIXED : false
+  SUSFS_UPDATE : false
+
+  AK3_SOURCE : "https://github.com/osm0sis/AnyKernel3.git"
+  AK3_BRANCH : "master"
+
+  BOOT_SOURCE : "https://github.com/boot_author/android_kernel_codename/raw/refs/heads/main/rom/source_imgs/boot.img"
+
+  LXC_ENABLE : false
+
+  HAVE_NO_DTBO : false
+  HAVE_NO_DTBO_TOOL : false
+
+  ROM_TEXT : "rom_android"
+
+  # Other env
+  PYTHON_VERSION: "3" # Only 2(Ubuntu 22.04 and Ubuntu 20.04) or 3(Any OS Versions).
+
+  PACK_METHOD: "Anykernel3" # Anykernel3 need SOURCE and BRANCH, MKBOOTIMG needn't it.
+
+  KERNELSU_METHOD: "shell" # shell, manual and only.
+  KERNELSU_SUS_PATCH: "false" # if u need manual susfs patch to kernelsu.
+
+  PATCHES_SOURCE: "author/source" # [your_name]/[your_patch] -> gooder123/NonGKI_Patcher
+  PATCHES_BRANCH: "branch" # [your_branch] -> main
+
+  HOOK_METHOD: "normal" # manual hook method,can choice syscall and normal.
+  HOOK_OLDER: "false" # contain backport older patch and syscall older patch.
+
+  KPM_ENABLE: "false" # Only use it for SukiSU-Ultra.
+  KPM_FIX: "false" # Fix Error When Enabling KPM.
+  KPM_PATCH_SOURCE: "https://raw.githubusercontent.com/SukiSU-Ultra/SukiSU_patch/refs/heads/main/kpm/patch_linux" # patch exec file source -> raw.githubusercontent.com/Test/Test/patch .
+
+  GENERATE_DTB: "false" # if u kernel need DTB , but cannot auto generate it. (Only Anykernel3).
+  GENERATE_CHIP: "qcom" # only supported for qcom and mediatek.
+
+  BUILD_DEBUGGER: "false" # Output build errors.
+  SKIP_PATCH: "false" # Ignore errors found in Patch Debugger.
+
+  BUILD_OTHER_CONFIG: "false" # Merge config files.
+
+  FREE_MORE_SPACE: "false" # if u want get more space, enabled it.
+
+  REKERNEL_ENABLE: "false" # if u need Re:Kernel.
+
 jobs:
   build-kernel:
     name: Build Kernel
@@ -13,11 +87,8 @@ jobs:
       CCACHE_HARDLINK: "true"
 
     steps:
-        - name: Checkout repository
-          uses: actions/checkout@v4
-
-        - name: Execuate common process
-          run: bash ./Bin/Install.sh
+        - name: ⌛️ Execuate common process
+          uses: ./.github/workflows/install-env
 
         - name: Build
           run: |
