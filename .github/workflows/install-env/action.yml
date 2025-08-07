@@ -70,11 +70,11 @@ runs:
         shell: bash
         run: |
           if [ -z ${{ env.GCC_64_SOURCE }} ] && [ -z ${{ env.GCC_32_SOURCE }} ]; then
-                if [ ${{ env.SYSTEM_VERSION == "older" ] || [ ${{ env.SYSTEM_VERSION == "newer" ]; then
+                if [ "${{ env.SYSTEM_VERSION }}" == "arch" ] || [ "${{ env.SYSTEM_VERSION }}" == "newer" ]; then
                     sudo apt-get install binutils-aarch64-linux-gnu gcc-aarch64-linux-gnu gcc-arm-linux-gnueabi -y
                     echo "GCC_64=CROSS_COMPILE=aarch64-linux-gnu-" >> $GITHUB_ENV
                     echo "GCC_32=CROSS_COMPILE_ARM32=arm-linux-gnueabi-" >> $GITHUB_ENV
-                elif [ ${{ env.SYSTEM_VERSION == "arch" }} ]; then
+                elif [ "${{ env.SYSTEM_VERSION }}" == "arch" }} ]; then
                     pacman -S aarch64-linux-gnu-binutils aarch64-linux-gnu-gcc aarch64-linux-gnu-glibc aarch64-linux-gnu-linux-api-headers aarch64-linux-gnu-glibc --noconfirm
                     pacman -S arm-none-eabi-binutils arm-none-eabi-gcc arm-none-eabi-newlib --noconfirm
                     echo "GCC_64=CROSS_COMPILE=aarch64-linux-gnu-" >> $GITHUB_ENV
