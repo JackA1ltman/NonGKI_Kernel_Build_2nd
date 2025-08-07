@@ -11,15 +11,15 @@ runs:
 
           if [ "$ID" = "ubuntu" ]; then
               if [ "$VERSION_ID" = "22.04" ] || [ "$VERSION_ID" = "20.04" ]; then
-                  echo "$SYSTEM_VERSION=older" >> $GITHUB_ENV
+                  echo "SYSTEM_VERSION=older" >> $GITHUB_ENV
               elif [ "$VERSION_ID" = "24.04" ]; then
-                  echo "$SYSTEM_VERSION=newer" >> $GITHUB_ENV
+                  echo "SYSTEM_VERSION=newer" >> $GITHUB_ENV
               else
                   echo "Not Supported: $VERSION_ID"
                   false
               fi
           elif [ "$ID" = "arch" ]; then
-              echo "$SYSTEM_VERSION=arch" >> $GITHUB_ENV
+              echo "SYSTEM_VERSION=arch" >> $GITHUB_ENV
           else
               echo "Not Supported: $PRETTY_NAME"
               false
@@ -29,7 +29,7 @@ runs:
       - name: 💿 Install necessary packages
         shell: bash
         run: |
-          if [ ${{ env.SYSTEM_VERSION == "older" ]; then
+          if [ "${{ env.SYSTEM_VERSION }}" == "older" ]; then
             sudo apt-get update
             apt-get install git ccache automake flex lzop bison gperf build-essential zip curl zlib1g-dev g++-multilib libxml2-utils bzip2 libbz2-dev libbz2-1.0 libghc-bzlib-dev squashfs-tools pngcrush schedtool dpkg-dev liblz4-tool make optipng maven libssl-dev pwgen libswitch-perl policycoreutils minicom libxml-sax-base-perl libxml-simple-perl bc libc6-dev-i386 lib32ncurses5-dev libx11-dev lib32z-dev libgl1-mesa-dev xsltproc unzip device-tree-compiler wget curl -y
             apt-get install p7zip p7zip-full -y
@@ -46,7 +46,7 @@ runs:
                 echo "You need choose a python version."
                 false
             fi
-          elif [ ${{ env.SYSTEM_VERSION == "newer" ]; then
+          elif [ "${{ env.SYSTEM_VERSION }}" == "newer" ]; then
             sudo apt update
             sudo apt install git ccache automake flex lzop bison gperf build-essential zip curl zlib1g-dev g++-multilib libxml2-utils bzip2 libbz2-dev libbz2-1.0 libghc-bzlib-dev squashfs-tools pngcrush schedtool dpkg-dev make optipng maven libssl-dev pwgen libswitch-perl policycoreutils minicom libxml-sax-base-perl libxml-simple-perl bc libc6-dev-i386 libx11-dev lib32z-dev libgl1-mesa-dev xsltproc unzip device-tree-compiler python3
             sudo apt-get install zstd libc6 binutils libc6-dev-i386 gcc g++ p7zip p7zip-full -y
@@ -55,7 +55,7 @@ runs:
             ${{ env.CURLX }} http://security.ubuntu.com/ubuntu/pool/universe/n/ncurses/libtinfo5_6.3-2ubuntu0.1_amd64.deb libtinfo5.deb
             sudo apt install ./libtinfo5.deb
             rm -f libtinfo5.deb
-          elif [ ${{ env.SYSTEM_VERSION == "arch" }} ]; then
+          elif [ "${{ env.SYSTEM_VERSION }}" == "arch" ]; then
             pacman -Syyu --noconfirm
             pacman -S git base-devel systemd wget rustup curl patch ccache automake flex lzop bison gperf zip curl bzip2 squashfs-tools pngcrush schedtool make optipng maven pwgen minicom bc unzip 7zip zstd binutils gcc python3 wget which libxml2-legacy --noconfirm
 
