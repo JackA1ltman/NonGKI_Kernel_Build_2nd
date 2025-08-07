@@ -54,8 +54,8 @@ env:
   KERNELSU_METHOD: "shell" # shell, manual and only.
   KERNELSU_SUS_PATCH: "false" # if u need manual susfs patch to kernelsu.
 
-  PATCHES_SOURCE: "author/source" # [your_name]/[your_patch] -> gooder123/NonGKI_Patcher
-  PATCHES_BRANCH: "branch" # [your_branch] -> main
+  PATCHES_SOURCE: "JackA1ltman/NonGKI_Kernel_Patches" # [your_name]/[your_patch] -> gooder123/NonGKI_Patcher
+  PATCHES_BRANCH: "op_kernel" # [your_branch] -> main
 
   HOOK_METHOD: "normal" # manual hook method,can choice syscall and normal.
   HOOK_OLDER: "false" # contain backport older patch and syscall older patch.
