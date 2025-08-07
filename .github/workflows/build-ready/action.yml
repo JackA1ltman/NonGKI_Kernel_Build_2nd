@@ -17,6 +17,7 @@ runs:
           echo "SECOND_VERSION=$(echo "$KERNEL_VERSION" | awk -F '.' '{print $2}')" >> $GITHUB_ENV
 
       - name: Get Kernel Arch
+        shell: bash
         run: |
           cd $GITHUB_WORKSPACE/device_kernel
 
@@ -178,6 +179,7 @@ runs:
           fi
 
       - name: Set KSU and SUSFS for DEFCONFIG
+        shell: bash
         run: |
           cd $GITHUB_WORKSPACE/device_kernel
 

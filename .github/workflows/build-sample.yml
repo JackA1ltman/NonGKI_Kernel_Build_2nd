@@ -115,7 +115,6 @@ jobs:
           patch -p1 < 50_add_susfs_in_kernel-${{ env.KERNEL_VERSION }}.patch || true
 
           # Fixed Kernel Patch
-          # cd $GITHUB_WORKSPACE/device_kernel/
           # cp NonGKI_Kernel_Patches/${{ env.PATCH_FOLDER }}/[patch_file].patch ./
 
           # patch -p1 < [patch_file].patch || true
