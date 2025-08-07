@@ -13,7 +13,7 @@ runs:
               if [ "$VERSION_ID" = "20.04" ]; then
                   echo "SYSTEM_VERSION=oldest" >> $GITHUB_ENV
               elif [ "$VERSION_ID" = "22.04" ]; then
-                  echo "SYSTEM_VERSION=oldest" >> $GITHUB_ENV
+                  echo "SYSTEM_VERSION=older" >> $GITHUB_ENV
               elif [ "$VERSION_ID" = "24.04" ]; then
                   echo "SYSTEM_VERSION=newer" >> $GITHUB_ENV
               else
@@ -81,6 +81,7 @@ runs:
             else
                 echo "You need choose a python version."
                 false
+            fi
           elif [ "${{ env.SYSTEM_VERSION }}" == "newer" ]; then
             sudo apt update
             sudo apt install git ccache automake flex lzop bison gperf build-essential zip curl zlib1g-dev g++-multilib libxml2-utils bzip2 libbz2-dev libbz2-1.0 libghc-bzlib-dev squashfs-tools pngcrush schedtool dpkg-dev make optipng maven libssl-dev pwgen libswitch-perl policycoreutils minicom libxml-sax-base-perl libxml-simple-perl bc libc6-dev-i386 libx11-dev lib32z-dev libgl1-mesa-dev xsltproc unzip device-tree-compiler python3
