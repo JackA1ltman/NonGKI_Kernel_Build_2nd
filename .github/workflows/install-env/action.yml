@@ -10,8 +10,10 @@ runs:
           . /etc/os-release
 
           if [ "$ID" = "ubuntu" ]; then
-              if [ "$VERSION_ID" = "22.04" ] || [ "$VERSION_ID" = "20.04" ]; then
-                  echo "SYSTEM_VERSION=older" >> $GITHUB_ENV
+              if [ "$VERSION_ID" = "20.04" ]; then
+                  echo "SYSTEM_VERSION=oldest" >> $GITHUB_ENV
+              elif [ "$VERSION_ID" = "22.04" ]; then
+                  echo "SYSTEM_VERSION=oldest" >> $GITHUB_ENV
               elif [ "$VERSION_ID" = "24.04" ]; then
                   echo "SYSTEM_VERSION=newer" >> $GITHUB_ENV
               else
@@ -46,8 +48,8 @@ runs:
       - name: Install necessary packages
         shell: bash
         run: |
-          if [ "${{ env.SYSTEM_VERSION }}" == "older" ]; then
-            sudo apt-get update
+          if [ "${{ env.SYSTEM_VERSION }}" == "oldest" ]; then
+            apt-get update
             apt-get install git ccache automake flex lzop bison gperf build-essential zip curl zlib1g-dev g++-multilib libxml2-utils bzip2 libbz2-dev libbz2-1.0 libghc-bzlib-dev squashfs-tools pngcrush schedtool dpkg-dev liblz4-tool make optipng maven libssl-dev pwgen libswitch-perl policycoreutils minicom libxml-sax-base-perl libxml-simple-perl bc libc6-dev-i386 lib32ncurses5-dev libx11-dev lib32z-dev libgl1-mesa-dev xsltproc unzip device-tree-compiler wget curl -y
             apt-get install p7zip p7zip-full -y
             apt-get install libtinfo5 -y
@@ -63,6 +65,22 @@ runs:
                 echo "You need choose a python version."
                 false
             fi
+          elif [ "${{ env.SYSTEM_VERSION }}" == "older" ]; then
+            sudo apt-get update
+            sudo apt-get install git ccache automake flex lzop bison gperf build-essential zip curl zlib1g-dev g++-multilib libxml2-utils bzip2 libbz2-dev libbz2-1.0 libghc-bzlib-dev squashfs-tools pngcrush schedtool dpkg-dev liblz4-tool make optipng maven libssl-dev pwgen libswitch-perl policycoreutils minicom libxml-sax-base-perl libxml-simple-perl bc libc6-dev-i386 lib32ncurses5-dev libx11-dev lib32z-dev libgl1-mesa-dev xsltproc unzip device-tree-compiler wget curl -y
+            sudo apt-get install p7zip p7zip-full -y
+            sudo apt-get install libtinfo5 -y
+            if [ "${{ env.PYTHON_VERSION }}" == "3" ]; then
+                sudo apt install python2 python3 -y
+                rm -rf /usr/bin/python
+                ln -s /usr/bin/python3 /usr/bin/python
+            elif [ "${{ env.PYTHON_VERSION }}" == "2" ]; then
+                sudo apt install python2 -y
+                rm -rf /usr/bin/python
+                ln -s /usr/bin/python2.7 /usr/bin/python
+            else
+                echo "You need choose a python version."
+                false
           elif [ "${{ env.SYSTEM_VERSION }}" == "newer" ]; then
             sudo apt update
             sudo apt install git ccache automake flex lzop bison gperf build-essential zip curl zlib1g-dev g++-multilib libxml2-utils bzip2 libbz2-dev libbz2-1.0 libghc-bzlib-dev squashfs-tools pngcrush schedtool dpkg-dev make optipng maven libssl-dev pwgen libswitch-perl policycoreutils minicom libxml-sax-base-perl libxml-simple-perl bc libc6-dev-i386 libx11-dev lib32z-dev libgl1-mesa-dev xsltproc unzip device-tree-compiler python3
