@@ -25,6 +25,23 @@ runs:
               false
           fi
 
+      - name: Remove useless tools
+        if: env.SYSTEM_VERSION == 'newer'
+        shell: bash
+        run: |
+          sudo rm -rf /opt/hostedtoolcache
+          df -h
+
+      - name: Move Patch and Tools
+      shell: bash
+        run: |
+          # Move patch folder to tmp
+          mv $GITHUB_WORKSPACE/Patches /tmp/
+
+          # Set curlx
+          mv $GITHUB_WORKSPACE/Bin /tmp/
+          chmod 777 /tmp/Bin/curlx.sh
+          echo "CURLX=/tmp/Bin/curlx.sh" >> $GITHUB_ENV
 
       - name: Install necessary packages
         shell: bash
