@@ -1,18 +1,18 @@
-name: Build Onelus 8 Series (OxygenOS 13 A13) (XTD Kernel)
+name: Build Sample YAML
 
 on:
   workflow_call:
 
 env:
   # Device env
-  DEVICE_NAME : "oneplus_8_cn"
-  DEVICE_CODENAME : "instantnoodle"
+  DEVICE_NAME : "device_name"
+  DEVICE_CODENAME : "device_codename"
 
   CUSTOM_CMDS : "CLANG_TRIPLE=aarch64-linux-gnu-"
-  EXTRA_CMDS : "LD:ld.lld"
+  EXTRA_CMDS : "LD:ld.lld LLVM=1 LLVM_IAS=1"
 
-  KERNEL_SOURCE : "https://github.com/ppajda/android_kernel_oneplus_sm8250.git"
-  KERNEL_BRANCH : "oos13.1"
+  KERNEL_SOURCE : "https://github.com/kernel_author/android_kernel_codename.git"
+  KERNEL_BRANCH : "system_os"
 
   CLANG_SOURCE : "https://github.com/llvm/llvm-project/releases/download/llvmorg-19.1.7/LLVM-19.1.7-Linux-X64.tar.xz"
   CLANG_BRANCH : ""
@@ -24,27 +24,27 @@ env:
   GCC_32_BRANCH : "android12L-release"
 
   DEFCONFIG_SOURCE: ""
-  DEFCONFIG_NAME : "xtd_defconfig"
+  DEFCONFIG_NAME : "codename_defconfig"
   DEFCONFIG_ORIGIN_IMAGE: ""
   DEFCONFIG_FROM_BOOT: false
 
-  KERNELSU_SOURCE : "https://raw.githubusercontent.com/backslashxx/KernelSU/refs/heads/12107%2B155/kernel/setup.sh"
-  KERNELSU_BRANCH : "12107+155"
+  KERNELSU_SOURCE : "https://raw.githubusercontent.com/tiann/KernelSU/refs/heads/main/kernel/setup.sh"
+  KERNELSU_BRANCH : "v0.9.5"
   KERNELSU_NAME : "KernelSU"
 
-  SUSFS_ENABLE : true
-  SUSFS_FIXED : true
+  SUSFS_ENABLE : false
+  SUSFS_FIXED : false
   SUSFS_UPDATE : false
 
-  AK3_SOURCE : "https://github.com/JackA1ltman/OP8_AnyKernel3.git"
-  AK3_BRANCH : "main"
+  AK3_SOURCE : "https://github.com/osm0sis/AnyKernel3.git"
+  AK3_BRANCH : "master"
 
   BOOT_SOURCE : ""
 
   NEED_DTBO : false
   NEED_SAFE_DTBO : false
 
-  ROM_TEXT : "oxygen13.1_a13"
+  ROM_TEXT : "rom_android"
 
   # Other env
   PYTHON_VERSION: "3" # Only 2(Ubuntu 22.04 and Ubuntu 20.04) or 3(Any OS Versions).
@@ -79,7 +79,8 @@ env:
 jobs:
   build-kernel:
     name: Build Kernel
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest # u can changed to ubuntu 22.04, and need container set ubuntu-latest
+    # container: archlinux/archlinux:latest # if u need use arch linux -> archlinux/archlinux:latest or ubuntu 20.04 -> ubuntu:focal
     env:
       CCACHE_COMPILERCHECK: "%compiler% -dumpmachine; %compiler% -dumpversion"
       CCACHE_NOHASHDIR: "true"

@@ -1,0 +1,156 @@
+name: 'Upload files.'
+
+runs:
+  using: 'composite'
+  steps:
+      - name: Make Anykernel3 Flasher
+        if: env.PACK_METHOD == 'Anykernel3'
+        shell: bash
+        run: |
+          TIME=$(date +"%Y%m%d%H%M%S")
+
+          cd $GITHUB_WORKSPACE/device_kernel/
+          if [[ -d "arch/arm64/configs" ]]; then
+            IMAGE_DIR="$GITHUB_WORKSPACE/device_kernel/out/arch/arm64/boot"
+          else
+            IMAGE_DIR="$GITHUB_WORKSPACE/device_kernel/out/arch/arm/boot"
+          fi
+
+          mkdir -p tmp
+
+          if [[ "${{ env.AK3_SOURCE }}" =~ "osm0sis" ]]; then
+            sed -i 's/do.devicecheck=1/do.devicecheck=0/g' Anykernel3/anykernel.sh
+            sed -i 's!BLOCK=/dev/block/platform/omap/omap_hsmmc.0/by-name/boot;!BLOCK=auto;!g' Anykernel3/anykernel.sh
+            sed -i 's/IS_SLOT_DEVICE=0;/is_slot_device=auto;/g' Anykernel3/anykernel.sh
+            echo "Now using official Anykernel3."
+          else
+            echo "Now using custom Anykernel3."
+          fi
+
+          if [[ -f "$IMAGE_DIR/Image.gz-dtb" ]]; then
+            cp -fp $IMAGE_DIR/Image.gz-dtb tmp
+            echo "Found Image.gz-dtb !"
+          elif [[ -f "$IMAGE_DIR/Image.gz" ]]; then
+            cp -fp $IMAGE_DIR/Image.gz tmp
+            echo "Found Image.gz !"
+          elif [[ -f "$IMAGE_DIR/zImage-dtb" ]]; then
+            cp -fp $IMAGE_DIR/zImage-dtb tmp
+            echo "Found zImage-dtb (ARMV7A) !"
+          elif [[ -f "$IMAGE_DIR/Image" ]]; then
+            # gzip -c $IMAGE_DIR/Image > $IMAGE_DIR/Image.gz
+            # cp -fp $IMAGE_DIR/Image.gz tmp
+            cp -fp $IMAGE_DIR/Image tmp
+            echo "Found Image !"
+          fi
+
+          if [[ -f "$IMAGE_DIR/dtbo.img" ]]; then
+            cp -fp $IMAGE_DIR/dtbo.img tmp
+            echo "Found dtbo.img !"
+          else
+            echo "Doesn't found dtbo.img! Your device maybe needn't the file."
+          fi
+
+          if [ -f "$IMAGE_DIR/dtb" ]; then
+            echo "Found DTB!"
+            cp -fp $IMAGE_DIR/dtb tmp
+          elif [ "${{ env.GENERATE_DTB }}" == "true" ]; then
+            if [ -d "$IMAGE_DIR/dts/vendor/${{ env.GENERATE_CHIP }}" ]; then
+                cat $IMAGE_DIR/dts/vendor/${{ env.GENERATE_CHIP }}/*.dtb > $IMAGE_DIR/DTB
+                cp -fp $IMAGE_DIR/DTB tmp
+                echo "Generated ${{ env.GENERATE_CHIP }} DTB."
+            elif [ -d "$IMAGE_DIR/dts/${{ env.GENERATE_CHIP }}" ]; then
+                cat $IMAGE_DIR/dts/${{ env.GENERATE_CHIP }}/*.dtb > $IMAGE_DIR/DTB
+                cp -fp $IMAGE_DIR/DTB tmp
+                echo "Generated ${{ env.GENERATE_CHIP }} DTB."
+            else
+                echo "Missing .dtb file in dts or dts/vendor ! Generate Failed !"
+                false
+            fi
+          else
+            echo "Doesn't found DTB! Your device maybe needn't the file."
+          fi
+
+          cp -rp ./Anykernel3/* tmp
+          cd tmp
+          7za a -mx9 tmp.zip *
+          cd ..
+          cp -fp tmp/tmp.zip ${{ env.DEVICE_CODENAME }}-${{ env.ROM_TEXT }}-$TIME-${{ env.PACK_METHOD }}${{ env.LXC_STATUS }}.zip
+          rm -rf tmp
+
+          echo "PACK_NAME=${{ env.DEVICE_CODENAME }}-${{ env.ROM_TEXT }}-$TIME-${{ env.PACK_METHOD }}${{ env.LXC_STATUS }}.zip" >> $GITHUB_ENV
+
+      - name: Make Latest Boot Image
+        if: env.PACK_METHOD == 'MKBOOTIMG'
+        shell: bash
+        run: |
+          cd $GITHUB_WORKSPACE/
+          IMAGE_DIR="$GITHUB_WORKSPACE/device_kernel/out/arch/arm64/boot"
+          TIME=$(date +"%Y%m%d%H%M%S")
+          FORMAT_MKBOOTING=$(echo `mkboottools/unpack_bootimg.py --boot_img=boot_source_${{ env.DEVICE_NAME }}.img --format mkbootimg`)
+
+          mkboottools/unpack_bootimg.py --boot_img boot_source_${{ env.DEVICE_NAME }}.img
+
+          if [[ -f "$IMAGE_DIR/Image.gz-dtb" ]]; then
+            rm -f out/kernel
+            cp -fp $IMAGE_DIR/Image.gz-dtb out/kernel
+            echo "Found Image.gz-dtb !"
+          elif [[ -f "$IMAGE_DIR/Image.gz" ]]; then
+            rm -f out/kernel
+            cp -fp $IMAGE_DIR/Image.gz out/kernel
+            echo "Found Image.gz !"
+          elif [[ -f "$IMAGE_DIR/Image" ]]; then
+            rm -f out/kernel
+            cp -fp $IMAGE_DIR/Image out/kernel
+            echo "Found Image !"
+          fi
+
+          if [ -f "$IMAGE_DIR/dtb" ]; then
+            echo "Found DTB!"
+            cp -fp $IMAGE_DIR/dtb out/dtb
+          elif [ "${{ env.GENERATE_DTB }}" == "true" ]; then
+            if [ -d "$IMAGE_DIR/dts/vendor/${{ env.GENERATE_CHIP }}" ]; then
+                cat $IMAGE_DIR/dts/vendor/${{ env.GENERATE_CHIP }}/*.dtb > $IMAGE_DIR/DTB
+                cp -fp $IMAGE_DIR/DTB tmp
+                echo "Generated ${{ env.GENERATE_CHIP }} DTB."
+            elif [ -d "$IMAGE_DIR/dts/${{ env.GENERATE_CHIP }}" ]; then
+                cat $IMAGE_DIR/dts/${{ env.GENERATE_CHIP }}/*.dtb > $IMAGE_DIR/DTB
+                cp -fp $IMAGE_DIR/DTB tmp
+                echo "Generated ${{ env.GENERATE_CHIP }} DTB."
+            else
+                echo "Missing .dtb file in dts or dts/vendor ! Generate Failed !"
+                false
+            fi
+          else
+            echo "Doesn't found DTB! Your device maybe needn't the file."
+          fi
+
+          eval "mkboottools/mkbootimg.py $FORMAT_MKBOOTING -o ${{ env.DEVICE_CODENAME }}-${{ env.ROM_TEXT }}-$TIME-image${{ env.LXC_STATUS }}.img"
+
+          echo "PACK_NAME=${{ env.DEVICE_CODENAME }}-${{ env.ROM_TEXT }}-$TIME-image${{ env.LXC_STATUS }}.img" >> $GITHUB_ENV
+
+          rm -f $GITHUB_WORKSPACE/boot_source_${{ env.DEVICE_NAME }}.img
+
+      - name: Upload Build Error Files
+        if: ${{ failure() && env.BUILD_DEBUGGER == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: error_files
+          path: |
+            device_kernel/error.log
+            device_kernel/compile_errors_files.zip
+
+      - name: Upload Build Artifacts For Anykernel3
+        if: env.PACK_METHOD == 'Anykernel3'
+        uses: actions/upload-artifact@v4
+        with:
+          name: Kernel-${{ env.PACK_NAME }}
+          path: |
+            device_kernel/${{ env.PACK_NAME }}
+
+      - name: Upload Build Artifacts For Boot Image
+        if: env.PACK_METHOD == 'MKBOOTIMG'
+        uses: actions/upload-artifact@v4
+        with:
+          name: Kernel-${{ env.PACK_NAME }}
+          path: |
+            ${{ env.PACK_NAME }}

@@ -3,7 +3,7 @@ name: 'Set up the system environment for compilation.'
 runs:
   using: 'composite'
   steps:
-      - name: 🔧 Check System OS
+      - name: Check System OS
         shell: bash
         run: |
           lsb_release -a
@@ -26,7 +26,7 @@ runs:
           fi
 
 
-      - name: 💿 Install necessary packages
+      - name: Install necessary packages
         shell: bash
         run: |
           if [ "${{ env.SYSTEM_VERSION }}" == "older" ]; then
@@ -52,7 +52,7 @@ runs:
             sudo apt-get install zstd libc6 binutils libc6-dev-i386 gcc g++ p7zip p7zip-full -y
 
             # Install Libtinfo5
-            ${{ env.CURLX }} http://security.ubuntu.com/ubuntu/pool/universe/n/ncurses/libtinfo5_6.3-2ubuntu0.1_amd64.deb libtinfo5.deb
+            ${{ env.CURLX }} http://launchpadlibrarian.net/580830584/libtinfo5_6.3-2_amd64.deb libtinfo5.deb
             sudo apt install ./libtinfo5.deb
             rm -f libtinfo5.deb
           elif [ "${{ env.SYSTEM_VERSION }}" == "arch" ]; then
@@ -65,7 +65,7 @@ runs:
             echo "Your system os cannot supported."
           fi
 
-      - name: 📀 Install GNU GCC
+      - name: Install GNU GCC
         if: env.GCC_GNU == 'true'
         shell: bash
         run: |
@@ -86,7 +86,7 @@ runs:
             echo "You needn't gcc powered by system."
           fi
 
-      - name: 📟 Set Compile Environment
+      - name: Set Compile Environment
         shell: bash
         run: |
           cd $GITHUB_WORKSPACE
