@@ -1,0 +1,71 @@
+name: 'Patch Kernel for no-kprobe.'
+
+runs:
+  using: 'composite'
+  steps:
+      - name: Patch Kernel for no-kprobe
+        shell: bash
+        run: |
+          cd $GITHUB_WORKSPACE
+          if grep -q "CONFIG_KSU" "device_kernel/fs/exec.c"; then
+            echo "Your kernel source code appears to have been manually patched, so this step is skipped."
+          else
+            if [[ ${{ env.HOOK_METHOD }} == "normal" ]]; then
+              if [[ -f "/tmp/Patches/normal_patches.sh" ]]; then
+                  cp /tmp/Patches/normal_patches.sh device_kernel/
+                  cd device_kernel
+                  bash normal_patches.sh
+                  echo "execuated patch successfully."
+                  if [[ "${{ env.KERNELSU_NAME }}" != "KernelSU-Next" ]]; then
+                        cp /tmp/Patches/backport_patches_early.sh ./
+                        bash backport_patches_early.sh
+                        echo "execuated backport patch early successfully. "
+                  else
+                      echo "your kernel needn't backport patch."
+                  fi
+              else
+                  echo "Cannot found normal_patches.sh in build project , please check u file existed in build project !"
+                  false
+              fi
+            elif [[ ${{ env.HOOK_METHOD }} == "syscall" ]]; then
+               if [[ -f "/tmp/Patches/syscall_hook_patches_older.sh" ]] && [[ "${{ env.HOOK_OLDER }}" == "true" ]]; then
+                   cp /tmp/Patches/syscall_hook_patches_older.sh device_kernel/
+                   cd device_kernel
+                   bash syscall_hook_patches_older.sh
+                   echo "execuated syscall patch older successfully."
+                   if [[ "${{ env.KERNELSU_NAME }}" != "KernelSU-Next" ]]; then
+                     cp /tmp/Patches/backport_patches.sh ./
+                     bash backport_patches.sh
+                     if [ "${{ env.FIRST_VERSION }}" -lt 5 ] && [ "${{ env.SECOND_VERSION }}" -lt 10 ]; then
+                         cp /tmp/Patches/Patch/backport_kernel_read_and_kernel_write_to_ksu.patch ./
+                         patch -p1 < backport_kernel_read_and_kernel_write_to_ksu.patch || true
+                         echo "execuated backport patch kernel_read and kernel_read successfully. If you current kernel version < 4.14, then u maybe manual fixed it."
+                     fi
+                     echo "execuated backport patch successfully. "
+                   else
+                     echo "your kernel needn't backport patch."
+                   fi
+               elif [[ -f "/tmp/Patches/syscall_hook_patches.sh" ]]; then
+                   cp /tmp/Patches/syscall_hook_patches.sh device_kernel/
+                   cd device_kernel
+                   bash syscall_hook_patches.sh
+                   echo "execuated syscall patch successfully."
+                   if [[ "${{ env.KERNELSU_NAME }}" != "KernelSU-Next" ]]; then
+                     cp /tmp/Patches/backport_patches.sh ./
+                     bash backport_patches.sh
+                     if [ "${{ env.FIRST_VERSION }}" -lt 5 ] && [ "${{ env.SECOND_VERSION }}" -lt 10 ]; then
+                         cp /tmp/Patches/Patch/backport_kernel_read_and_kernel_write_to_ksu.patch ./
+                         patch -p1 < backport_kernel_read_and_kernel_write_to_ksu.patch || true
+                         echo "execuated backport patch kernel_read and kernel_read successfully. If you current kernel version < 4.14, then u maybe manual fixed it."
+                     fi
+                     echo "execuated backport patch successfully."
+                   fi
+                else
+                   echo "Cannot found syscall_hook_patches.sh in build project , please check u file existed in build project !"
+                   false
+               fi
+            else
+              echo "please input vaild option!"
+              false
+            fi
+          fi

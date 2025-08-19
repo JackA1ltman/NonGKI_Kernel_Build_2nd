@@ -1,0 +1,223 @@
+name: 'Preparation for the official start of the compilation steps.'
+
+runs:
+  using: 'composite'
+  steps:
+      - name: Get Kernel
+        shell: bash
+        run: |
+          cd $GITHUB_WORKSPACE
+          git clone --recursive "${{ env.KERNEL_SOURCE }}" -b "${{ env.KERNEL_BRANCH }}" device_kernel --depth=1
+
+          # Get KernelSU Version and Kernel Version
+
+          KERNEL_VERSION=$(head -n 3 $GITHUB_WORKSPACE/device_kernel/Makefile | grep -E 'VERSION|PATCHLEVEL' | awk '{print $3}' | paste -sd '.')
+          echo "KERNEL_VERSION=$(head -n 3 device_kernel/Makefile | grep -E 'VERSION|PATCHLEVEL' | awk '{print $3}' | paste -sd '.')" >> $GITHUB_ENV
+          echo "FIRST_VERSION=$(echo "$KERNEL_VERSION" | awk -F '.' '{print $1}')" >> $GITHUB_ENV
+          echo "SECOND_VERSION=$(echo "$KERNEL_VERSION" | awk -F '.' '{print $2}')" >> $GITHUB_ENV
+
+      - name: Get Kernel Arch
+        shell: bash
+        run: |
+          cd $GITHUB_WORKSPACE/device_kernel
+
+          if [[ -d "arch/arm64/configs" ]]; then
+            echo "KERNEL_ARCH=arm64" >> $GITHUB_ENV
+          else
+            echo "KERNEL_ARCH=arm" >> $GITHUB_ENV
+          fi
+
+      - name: Get Packing Tools
+        shell: bash
+        run: |
+          # Set ${{ env.PACK_METHOD }}
+
+          if [[ "${{ env.PACK_METHOD }}" == "Anykernel3" ]]; then
+            cd $GITHUB_WORKSPACE/device_kernel
+            if [[ -d "Anykernel3" ]]; then
+              echo "Found Anykernel3 in Kernel!"
+            else
+              git clone "${{ env.AK3_SOURCE }}" -b "${{ env.AK3_BRANCH }}" Anykernel3 --depth=1
+            fi
+          elif [[ "${{ env.PACK_METHOD }}" == "MKBOOTIMG" ]] || [ "${{ env.DEFCONFIG_FROM_BOOT }}" == "true" ]; then
+            cd $GITHUB_WORKSPACE
+            git clone https://android.googlesource.com/platform/system/tools/mkbootimg $GITHUB_WORKSPACE/mkboottools -b main-kernel-build-2024 --depth=1
+            ${{ env.CURLX }} ${{ env.BOOT_SOURCE }} $GITHUB_WORKSPACE/boot_source_${{ env.DEVICE_NAME }}.img
+            cd device_kernel
+          else
+            echo "Need packing method! "
+            false
+          fi
+          echo "PACK_METHOD=${{ env.PACK_METHOD }}" >> $GITHUB_ENV
+
+      - name: Get DEFCONFIG
+        if: env.DEFCONFIG_SOURCE != '' || env.DEFCONFIG_FROM_BOOT == 'true'
+        shell: bash
+        run: |
+          cd $GITHUB_WORKSPACE/device_kernel
+
+          if [[ -n "${{ env.DEFCONFIG_SOURCE }}" ]]; then
+            if [[ -d "device_kernel/arch/arm64/configs" ]]; then
+                ${{ env.CURLX }} ${{ env.DEFCONFIG_SOURCE }} device_kernel/arch/arm64/configs/${{ env.DEFCONFIG_NAME }}
+            else
+                ${{ env.CURLX }} ${{ env.DEFCONFIG_SOURCE }} device_kernel/arch/arm/configs/${{ env.DEFCONFIG_NAME }}
+            fi
+          elif [[ -z "${{ env.DEFCONFIG_ORIGIN_IMAGE }}" ]]; then
+            if [[ "${{ env.DEFCONFIG_FROM_BOOT }}" == "true" ]]; then
+                if [[ -f "${{ env.BOOT_SOURCE }}" ]]; then
+                    ${{ env.CURLX }} "${{ env.BOOT_SOURCE }}" $GITHUB_WORKSPACE/boot.img
+                    $GITHUB_WORKSPACE/mkboottools/unpack_bootimg.py --boot_img $GITHUB_WORKSPACE/boot.img
+                    mv $GITHUB_WORKSPACE/out/kernel $GITHUB_WORKSPACE/device_kernel/Image
+                    if [[ -d "device_kernel/arch/arm64/configs" ]]; then
+                        $GITHUB_WORKSPACE/device_kernel/scripts/extract-ikconfig $GITHUB_WORKSPACE/device_kernel/Image > $GITHUB_WORKSPACE/device_kernel/arch/arm64/configs/${{ env.DEFCONFIG_NAME }}
+                    else
+                        $GITHUB_WORKSPACE/device_kernel/scripts/extract-ikconfig $GITHUB_WORKSPACE/device_kernel/Image > $GITHUB_WORKSPACE/device_kernel/arch/arm/configs/${{ env.DEFCONFIG_NAME }}
+                    fi
+                fi
+            else
+                ${{ env.CURLX }} "${{ env.DEFCONFIG_ORIGIN_IMAGE }}" $GITHUB_WORKSPACE/device_kernel/Image
+                if [[ -d "device_kernel/arch/arm64/configs" ]]; then
+                    $GITHUB_WORKSPACE/device_kernel/scripts/extract-ikconfig $GITHUB_WORKSPACE/device_kernel/Image > $GITHUB_WORKSPACE/device_kernel/arch/arm64/configs/${{ env.DEFCONFIG_NAME }}
+                else
+                    $GITHUB_WORKSPACE/device_kernel/scripts/extract-ikconfig $GITHUB_WORKSPACE/device_kernel/Image > $GITHUB_WORKSPACE/device_kernel/arch/arm/configs/${{ env.DEFCONFIG_NAME }}
+                fi
+            fi
+          fi
+
+      - name: Set KernelSU and SUSFS
+        shell: bash
+        run: |
+          cd $GITHUB_WORKSPACE/device_kernel
+
+          # Variable
+          SUSFS_SOURCE=https://gitlab.com/simonpunk/susfs4ksu.git
+          SUSFS_BRANCH=kernel-${{ env.KERNEL_VERSION }}
+
+          if [[ ${{ env.KERNELSU_METHOD }} == "shell" ]]; then
+            if [[ "${{ env.KERNELSU_SOURCE }}" != *".sh" ]]; then
+                echo "You need to provide a link ending with .sh, not one ending with .git or any other extension !"
+                false
+            else
+                curl -sSL ${{ env.KERNELSU_SOURCE }} | bash -s ${{ env.KERNELSU_BRANCH }}
+            fi
+          elif [[ ${{ env.KERNELSU_METHOD }} == "manual" ]]; then
+            if [[ "${{ env.KERNELSU_SOURCE }}" != *".git" ]]; then
+                echo "You need to provide a link ending with .git, not one ending with .sh or any other extension !"
+                false
+            else
+                rm -rf KernelSU
+                git clone ${{ env.KERNELSU_SOURCE }} -b ${{ env.KERNELSU_BRANCH }} ${{ env.KERNELSU_NAME }}
+                ln -sf "$(realpath --relative-to="$GITHUB_WORKSPACE/device_kernel/drivers" "$GITHUB_WORKSPACE/device_kernel/${{ env.KERNELSU_NAME }}/kernel")" "kernelsu"
+                grep -q "kernelsu" "$GITHUB_WORKSPACE/device_kernel/drivers/Makefile" || printf "\nobj-\$(CONFIG_KSU) += kernelsu/\n" >> $GITHUB_WORKSPACE/device_kernel/drivers/Makefile
+                grep -q "source \"drivers/kernelsu/Kconfig\"" "$GITHUB_WORKSPACE/device_kernel/drivers/Kconfig" || sed -i "/endmenu/i\source \"drivers/kernelsu/Kconfig\"" "$GITHUB_WORKSPACE/device_kernel/drivers/Kconfig"
+                echo "KernelSU Settings done."
+            fi
+          elif [[ ${{ env.KERNELSU_METHOD }} == "only" ]];then
+            if [[ "${{ env.KERNELSU_SOURCE }}" != *".git" ]]; then
+                echo "You need to provide a link ending with .git, not one ending with .sh or any other extension !"
+                false
+            else
+                rm -rf *KernelSU* && rm -rf drivers/kernelsu
+                git clone ${{ env.KERNELSU_SOURCE }} -b ${{ env.KERNELSU_BRANCH }} ${{ env.KERNELSU_NAME }}
+                ln -sf ../${{ env.KERNELSU_NAME }}/kernel drivers/kernelsu
+                echo "KernelSU git done."
+            fi
+          else
+            false
+          fi
+          echo "KERNELSU_METHOD=${{ env.KERNELSU_METHOD }}" >> $GITHUB_ENV
+
+          # Set SUSFS
+          if [[ "${{ env.SUSFS_ENABLE }}" == true ]]; then
+            if [[ "${{ env.SUSFS_FIXED }}" == true ]]; then
+              if [ -z "${{ env.PATCHES_SOURCE }}" ] || [ -z "${{ env.PATCHES_BRANCH }}" ]; then
+                echo "Please input vaild source and branch!"
+                false
+              elif [[ "${{ env.PATCHES_SOURCE }}" == *".git" ]]; then
+                echo "Please do not set a full URL in PATCH_SOURCE!"
+                false
+              else
+                git clone https://github.com/${{ env.PATCHES_SOURCE }}.git -b ${{ env.PATCHES_BRANCH }} NonGKI_Kernel_Patches --depth=1 # It's not necessary.
+              fi
+            fi
+            git clone $SUSFS_SOURCE -b $SUSFS_BRANCH susfs4ksu --depth=1
+            cp susfs4ksu/kernel_patches/fs/* fs/
+            cp susfs4ksu/kernel_patches/include/linux/* include/linux/
+          else
+            echo "Disabled SUSFS !"
+          fi
+
+      - name: KPM Function Support
+        if: env.KPM_ENABLE == 'true'
+        shell: bash
+        run: |
+          cd $GITHUB_WORKSPACE/device_kernel
+
+          if [[ -d "${{ env.KERNELSU_NAME }}/kernel/kpm" ]]; then
+            if [ -f "include/linux/set_memory.h" ]; then
+                echo "CONFIG_KPM=y" >> ./arch/arm64/configs/${{ env.DEFCONFIG_NAME }}
+                ${{ env.CURLX }} "${{ env.KPM_PATCH_SOURCE }}" patch
+                chmod a+x patch
+                echo "Set KPM successfully !"
+            else
+                if [ "${{ env.FIRST_VERSION }}" -lt 5 ] && [ "${{ env.SECOND_VERSION }}" -lt 10 ]; then
+                    cp /tmp/Patches/Patch/set_memory_to_49_and_low.patch ./
+                    patch -p1 < set_memory_to_49_and_low.patch || true
+                    echo "CONFIG_KPM=y" >> ./arch/arm64/configs/${{ env.DEFCONFIG_NAME }}
+                    ${{ env.CURLX }} "${{ env.KPM_PATCH_SOURCE }}" patch
+                    chmod a+x patch
+                    echo "Patch set_memory successfully !"
+                    echo "If have patch error (.rej), manual fixed it."
+                else
+                    echo "Your kernel cannot support KPM function."
+                    false
+                fi
+            fi
+          else
+            echo "KernelSU cannot support KPM !"
+            false
+          fi
+
+          # Fixed stack frame overflow vulnerability
+          if [[ "${{ env.KPM_FIX }}" == "true" ]]; then
+            cd ${{ env.KERNELSU_NAME }}/kernel/kpm
+            cp /tmp/Patches/Patch/fix_kpm.patch ./
+            patch -p1 < fix_kpm.patch || true
+          fi
+
+      - name: Set KSU and SUSFS for DEFCONFIG
+        shell: bash
+        run: |
+          cd $GITHUB_WORKSPACE/device_kernel
+
+          echo "CONFIG_KSU=y" >> ./arch/${{ env.KERNEL_ARCH }}/configs/${{ env.DEFCONFIG_NAME }}
+          if [[ "${{ env.KERNELSU_SOURCE }}" == *rsuntk* ]] || [[ "${{ env.KERNELSU_SOURCE }}" == *SukiSU* ]]; then
+            echo "CONFIG_KSU_MANUAL_HOOK=y" >> ./arch/${{ env.KERNEL_ARCH }}/configs/${{ env.DEFCONFIG_NAME }}
+          fi
+          if [[ "${{ env.KERNELSU_SOURCE }}" == *SukiSU* ]] && [[ "${{ env.KPM_ENABLE }}" == "true" ]]; then
+            echo "CONFIG_KALLSYMS=y" >> ./arch/${{ env.KERNEL_ARCH }}/configs/${{ env.DEFCONFIG_NAME }}
+            echo "CONFIG_KALLSYMS_ALL=y" >> ./arch/${{ env.KERNEL_ARCH }}/configs/${{ env.DEFCONFIG_NAME }}
+          fi
+          if [[ "${{ env.SUSFS_ENABLE }}" == "true" ]]; then
+            echo "CONFIG_KSU_SUSFS=y" >> ./arch/${{ env.KERNEL_ARCH }}/configs/${{ env.DEFCONFIG_NAME }}
+            echo "CONFIG_KSU_SUSFS_HAS_MAGIC_MOUNT=y" >> ./arch/${{ env.KERNEL_ARCH }}/configs/${{ env.DEFCONFIG_NAME }}
+            echo "CONFIG_KSU_SUSFS_SUS_PATH=y" >> ./arch/${{ env.KERNEL_ARCH }}/configs/${{ env.DEFCONFIG_NAME }}
+            echo "CONFIG_KSU_SUSFS_SUS_MOUNT=y" >> ./arch/${{ env.KERNEL_ARCH }}/configs/${{ env.DEFCONFIG_NAME }}
+            echo "CONFIG_KSU_SUSFS_AUTO_ADD_SUS_KSU_DEFAULT_MOUNT=y" >> ./arch/${{ env.KERNEL_ARCH }}/configs/${{ env.DEFCONFIG_NAME }}
+            echo "CONFIG_KSU_SUSFS_AUTO_ADD_SUS_BIND_MOUNT=y" >> ./arch/${{ env.KERNEL_ARCH }}/configs/${{ env.DEFCONFIG_NAME }}
+            echo "CONFIG_KSU_SUSFS_SUS_KSTAT=y" >> ./arch/${{ env.KERNEL_ARCH }}/configs/${{ env.DEFCONFIG_NAME }}
+            echo "# CONFIG_KSU_SUSFS_SUS_OVERLAYFS is not set" >> ./arch/${{ env.KERNEL_ARCH }}/configs/${{ env.DEFCONFIG_NAME }}
+            echo "CONFIG_KSU_SUSFS_TRY_UMOUNT=y" >> ./arch/${{ env.KERNEL_ARCH }}/configs/${{ env.DEFCONFIG_NAME }}
+            echo "CONFIG_KSU_SUSFS_AUTO_ADD_TRY_UMOUNT_FOR_BIND_MOUNT=y" >> ./arch/${{ env.KERNEL_ARCH }}/configs/${{ env.DEFCONFIG_NAME }}
+            echo "CONFIG_KSU_SUSFS_SPOOF_UNAME=y" >> ./arch/${{ env.KERNEL_ARCH }}/configs/${{ env.DEFCONFIG_NAME }}
+            echo "CONFIG_KSU_SUSFS_ENABLE_LOG=y" >> ./arch/${{ env.KERNEL_ARCH }}/configs/${{ env.DEFCONFIG_NAME }}
+            echo "CONFIG_KSU_SUSFS_HIDE_KSU_SUSFS_SYMBOLS=y" >> ./arch/${{ env.KERNEL_ARCH }}/configs/${{ env.DEFCONFIG_NAME }}
+            echo "CONFIG_KSU_SUSFS_SPOOF_CMDLINE_OR_BOOTCONFIG=y" >> ./arch/${{ env.KERNEL_ARCH }}/configs/${{ env.DEFCONFIG_NAME }}
+            echo "CONFIG_KSU_SUSFS_OPEN_REDIRECT=y" >> ./arch/${{ env.KERNEL_ARCH }}/configs/${{ env.DEFCONFIG_NAME }}
+          fi
+          if [[ "${{ env.LXC_ENABLE }}" == "true" ]]; then
+           echo "CONFIG_VIRTUALIZATION=y" >> ./arch/${{ env.KERNEL_ARCH }}/configs/${{ env.DEFCONFIG_NAME }}
+           echo "CONFIG_KVM=y" >> ./arch/${{ env.KERNEL_ARCH }}/configs/${{ env.DEFCONFIG_NAME }}
+           echo "CONFIG_VHOST_NET=y" >> ./arch/${{ env.KERNEL_ARCH }}/configs/${{ env.DEFCONFIG_NAME }}
+           echo "CONFIG_VHOST_CROSS_ENDIAN_LEGACY=y" >> ./arch/${{ env.KERNEL_ARCH }}/configs/${{ env.DEFCONFIG_NAME }}
+          fi

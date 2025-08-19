@@ -1,0 +1,208 @@
+name: 'Execute the compilation process.'
+
+runs:
+  using: 'composite'
+  steps:
+      - name: Added mkdtboimg to kernel (Experiment)
+        if: env.HAVE_NO_DTBO == 'true' && env.HAVE_NO_DTBO_TOOL != 'true'
+        shell: bash
+        run: |
+          # Get MKDTBO tool to kernel
+          cd $GITHUB_WORKSPACE/device_kernel/scripts/dtc
+          ${{ env.CURLX }} https://android.googlesource.com/platform/system/libufdt/+archive/refs/heads/main/utils/src.tar.gz src.tar.gz
+          tar zxvf src.tar.gz
+          rm -f src.tar.gz
+
+          # Hook dtbo generate code to kernel
+          cd $GITHUB_WORKSPACE/device_kernel
+          sed -i '/targets := Image Image.bz2 Image.gz Image.lz4 Image.lzma Image.lzo/s/$/ dtbo.img/' ./arch/arm64/boot/Makefile
+          sed -i '/# Add RTIC DTB to the DTB list if RTIC MPGen is enabled/i \DTBO_OBJS := $(shell find $(obj)/dts/ -name \\*.dtbo)\n' arch/arm64/boot/Makefile
+          sed -i '/$(obj)\/Image\.gz-dtb: $(obj)\/Image\.gz $(DTB_OBJS) FORCE/a \#DTBO\n$(obj)\/dtbo.img: $(DTBO_OBJS) FORCE\n\t$(call if_changed,mkdtimg)' ./arch/arm64/boot/Makefile
+          sed -i '/KBUILD_DTBS\t:= dtbs/a \#DTBO\nKBUILD_DTBO_IMG := dtbo.img' ./arch/arm64/Makefile
+          sed -i '/PHONY += vdso_install/i \ifeq ($(CONFIG_BUILD_ARM64_DT_OVERLAY),y)\n$(KBUILD_DTBO_IMG): dtbs\n\t$(Q)$(MAKE) $(build)=$(boot) $(boot)/$@\n\nall: $(KBUILD_DTBO_IMG)\nendif' arch/arm64/Makefile
+          sed -i '/dtc-tmp = $(subst $(comma),_,$(dot-target)\.dts\.tmp)/a \#DTBO\n# mkdtimg\n#----------------------------------------------------------------------------\nquiet_cmd_mkdtimg = DTBOIMG $@\ncmd_mkdtimg = python3 $(srctree)\/scripts\/dtc\/mkdtboimg.py create $@ --page_size=4096 $(filter-out FORCE,$^)' ./scripts/Makefile.lib
+
+      - name: Patch Debugger
+        if: env.BUILD_DEBUGGER == 'true'
+        shell: bash
+        run: |
+          cd $GITHUB_WORKSPACE/device_kernel/
+          mapfile -t REJ_FILES < <(find . -type f -name "*.rej")
+          if [ ${#REJ_FILES[@]} -eq 0 ]; then
+            echo "Your kernel have no any rej files."
+          else
+            for CAT_REJ in "${REJ_FILES[@]}"; do
+                echo "Found .rej file: $CAT_REJ"
+                cat $CAT_REJ
+                echo "==========EOF=========="
+            done
+
+            if [[ "${{ env.SKIP_PATCH }}" != "true" ]]; then
+              false
+            fi
+          fi
+
+      - name: Setup ccache
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: build-kernel-${{ env.DEVICE_NAME }}${{ env.UPLOADNAME }}
+          max-size: 2G
+
+      - name: Build Kernel
+        shell: bash
+        run: |
+          if [[ "${{ env.BUILD_OTHER_CONFIG }}" == "true" ]]; then
+            IFS=',' read -ra MERGE_CONFIG_FILES <<< "${{ env.MERGE_CONFIG_FILES }}"
+          fi
+
+          export PATH=$GITHUB_WORKSPACE/clang-custom/bin:$PATH
+          cd $GITHUB_WORKSPACE/device_kernel/
+          if [ -z "${{ env.GCC_32 }}" ] && [ -z "${{ env.GCC_64 }}" ]; then
+            make CC="ccache clang" O=out ARCH=arm64 ${{ env.CUSTOM_CMDS }} ${{ env.EXTRA_CMDS }} ${{ env.DEFCONFIG_NAME }}
+            if [[ "${{ env.BUILD_OTHER_CONFIG }}"  == "true" ]]; then
+                for FILES in "${MERGE_CONFIG_FILES[@]}"; do
+                    ./scripts/kconfig/merge_config.sh -O out/ -m out/.config arch/arm64/configs/$FILES
+                done
+                make CC="ccache clang" O=out ARCH=arm64 ${{ env.CUSTOM_CMDS }} ${{ env.EXTRA_CMDS }} olddefconfig
+            fi
+            make -j$(nproc --all) CC="ccache clang" O=out ARCH=arm64 ${{ env.CUSTOM_CMDS }} ${{ env.EXTRA_CMDS }} 2>&1|tee error.log
+          elif [ -z "${{ env.GCC_32 }}" ]; then
+            make O=out ARCH=arm64 ${{ env.GCC_64 }} ${{ env.DEFCONFIG_NAME }}
+            if [[ "${{ env.BUILD_OTHER_CONFIG }}"  == "true" ]]; then
+                for FILES in "${MERGE_CONFIG_FILES[@]}"; do
+                    ./scripts/kconfig/merge_config.sh -O out/ -m out/.config arch/arm64/configs/$FILES
+                done
+                make O=out ARCH=arm64 ${{ env.GCC_64 }} olddefconfig
+            fi
+            make -j$(nproc --all) O=out ARCH=arm64 ${{ env.GCC_64 }} 2>&1|tee error.log
+          elif [ -z "${{ env.GCC_64 }}" ]; then
+            make O=out ARCH=arm ${{ env.GCC_64 }} ${{ env.DEFCONFIG_NAME }}
+            if [[ "${{ env.BUILD_OTHER_CONFIG }}"  == "true" ]]; then
+                for FILES in "${MERGE_CONFIG_FILES[@]}"; do
+                    ./scripts/kconfig/merge_config.sh -O out/ -m out/.config arch/arm/configs/$FILES
+                done
+                make O=out ARCH=arm ${{ env.GCC_32 }} olddefconfig
+            fi
+            make -j$(nproc --all) O=out ARCH=arm ${{ env.GCC_32 }} 2>&1|tee error.log
+          elif [ -z "${{ env.CLANG_SOURCE }}" ]; then
+            make O=out ARCH=arm64 ${{ env.GCC_64 }} ${{ env.GCC_32 }} ${{ env.DEFCONFIG_NAME }}
+            if [[ "${{ env.BUILD_OTHER_CONFIG }}"  == "true" ]]; then
+                for FILES in "${MERGE_CONFIG_FILES[@]}"; do
+                    ./scripts/kconfig/merge_config.sh -O out/ -m out/.config arch/arm64/configs/$FILES
+                done
+                make O=out ARCH=arm64 ${{ env.GCC_64 }} ${{ env.GCC_32 }} olddefconfig
+            fi
+            make -j$(nproc --all) O=out ARCH=arm64 ${{ env.GCC_64 }} ${{ env.GCC_32 }} 2>&1|tee error.log
+          else
+            make CC="ccache clang" O=out ARCH=arm64 ${{ env.CUSTOM_CMDS }} ${{ env.EXTRA_CMDS }} ${{ env.GCC_64 }} ${{ env.GCC_32 }} ${{ env.DEFCONFIG_NAME }}
+            if [[ "${{ env.BUILD_OTHER_CONFIG }}"  == "true" ]]; then
+                for FILES in "${MERGE_CONFIG_FILES[@]}"; do
+                    ./scripts/kconfig/merge_config.sh -O out/ -m out/.config arch/arm64/configs/$FILES
+                done
+                make CC="ccache clang" O=out ARCH=arm64 ${{ env.CUSTOM_CMDS }} ${{ env.EXTRA_CMDS }} ${{ env.GCC_64 }} ${{ env.GCC_32 }} olddefconfig
+            fi
+            make -j$(nproc --all) CC="ccache clang" O=out ARCH=arm64 ${{ env.CUSTOM_CMDS }} ${{ env.EXTRA_CMDS }} ${{ env.GCC_64 }} ${{ env.GCC_32 }} 2>&1|tee error.log
+          fi
+
+          if grep -q "Error 2" "error.log"; then
+            false
+          fi
+
+          ## Generate DTBO
+          if [ "${{ env.HAVE_NO_DTBO }}" == "true" ] && [ "${{ env.HAVE_NO_DTBO_TOOL }}" == "true" ]; then
+            cd $GITHUB_WORKSPACE/device_kernel
+            mkdir dtbo_tool
+            cd dtbo_tool
+            ${{ env.CURLX }} https://android.googlesource.com/platform/system/libufdt/+archive/master/utils.tar.gz mkdtboimg.tar.gz
+            tar zxvf mkdtboimg.tar.gz
+            cd ../
+            if [ -d "$GITHUB_WORKSPACE/device_kernel/out/arch/arm64/boot/dts/vendor" ]; then
+                python dtbo_tool/src/mkdtboimg.py create $GITHUB_WORKSPACE/device_kernel/out/arch/arm64/boot/dtbo.img $GITHUB_WORKSPACE/device_kernel/out/arch/arm64/boot/dts/vendor/${{ env.GENERATE_CHIP }}/*.dtbo
+            else
+                python dtbo_tool/src/mkdtboimg.py create $GITHUB_WORKSPACE/device_kernel/out/arch/arm64/boot/dtbo.img $GITHUB_WORKSPACE/device_kernel/out/arch/arm64/boot/dts/${{ env.GENERATE_CHIP }}/*.dtbo
+            fi
+          fi
+
+      - name: Analyze compile error
+        if: ${{ failure() && env.BUILD_DEBUGGER == 'true' }}
+        shell: bash
+        run: |
+          cd $GITHUB_WORKSPACE/device_kernel/
+
+          cp /tmp/Bin/check_error.sh ./
+          bash check_error.sh
+
+          if [ -f "have_error" ]; then
+            cp /tmp/Bin/pack_error_files.sh ./
+            bash pack_error_files.sh
+            false
+          else
+            echo "Skipped."
+          fi
+
+      - name: KPM Patcher (Experiment)
+        if: env.KPM_ENABLE == 'true'
+        shell: bash
+        run: |
+          cd $GITHUB_WORKSPACE/device_kernel/
+          IMAGE_DIR="$GITHUB_WORKSPACE/device_kernel/out/arch/arm64/boot"
+
+          if [[ -f "$IMAGE_DIR/Image.gz-dtb" ]]; then
+              MODE="gz-dtb"
+          elif [[ -f "$IMAGE_DIR/Image.gz" ]]; then
+              MODE="gz"
+          elif [[ -f "$IMAGE_DIR/Image" ]]; then
+              MODE="plain"
+          else
+              echo "No valid Image file found."
+              exit 1
+          fi
+
+          case "$MODE" in
+            gz-dtb)
+              if [ -f "include/linux/set_memory.h" ]; then
+                  if [ -d "out/arch/arm64/boot/dts" ]; then
+                      rm -f "$IMAGE_DIR/Image.gz-dtb" "$IMAGE_DIR/Image.gz"
+                      cp patch "$IMAGE_DIR/"
+                      cd "$IMAGE_DIR/" || exit 1
+                      ./patch
+                      rm -f Image
+                      mv oImage Image
+                      gzip -c Image > Image.gz
+                      cat Image.gz dts/${{ env.GENERATE_CHIP }}/*.dtb > Image.gz-dtb
+                      echo "Hook Image successfully !"
+                  elif [ -d "out/arch/arm64/boot/vendor/dts" ]; then
+                      rm -f "$IMAGE_DIR/Image.gz-dtb" "$IMAGE_DIR/Image.gz"
+                      cp patch "$IMAGE_DIR/"
+                      cd "$IMAGE_DIR/" || exit 1
+                      ./patch
+                      rm -f Image
+                      mv oImage Image
+                      gzip -c Image > Image.gz
+                      cat Image.gz vendor/dts/${{ env.GENERATE_CHIP }}/*.dtb > Image.gz-dtb
+                      echo "Hook Image successfully !"
+                  else
+                      echo "Not found dts folder, abort."
+                  fi
+              else
+                  echo "Not supported for your kernel !"
+              fi
+              ;;
+            gz)
+              rm -f "$IMAGE_DIR/Image.gz"
+              cp patch "$IMAGE_DIR/"
+              cd "$IMAGE_DIR/" || exit 1
+              ./patch
+              rm -f Image
+              mv oImage Image
+              gzip -c Image > Image.gz
+              echo "Hook Image successfully !"
+              ;;
+            plain)
+              cp patch "$IMAGE_DIR/"
+              cd "$IMAGE_DIR/" || exit 1
+              ./patch
+              mv oImage Image
+              echo "Hook Image successfully !"
+              ;;
+          esac

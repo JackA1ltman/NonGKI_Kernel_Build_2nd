@@ -1,0 +1,219 @@
+name: 'Set up the system environment for compilation.'
+
+runs:
+  using: 'composite'
+  steps:
+      - name: Check System OS
+        shell: bash
+        run: |
+          lsb_release -a
+          . /etc/os-release
+
+          if [ "$ID" = "ubuntu" ]; then
+              if [ "$VERSION_ID" = "20.04" ]; then
+                  echo "SYSTEM_VERSION=oldest" >> $GITHUB_ENV
+              elif [ "$VERSION_ID" = "22.04" ]; then
+                  echo "SYSTEM_VERSION=older" >> $GITHUB_ENV
+              elif [ "$VERSION_ID" = "24.04" ]; then
+                  echo "SYSTEM_VERSION=newer" >> $GITHUB_ENV
+              else
+                  echo "Not Supported: $VERSION_ID"
+                  false
+              fi
+          elif [ "$ID" = "arch" ]; then
+              echo "SYSTEM_VERSION=arch" >> $GITHUB_ENV
+          else
+              echo "Not Supported: $PRETTY_NAME"
+              false
+          fi
+
+      - name: Remove useless tools
+        if: env.SYSTEM_VERSION == 'newer'
+        shell: bash
+        run: |
+          sudo rm -rf /opt/hostedtoolcache
+          df -h
+
+      - name: Move Patch and Tools
+        shell: bash
+        run: |
+          # Move patch folder to tmp
+          mv $GITHUB_WORKSPACE/Patches /tmp/
+
+          # Set curlx
+          mv $GITHUB_WORKSPACE/Bin /tmp/
+          chmod 777 /tmp/Bin/curlx.sh
+          echo "CURLX=/tmp/Bin/curlx.sh" >> $GITHUB_ENV
+
+      - name: Install necessary packages
+        shell: bash
+        run: |
+          if [ "${{ env.SYSTEM_VERSION }}" == "oldest" ]; then
+            apt-get update
+            apt-get install git ccache automake flex lzop bison gperf build-essential zip curl zlib1g-dev g++-multilib libxml2-utils bzip2 libbz2-dev libbz2-1.0 libghc-bzlib-dev squashfs-tools pngcrush schedtool dpkg-dev liblz4-tool make optipng maven libssl-dev pwgen libswitch-perl policycoreutils minicom libxml-sax-base-perl libxml-simple-perl bc libc6-dev-i386 lib32ncurses5-dev libx11-dev lib32z-dev libgl1-mesa-dev xsltproc unzip device-tree-compiler wget curl cpio -y
+            apt-get install p7zip p7zip-full -y
+            apt-get install libtinfo5 -y
+            if [ "${{ env.PYTHON_VERSION }}" == "3" ]; then
+                apt install python2 python3 -y
+                rm -rf /usr/bin/python
+                ln -s /usr/bin/python3 /usr/bin/python
+            elif [ "${{ env.PYTHON_VERSION }}" == "2" ]; then
+                apt install python2 -y
+                rm -rf /usr/bin/python
+                ln -s /usr/bin/python2.7 /usr/bin/python
+            else
+                echo "You need choose a python version."
+                false
+            fi
+          elif [ "${{ env.SYSTEM_VERSION }}" == "older" ]; then
+            sudo apt-get update
+            sudo apt-get install git ccache automake flex lzop bison gperf build-essential zip curl zlib1g-dev g++-multilib libxml2-utils bzip2 libbz2-dev libbz2-1.0 libghc-bzlib-dev squashfs-tools pngcrush schedtool dpkg-dev liblz4-tool make optipng maven libssl-dev pwgen libswitch-perl policycoreutils minicom libxml-sax-base-perl libxml-simple-perl bc libc6-dev-i386 lib32ncurses5-dev libx11-dev lib32z-dev libgl1-mesa-dev xsltproc unzip device-tree-compiler wget curl cpio -y
+            sudo apt-get install p7zip p7zip-full -y
+            sudo apt-get install libtinfo5 -y
+            if [ "${{ env.PYTHON_VERSION }}" == "3" ]; then
+                sudo apt install python2 python3 -y
+                sudo rm -rf /usr/bin/python
+                sudo ln -s /usr/bin/python3 /usr/bin/python
+            elif [ "${{ env.PYTHON_VERSION }}" == "2" ]; then
+                sudo apt install python2 -y
+                sudo rm -rf /usr/bin/python
+                sudo ln -s /usr/bin/python2.7 /usr/bin/python
+            else
+                echo "You need choose a python version."
+                false
+            fi
+          elif [ "${{ env.SYSTEM_VERSION }}" == "newer" ]; then
+            sudo apt update
+            sudo apt install git ccache automake flex lzop bison gperf build-essential zip curl zlib1g-dev g++-multilib libxml2-utils bzip2 libbz2-dev libbz2-1.0 libghc-bzlib-dev squashfs-tools pngcrush schedtool dpkg-dev make optipng maven libssl-dev pwgen libswitch-perl policycoreutils minicom libxml-sax-base-perl libxml-simple-perl bc libc6-dev-i386 libx11-dev lib32z-dev libgl1-mesa-dev xsltproc unzip device-tree-compiler python3 cpio -y
+            sudo apt-get install zstd libc6 binutils libc6-dev-i386 gcc g++ p7zip p7zip-full -y
+
+            # Install Libtinfo5
+            ${{ env.CURLX }} http://launchpadlibrarian.net/580830584/libtinfo5_6.3-2_amd64.deb libtinfo5.deb
+            sudo apt install ./libtinfo5.deb
+            rm -f libtinfo5.deb
+          elif [ "${{ env.SYSTEM_VERSION }}" == "arch" ]; then
+            pacman -Syyu --noconfirm
+            pacman -S git base-devel systemd wget rustup curl patch ccache automake flex lzop bison gperf zip curl bzip2 squashfs-tools pngcrush schedtool make optipng maven pwgen minicom bc unzip 7zip zstd binutils gcc python3 wget which libxml2-legacy cpio --noconfirm
+
+            # Update Rust Toolchain
+            rustup default stable
+          else
+            echo "Your system os cannot supported."
+          fi
+
+      - name: Install GNU GCC
+        if: env.GCC_GNU == 'true'
+        shell: bash
+        run: |
+          if [ -z ${{ env.GCC_64_SOURCE }} ] && [ -z ${{ env.GCC_32_SOURCE }} ]; then
+                if [ "${{ env.SYSTEM_VERSION }}" == "arch" ] || [ "${{ env.SYSTEM_VERSION }}" == "newer" ]; then
+                    sudo apt-get install binutils-aarch64-linux-gnu gcc-aarch64-linux-gnu gcc-arm-linux-gnueabi -y
+                    echo "GCC_64=CROSS_COMPILE=aarch64-linux-gnu-" >> $GITHUB_ENV
+                    echo "GCC_32=CROSS_COMPILE_ARM32=arm-linux-gnueabi-" >> $GITHUB_ENV
+                elif [ "${{ env.SYSTEM_VERSION }}" == "arch" }} ]; then
+                    pacman -S aarch64-linux-gnu-binutils aarch64-linux-gnu-gcc aarch64-linux-gnu-glibc aarch64-linux-gnu-linux-api-headers aarch64-linux-gnu-glibc --noconfirm
+                    pacman -S arm-none-eabi-binutils arm-none-eabi-gcc arm-none-eabi-newlib --noconfirm
+                    echo "GCC_64=CROSS_COMPILE=aarch64-linux-gnu-" >> $GITHUB_ENV
+                    echo "GCC_32=CROSS_COMPILE_ARM32=arm-none-eabi-" >> $GITHUB_ENV
+                else
+                    echo "Your system os cannot supported."
+                fi
+          else
+            echo "You needn't gcc powered by system."
+          fi
+
+      - name: Set Compile Environment
+        shell: bash
+        run: |
+          cd $GITHUB_WORKSPACE
+
+          # Copy Shell
+          cp /tmp/Bin/found_gcc.sh ./
+
+          # Set GCC Aarch64
+          if [[ "${{ env.CLANG_SOURCE }}" == *proton* ]]; then
+            echo "Detected Proton Clang. Not use GCC Source."
+            GCC_64_BIN=aarch64-linux-gnu-
+            echo "GCC_64=CROSS_COMPILE=$GCC_64_BIN" >> $GITHUB_ENV
+          elif [ -z "${{ env.GCC_64_SOURCE }}" ]; then
+            echo "Not set GCC 64!"
+          else
+            if [[ "${{ env.GCC_64_SOURCE }}" == *".git" ]]; then
+              git clone ${{ env.GCC_64_SOURCE }} -b ${{ env.GCC_64_BRANCH }} gcc-64 --depth=1
+            fi
+            if [[ "${{ env.GCC_64_SOURCE }}" == *'.tar.gz' ]]; then
+              ${{ env.CURLX }} ${{ env.GCC_64_SOURCE }} gcc-64.tar.gz
+              mkdir gcc-64
+              tar -C gcc-64/ -zxvf gcc-64.tar.gz
+            fi
+            if [[ "${{ env.GCC_64_SOURCE }}" == *'.tar.xz' ]]; then
+              ${{ env.CURLX }} ${{ env.GCC_64_SOURCE }} gcc-64.tar.xz
+              mkdir gcc-64
+              tar -C gcc-64/ -xvf gcc-64.tar.xz --strip-components 1
+            fi
+            if [[ "${{ env.GCC_64_SOURCE }}" == *'.zip' ]]; then
+              ${{ env.CURLX }} ${{ env.GCC_64_SOURCE }} gcc-64.zip
+              mkdir gcc-64
+              unzip gcc-64.zip -d gcc-64/
+            fi
+            bash found_gcc.sh GCC_64
+          fi
+
+
+          # Set GCC ARM32
+          if [[ "${{ env.CLANG_SOURCE }}" == *proton* ]]; then
+            echo "Detected Proton Clang. Not use GCC Source."
+            GCC_32_BIN=arm-linux-gnueabi-
+            echo "GCC_32=CROSS_COMPILE_ARM32=$GCC_32_BIN" >> $GITHUB_ENV
+          elif [ -z "${{ env.GCC_32_SOURCE }}" ]; then
+            echo "Not set GCC 32!"
+          else
+            if [[ "${{ env.GCC_32_SOURCE }}" == *".git" ]]; then
+              git clone ${{ env.GCC_32_SOURCE }} -b ${{ env.GCC_32_BRANCH }} gcc-32 --depth=1
+            fi
+            if [[ "${{ env.GCC_32_SOURCE }}" == *'.tar.gz' ]]; then
+              ${{ env.CURLX }} ${{ env.GCC_32_SOURCE }} gcc-32.tar.gz
+              mkdir gcc-32
+              tar -C gcc-32/ -zxvf gcc-32.tar.gz
+            fi
+            if [[ "${{ env.GCC_32_SOURCE }}" == *'.tar.xz' ]]; then
+              ${{ env.CURLX }} ${{ env.GCC_32_SOURCE }} gcc-32.tar.xz
+              mkdir gcc-32
+              tar -C gcc-32/ -xvf gcc-32.tar.xz --strip-components 1
+            fi
+            if [[ "${{ env.GCC_32_SOURCE }}" == *'.zip' ]]; then
+              ${{ env.CURLX }} ${{ env.GCC_32_SOURCE }} gcc-32.zip
+              mkdir gcc-32
+              unzip gcc-32.zip -d gcc-32/
+            fi
+            if [ -z "${{ env.GCC_64_SOURCE }}" ]; then
+                bash found_gcc.sh GCC_32_ONLY
+            else
+                bash found_gcc.sh GCC_32
+            fi
+          fi
+
+          # Set Clang
+          if [[ "${{ env.CLANG_SOURCE }}" == *".git" ]]; then
+            git clone ${{ env.CLANG_SOURCE }} -b ${{ env.CLANG_BRANCH }} clang-custom --depth=1
+          elif [[ "${{ env.CLANG_SOURCE }}" == *'.tar.gz' ]]; then
+            ${{ env.CURLX }} ${{ env.CLANG_SOURCE }} clang.tar.gz
+            mkdir clang-custom
+            tar -C clang-custom/ -zxvf clang.tar.gz
+          elif [[ "${{ env.CLANG_SOURCE }}" == *'.tar.xz' ]]; then
+            ${{ env.CURLX }} ${{ env.CLANG_SOURCE }} clang.tar.xz
+            mkdir clang-custom
+            tar -C clang-custom/ -xvf clang.tar.xz --strip-components 1
+          elif [[ "${{ env.CLANG_SOURCE }}" == *'.zip' ]]; then
+            ${{ env.CURLX }} ${{ env.CLANG_SOURCE }} clang.zip
+            mkdir clang-custom
+            unzip clang.zip -d clang-custom/
+          elif [[ "${{ env.CLANG_SOURCE }}" == *"antman" ]]; then
+            mkdir clang-custom
+            cd clang-custom
+            ${{ env.CURLX }} ${{ env.CLANG_SOURCE }} antman
+            chmod +x antman
+            bash antman -S
+          else
+            echo "You needn't clang!"
+          fi

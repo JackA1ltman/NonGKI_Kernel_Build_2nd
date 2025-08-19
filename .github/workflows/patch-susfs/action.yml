@@ -1,0 +1,105 @@
+name: 'Patch SuSFS for Kernel.'
+
+runs:
+  using: 'composite'
+  steps:
+      - name: Patch SuSFS
+        if: env.SUSFS_ENABLE == 'true'
+        shell: bash
+        run: |
+          cd $GITHUB_WORKSPACE/device_kernel/
+          cp susfs4ksu/kernel_patches/50_add_susfs_in_kernel-${{ env.KERNEL_VERSION }}.patch ./
+
+          patch -p1 < 50_add_susfs_in_kernel-${{ env.KERNEL_VERSION }}.patch || true
+
+      - name: SUSFS Patch Fixed
+        if: env.SUSFS_ENABLE == 'true'
+        shell: bash
+        run: |
+          cd $GITHUB_WORKSPACE/device_kernel/
+
+          if [[ -z "${{ env.SUSFS_155_FIXED }}" ]]; then
+            echo "Your doesn't powered any patch file."
+          else
+            IFS=',' read -ra FIXED_LIST <<< "${{ env.SUSFS_155_FIXED }}"
+            echo "<<<<<<<<<<<<<<<<<<<<<>>>>>>>>>>>>>>>>>>>>>>>>>>"
+            for i in "${!FIXED_LIST[@]}"; do
+              echo "Patching -> ${FIXED_LIST[$i]}"
+              if [[ -z "${{ env.SUSFS_FOLDER_FIXED }}" ]]; then
+                cp NonGKI_Kernel_Patches/${FIXED_LIST[$i]}.patch ./
+              else
+                cp NonGKI_Kernel_Patches/"${{ env.SUSFS_FOLDER_FIXED }}"/${FIXED_LIST[$i]}.patch ./
+              fi
+              patch -p1 < ${FIXED_LIST[$i]}.patch || true
+              echo "Patch fine!"
+              echo "<<<<<<<<<<<<<<<<<<<<<>>>>>>>>>>>>>>>>>>>>>>>>>>"
+            done
+          fi
+
+      - name: Updated SUSFS Version
+        if: env.SUSFS_ENABLE == 'true' && env.SUSFS_UPDATE == 'true'
+        shell: bash
+        run: |
+          cd $GITHUB_WORKSPACE/device_kernel/
+
+          # Upgrade 1.5.7
+          cp /tmp/Patches/Patch/susfs_upgrade_to_157.patch ./
+
+          patch -p1 < susfs_upgrade_to_157.patch || true
+
+          # Upgrade 1.5.8
+          if grep -q "CONFIG_KSU" "fs/exec.c"; then
+            cp /tmp/Patches/Patch/susfs_upgrade_to_158_${{ env.KERNEL_VERSION }}.patch ./
+            patch -p1 < susfs_upgrade_to_158_${{ env.KERNEL_VERSION }}.patch || true
+            echo "Detected no-kprobe hook, use no-kprobe patch."
+          elif [[ "${{ env.KERNEL_VERSION }}" == "5.4" ]]; then
+            cp /tmp/Patches/Patch/susfs_upgrade_to_158_5.4_kprobe.patch ./
+            patch -p1 < susfs_upgrade_to_158_5.4_kprobe.patch || true
+            echo "Cannot detected no-kprobe hook in kernel 5.4, use kprobe patch."
+          else
+            echo "kernel version<5.4 cannot use kprobe patch."
+          fi
+          ## Fixed ZYGOTE_ISO error
+          sed -i '/#define CMD_SUSFS_HIDE_SUS_MNTS_FOR_ALL_PROCS 0x55561/a \#define CMD_SUSFS_UMOUNT_FOR_ZYGOTE_ISO_SERVICE 0x55562' include/linux/susfs_def.h
+
+          # Upgrade 1.5.9
+          cp /tmp/Patches/Patch/susfs_upgrade_to_159.patch ./
+
+          patch -p1 < susfs_upgrade_to_159.patch || true
+
+          # Upgrade 1.5.10
+          if grep -q "CONFIG_KSU" "fs/exec.c"; then
+            cp /tmp/Patches/Patch/susfs_upgrade_to_1510_${{ env.KERNEL_VERSION }}.patch ./
+            patch -p1 < susfs_upgrade_to_1510_${{ env.KERNEL_VERSION }}.patch || true
+            echo "Detected no-kprobe hook, use no-kprobe patch to update 1.5.10."
+          elif [[ "${{ env.KERNEL_VERSION }}" == "5.4" ]]; then
+            cp /tmp/Patches/Patch/susfs_upgrade_to_1510_5.4_kprobe.patch ./
+            patch -p1 < susfs_upgrade_to_1510_5.4_kprobe.patch || true
+            echo "Cannot detected no-kprobe hook in kernel 5.4, use kprobe patch to update 1.5.10."
+          else
+            echo "kernel version<5.4 cannot use kprobe patch to update 1.5.10."
+          fi
+
+      - name: Updated SUSFS Patch Fixed
+        if: env.SUSFS_ENABLE == 'true' && env.SUSFS_UPDATE == 'true'
+        shell: bash
+        run: |
+          cd $GITHUB_WORKSPACE/device_kernel/
+
+          if [[ -z "${{ env.SUSFS_LATEST_FIXED }}" ]]; then
+            echo "Your doesn't powered any patch file."
+          else
+            IFS=',' read -ra FIXED_LIST <<< "${{ env.SUSFS_LATEST_FIXED }}"
+            echo "<<<<<<<<<<<<<<<<<<<<<>>>>>>>>>>>>>>>>>>>>>>>>>>"
+            for i in "${!FIXED_LIST[@]}"; do
+              echo "Patching -> ${FIXED_LIST[$i]}"
+              if [[ -z "${{ env.SUSFS_FOLDER_FIXED }}" ]]; then
+                cp NonGKI_Kernel_Patches/${FIXED_LIST[$i]}.patch ./
+              else
+                cp NonGKI_Kernel_Patches/"${{ env.SUSFS_FOLDER_FIXED }}"/${FIXED_LIST[$i]}.patch ./
+              fi
+              patch -p1 < ${FIXED_LIST[$i]}.patch || true
+              echo "Patch fine!"
+              echo "<<<<<<<<<<<<<<<<<<<<<>>>>>>>>>>>>>>>>>>>>>>>>>>"
+            done
+          fi
