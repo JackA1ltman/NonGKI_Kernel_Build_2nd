@@ -1,0 +1,109 @@
+--- a/kpm.c	2025-06-23 23:50:08.000000000 +0800
++++ b/kpm.c	2025-06-23 23:53:20.538833061 +0800
+@@ -44,20 +44,20 @@
+ #include "kpm.h"
+ #include "compact.h"
+ 
+-#ifndef NO_OPTIMIZE
+-#if defined(__GNUC__) && !defined(__clang__)
+-    #define NO_OPTIMIZE __attribute__((optimize("O0")))
+-#elif defined(__clang__)
+-    #define NO_OPTIMIZE __attribute__((optnone))
+-#else
+-    #define NO_OPTIMIZE
+-#endif
+-#endif
++//#ifndef NO_OPTIMIZE
++//#if defined(__GNUC__) && !defined(__clang__)
++//    #define NO_OPTIMIZE __attribute__((optimize("O0")))
++//#elif defined(__clang__)
++//    #define NO_OPTIMIZE __attribute__((optnone))
++//#else
++//    #define NO_OPTIMIZE
++//#endif
++//#endif
+ 
+ // ============================================================================================
+ 
+-noinline
+-NO_OPTIMIZE
++//noinline
++//NO_OPTIMIZE
+ void sukisu_kpm_load_module_path(const char* path, const char* args, void* ptr, void __user* result) {
+     // This is a KPM module stub.
+     int res = -1;
+@@ -66,8 +66,8 @@
+     if(copy_to_user(result, &res, sizeof(res)) < 1) printk("KPM: Copy to user faild.");
+ }
+ 
+-noinline
+-NO_OPTIMIZE
++//noinline
++//NO_OPTIMIZE
+ void sukisu_kpm_unload_module(const char* name, void* ptr, void __user* result) {
+     // This is a KPM module stub.
+     int res = -1;
+@@ -76,8 +76,8 @@
+     if(copy_to_user(result, &res, sizeof(res)) < 1) printk("KPM: Copy to user faild.");
+ }
+ 
+-noinline
+-NO_OPTIMIZE
++//noinline
++//NO_OPTIMIZE
+ void sukisu_kpm_num(void __user* result) {
+     // This is a KPM module stub.
+     int res = 0;
+@@ -86,8 +86,8 @@
+     if(copy_to_user(result, &res, sizeof(res)) < 1) printk("KPM: Copy to user faild.");
+ }
+ 
+-noinline
+-NO_OPTIMIZE
++//noinline
++//NO_OPTIMIZE
+ void sukisu_kpm_info(const char* name, void __user* out, void __user* result) {
+     // This is a KPM module stub.
+     int res = -1;
+@@ -96,8 +96,8 @@
+     if(copy_to_user(result, &res, sizeof(res)) < 1) printk("KPM: Copy to user faild.");
+ }
+ 
+-noinline
+-NO_OPTIMIZE
++//noinline
++//NO_OPTIMIZE
+ void sukisu_kpm_list(void __user* out, unsigned int bufferSize, void __user* result) {
+     // This is a KPM module stub.
+     int res = -1;
+@@ -105,8 +105,8 @@
+     if(copy_to_user(result, &res, sizeof(res)) < 1) printk("KPM: Copy to user faild.");
+ }
+ 
+-noinline
+-NO_OPTIMIZE
++//noinline
++//NO_OPTIMIZE
+ void sukisu_kpm_control(void __user* name, void __user* args, void __user* result) {
+     // This is a KPM module stub.
+     int res = -1;
+@@ -115,8 +115,8 @@
+     if(copy_to_user(result, &res, sizeof(res)) < 1) printk("KPM: Copy to user faild.");
+ }
+ 
+-noinline
+-NO_OPTIMIZE
++//noinline
++//NO_OPTIMIZE
+ void sukisu_kpm_version(void __user* out, unsigned int bufferSize, void __user* result) {
+     int res = -1;
+     printk("KPM: Stub function called (sukisu_kpm_version). buffer=%p size=%d\n", out, bufferSize);
+@@ -131,7 +131,7 @@
+ EXPORT_SYMBOL(sukisu_kpm_version);
+ EXPORT_SYMBOL(sukisu_kpm_control);
+ 
+-noinline
++//noinline
+ int sukisu_handle_kpm(unsigned long arg2, unsigned long arg3, unsigned long arg4, unsigned long arg5)
+ {
+     if(arg2 == SUKISU_KPM_LOAD) {

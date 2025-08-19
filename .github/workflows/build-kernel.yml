@@ -1,0 +1,41 @@
+name: Build Kernel
+
+permissions:
+  contents: write
+  actions: write
+
+on:
+  workflow_call:
+
+jobs:
+  # OPPO
+  ## Oneplus
+  build-oneplus-8-series-oos13-a13-xtd:
+    name: "Onelus 8 Series (OxygenOS 13 A13) (XTD Kernel)"
+    strategy:
+      fail-fast: true
+    uses: ./.github/workflows/build-oneplus-8-series-oos13-a13-xtd.yml
+    secrets: inherit
+
+  # Xiaomi
+  build-xiaomi-mix2s-evox10-a15:
+    name: "Xiaomi Mix2s (Evolution X 10 A15)"
+    strategy:
+      fail-fast: true
+    uses: ./.github/workflows/build-xiaomi-mix2s-evox10-a15.yml
+    secrets: inherit
+
+  build-xiaomi-11ultra-hyperos-a14:
+    name: "Xiaomi 11 Ultra (HyperOS A14)"
+    strategy:
+      fail-fast: true
+    uses: ./.github/workflows/build-xiaomi-11ultra-hyperos-a14.yml
+    secrets: inherit
+
+  ## Redmi
+  build-redmi-k20pro-aosp-a15-sovietstaross:
+    name: "Redmi K20 Pro (Soviet-Star-OSS)(Based-AOSP A15)"
+    strategy:
+      fail-fast: true
+    uses: ./.github/workflows/build-redmi-k20pro-aosp-a15-sovietstaross.yml
+    secrets: inherit

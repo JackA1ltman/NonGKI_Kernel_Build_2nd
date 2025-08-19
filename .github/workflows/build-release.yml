@@ -1,0 +1,135 @@
+name: Build and Release Kernel
+
+permissions:
+  contents: write
+  actions: write
+
+on:
+  workflow_dispatch:
+    inputs:
+      build-kernel:
+        description: 'Build Kernel ?'
+        required: true
+        type: boolean
+        default: true
+
+      release-kernel:
+        description: 'Release Kernel ?'
+        required: true
+        type: boolean
+        default: true
+
+    schedule:
+        - cron: '0 3 * * 3'
+
+jobs:
+  build-kernel:
+    name: "Step Build Kernel"
+    uses: ./.github/workflows/build-kernel.yml
+    secrets: inherit
+    strategy:
+      fail-fast: true
+    if: ${{ inputs.build-kernel }}
+
+  release-kernel:
+    name: "Step Release Kernel"
+    runs-on: ubuntu-latest
+    needs:
+      - build-kernel
+    if: ${{ inputs.release-kernel }}
+    env:
+      REPO_OWNER: JackA1ltman
+      REPO_NAME: NonGKI_Kernel_Build
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      RELEASE_NAME: "Pre-built"
+      RELEASE_NOTES: |
+        Below is the codename reference table. Please select the image or archive you need based on this table.
+
+        | Device Name | Codename | Kernel | System | Android | Method | KernelSU | SuSFS | Re:Kernel | Syscall |
+        |----------|----------|----------|----------|----------|----------|----------|----------|----------|----------|
+        | OnePlus 8 | instantnoodle | 4.19 | OxygenOS 13.1 | 13 | AnyKernel3 | Magic | ✅ | ❌ | ❌ |
+        | Xiaomi Mix2s | polaris | 4.9 | Evolution X 10.X | 15 | AnyKernel3 | SukiSU(U) | ✅ | ✅ | ❌ |
+        | Xiaomi 11 Ultra | star | 5.4 | HyperOS | 14 | AnyKernel3 | rsuntk | ✅ | ❌ | ✅ |
+        | Redmi K20 Pro | raphael | 4.14 | Based-AOSP | 15 | AnyKernel3 | rsuntk | ✅ | ❌ | ✅ |
+
+        - Specific device information: [Supported List](Supported_list.md).
+        - The KernelSU version is for reference only. It is normal for the KernelSU version embedded in SUSFS to be lower.
+
+    steps:
+      # Checkout the code
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Download Artifacts for A12 (Only if A12 Build is successful or input is true or empty)
+      - name: Download Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: ./downloaded-artifacts
+
+      # Get the Latest Tag from GitHub
+      - name: Generate and Create New Tag
+        run: |
+          # Fetch the latest tag from GitHub (this is the latest tag based on the GitHub API)
+          LATEST_TAG=$(gh api repos/$REPO_OWNER/$REPO_NAME/tags --jq '.[0].name')
+          if [ -z "$LATEST_TAG" ]; then
+            LATEST_TAG="0000000001" # if have no any releases.
+          fi
+
+          NEW_TAG=$(date +%s)
+
+          # Output the new tag to be used
+          echo "New tag: $NEW_TAG"
+
+          # Set the new tag as an environment variable to be used in later steps
+          TIME=$(date +"%Y-%m-%d %H:%M")
+          echo "TIME=$TIME" >> $GITHUB_ENV
+          echo "NEW_TAG=${NEW_TAG}" >> $GITHUB_ENV
+
+          # Create the tag in the repository
+          git tag $NEW_TAG
+          git push --tags
+
+          # Get KernelSU version
+          git clone -b master https://github.com/backslashxx/KernelSU.git KernelSU-Magic
+          KSU_MAGIC_VERSION=$(cd KernelSU-Magic && expr $(/usr/bin/git rev-list --count HEAD) + 10200 - 32)
+          git clone -b main https://github.com/rsuntk/KernelSU.git KernelSU-rsuntk
+          KSU_RSUNTK_VERSION=$(cd KernelSU-rsuntk && expr $(/usr/bin/git rev-list --count HEAD) + 10200)
+          git clone -b nongki https://github.com/ShirkNeko/SukiSU-Ultra.git KernelSU-SukiSU-Ultra
+          KSU_SUKISU_ULTRA_VERSION=$(cd KernelSU-SukiSU-Ultra && expr $(/usr/bin/git rev-list --count HEAD) + 10200)
+
+          # Input release note
+          echo "RELEASE_NOTES<<EOF" >> $GITHUB_ENV
+          echo "$RELEASE_NOTES" >> $GITHUB_ENV
+          echo "[KernelSU-Magic](https://github.com/backslashxx/KernelSU) Version: $KSU_MAGIC_VERSION  " >> $GITHUB_ENV
+          echo "[KernelSU-rsuntk](https://github.com/rsuntk/KernelSU) Version: $KSU_RSUNTK_VERSION  " >> $GITHUB_ENV
+          echo "[KernelSU-SukiSU-Ultra](https://github.com/ShirkNeko/SukiSU-Ultra) Version: $KSU_SUKISU_ULTRA_VERSION  " >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+      # Create GitHub Release and upload files if make_release is true
+      - name: Create GitHub Release
+        uses: actions/create-release@v1
+        with:
+          tag_name: ${{ env.NEW_TAG }}
+          prerelease: false
+          release_name: "${{ env.RELEASE_NAME }} ${{ env.TIME }}"
+          body: ${{ env.RELEASE_NOTES }}
+
+      - name: Upload Release Assets Dynamically
+        run: |
+          # Loop through all files in the downloaded-artifacts directory
+          for file in ./downloaded-artifacts/Kernel-*/*; do
+              # Skip directories
+              if [ -d "$file" ]; then
+                  continue
+              fi
+
+              # Upload the file to the GitHub release
+              echo "Uploading $file..."
+              gh release upload ${{ env.NEW_TAG }} "$file"
+          done
+
+      # Display Files Uploaded
+      - name: Display Files Uploaded
+        run: |
+          echo "GitHub release created with the following files:"
+          ls ./downloaded-artifacts/**/*
