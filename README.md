@@ -70,4 +70,5 @@ It also aims to provide an easier compilation process using **GitHub Actions**, 
   - [Magic](https://github.com/backslashxx/KernelSU) - @backslashxx
   - [SukiSU-Ultra](https://github.com/SukiSU-Ultra/SukiSU-Ultra) - @ShirkNeko
 - [SuSFS](https://gitlab.com/simonpunk/susfs4ksu) - @simonpunk
+- [Re:Kernel](https://github.com/Sakion-Team/Re-Kernel) - @Sakion-Team
 - And to more open-source kernel authors.
