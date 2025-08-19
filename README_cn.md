@@ -1,7 +1,7 @@
 <h2 align="center">Non-GKI 内核自动化编译项目</h2>
 
 <p align="center">
-  <a href="README.md">English</a> | 中文说明 | <a href="Supported_list.md">支持列表</a>
+  <a href="README.md">English</a> | 中文说明 | <a href="Supported_list.md">支持列表</a> | <a href="https://github.com/JackA1ltman/NonGKI_Kernel_Build_2nd/wiki">Wiki</a>
 </p>
 
 > [!NOTE]
