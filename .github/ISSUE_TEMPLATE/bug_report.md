@@ -1,13 +1,16 @@
-name: Bug Report
+---
+name: Bug report
 about: Report a bug you found in this project
-title: '[Bug]: '
+title: "[Bug]"
 labels: bug
-assignees: ''
+assignees: JackA1ltman
 
-Bug Description
+---
+
+**Bug Description**
 A clear and concise description of what the bug is.
 
-Reproduction Steps
+**Reproduction Steps**
 Steps to reproduce the bug:
 
 ...
@@ -16,18 +19,18 @@ Steps to reproduce the bug:
 
 ...
 
-Expected Behavior
+**Expected Behavior**
 What did you expect to happen?
 
-Actual Behavior
+**Actual Behavior
 What actually happened?
 
-Environment
+**Environment**
 Operating System: [e.g., Ubuntu 22.04]
 
 Kernel Version: [e.g., 4.19.325]
 
 Other relevant information:
 
-Additional Context
+**Additional Context**
 Add any screenshots, log files, or extra context about the problem here.
