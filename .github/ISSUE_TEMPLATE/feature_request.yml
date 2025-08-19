@@ -1,4 +1,5 @@
 name: Feature request
+description: Suggest an idea or feature for this project
 title: "[Feature]"
 labels: ["enhancement"]
 assignees:

@@ -1,4 +1,5 @@
 name: Bug report
+description: Report a bug you found in this project
 title: "[Bug]"
 labels: ["bug"]
 assignees:

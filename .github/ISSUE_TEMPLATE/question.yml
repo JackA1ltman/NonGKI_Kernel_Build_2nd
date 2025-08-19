@@ -1,4 +1,5 @@
 name: Question
+description: Ask a general question about the project, such as how to use it or for technical details.
 title: "[QA]"
 labels: ["question"]
 assignees:
