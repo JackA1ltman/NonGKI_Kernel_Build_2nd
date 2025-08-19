@@ -8,18 +8,18 @@ body:
   - type: textarea
     attributes:
       label: Feature Description
-      placeholder: Please provide a clear and concise description of the feature you would like to see.
+      description: Please provide a clear and concise description of the feature you would like to see.
     validations:
       required: true
 
   - type: textarea
     attributes:
       label: Why is this feature needed?
-      placeholder: Explain the problem this feature would solve. Why is it helpful for the project?
+      description: Explain the problem this feature would solve. Why is it helpful for the project?
     validations:
       required: true
 
   - type: textarea
     attributes:
       label: Additional Context
-      placeholder: Provide any extra context, screenshots, or links that can help us understand your request.
+      description: Provide any extra context, screenshots, or links that can help us understand your request.

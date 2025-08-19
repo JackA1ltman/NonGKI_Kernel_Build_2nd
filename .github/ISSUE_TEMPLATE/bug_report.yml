@@ -8,26 +8,26 @@ body:
   - type: textarea
     attributes:
       label: Bug Description
-      placeholder: A clear and concise description of what the bug is.
+      description: A clear and concise description of what the bug is.
     validations:
       required: true
 
   - type: textarea
     attributes:
       label: Reproduction Steps
-      placeholder: Steps to reproduce the bug.
+      description: Steps to reproduce the bug.
 
   - type: textarea
     attributes:
       label: Expected Behavior
-      placeholder: What did you expect to happen?
+      description: What did you expect to happen?
 
   - type: textarea
     attributes:
       label: Actual Behavior
-      placeholder: What actually happened?
+      description: What actually happened?
 
   - type: textarea
     attributes:
       label: Additional Context
-      placeholder: Add any screenshots, log files, or extra context about the problem here.
+      description: Add any screenshots, log files, or extra context about the problem here.
