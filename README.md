@@ -1,7 +1,7 @@
 <h2 align="center">Non-GKI Kernel Build</h2>
 
 <p align="center">
-  English | <a href="README_cn.md">中文说明</a> | <a href="Supported_list.md">Supported List</a>
+  English | <a href="README_cn.md">中文说明</a> | <a href="Supported_list.md">Supported List</a> | <a href="https://github.com/JackA1ltman/NonGKI_Kernel_Build_2nd/wiki">Wiki</a>
 </p>
 
 > [!NOTE]
