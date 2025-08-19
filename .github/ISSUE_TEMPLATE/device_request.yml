@@ -5,53 +5,53 @@ labels: ["help wanted"]
 assignees:
   - JackA1ltman
 
-Body:
+body:
   - type: input
     attributes:
       label: Device Name
-      description: ex. OnePlus8
+      placeholder: ex. OnePlus8
     validations:
       required: true
 
   - type: input
     attributes:
       label: Device Codename
-      description: ex. instantnoodle
+      placeholder: ex. instantnoodle
     validations:
       required: true
 
   - type: input
     attributes:
       label: ROM Name
-      description: ex. OxygenOS
+      placeholder: ex. OxygenOS
     validations:
       required: true
 
   - type: input
     attributes:
       label: ROM Version
-      description: ex. 13.1
+      placeholder: ex. 13.1
     validations:
       required: true
 
   - type: input
     attributes:
       label: Android Version
-      description: ex. 13
+      placeholder: ex. 13
     validations:
       required: true
 
   - type: input
     attributes:
       label: Kernel Source Link
-      description: ex. https://github.com/oppo-source/android_kernel_oppo_sm8250
+      placeholder: ex. https://github.com/oppo-source/android_kernel_oppo_sm8250
 
   - type: input
     attributes:
       label: Kernel Source Branch
-      description: ex. oppo/sm8250_s_12.1
+      placeholder: ex. oppo/sm8250_s_12.1
 
   - type: input
     attributes:
       label: Kernel Version
-      description: ex. 4.19.325
+      placeholder: ex. 4.19.325
