@@ -1,0 +1,57 @@
+name: Device Request
+about: Request a kernel port for a specific device and ROM
+title: "[DevicePort]"
+labels: ["help wanted"]
+assignees:
+  - JackA1ltman
+
+Body:
+  - type: input
+    attributes:
+      label: Device Name
+      placeholder: ex. OnePlus8
+    validations:
+      required: true
+
+  - type: input
+    attributes:
+      label: Device Codename
+      placeholder: ex. instantnoodle
+    validations:
+      required: true
+
+  - type: input
+    attributes:
+      label: ROM Name
+      placeholder: ex. OxygenOS
+    validations:
+      required: true
+
+  - type: input
+    attributes:
+      label: ROM Version
+      placeholder: ex. 13.1
+    validations:
+      required: true
+
+  - type: input
+    attributes:
+      label: Android Version
+      placeholder: ex. 13
+    validations:
+      required: true
+
+  - type: input
+    attributes:
+      label: Kernel Source Link
+      placeholder: ex. https://github.com/oppo-source/android_kernel_oppo_sm8250
+
+  - type: input
+    attributes:
+      label: Kernel Source Branch
+      placeholder: ex. oppo/sm8250_s_12.1
+
+  - type: input
+    attributes:
+      label: Kernel Version
+      placeholder: ex. 4.19.325

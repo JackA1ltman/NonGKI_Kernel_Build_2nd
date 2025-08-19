@@ -1,0 +1,19 @@
+name: Question
+about: Ask a general question about the project, such as how to use it or for technical details.
+title: "[QA]"
+labels: ["question"]
+assignees:
+  - JackA1ltman
+
+body:
+  - type: textarea
+    attributes:
+      label: Your Question
+      placeholder: Please describe your question clearly here.
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: Additional Information
+      placeholder: If your question relates to a specific file, line of code, or situation, please provide more information to help us understand.
