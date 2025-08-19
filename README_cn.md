@@ -67,4 +67,5 @@
     - [Magic](https://github.com/backslashxx/KernelSU) - @backslashxx
     - [SukiSU-Ultra](https://github.com/SukiSU-Ultra/SukiSU-Ultra) - @ShirkNeko
 - [SuSFS](https://gitlab.com/simonpunk/susfs4ksu) - @simonpunk
+- [Re:Kernel](https://github.com/Sakion-Team/Re-Kernel) - @Sakion-Team
 - 以及更多的开源内核作者
