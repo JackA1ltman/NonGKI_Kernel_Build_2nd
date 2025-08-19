@@ -4,6 +4,7 @@
 | Xiaomi Mix2s | All | polaris | [4.9/Evolution-X-Devices/sdm845](https://github.com/Evolution-X-Devices/kernel_xiaomi_sdm845) | Evolution X 10.X | 15 | AnyKernel3 | SukiSU(U) | ✅ | ❌ | ✅ | ✅ | Stable |  
 | Xiaomi 11 Ultra | All | star | [5.4/EndCredits/Acetaminophen](https://github.com/EndCredits/android_kernel_xiaomi_sm8350-miui) | HyperOS | 14 | Anykernel3 | rsuntk | ✅ | ❌ | ❌ | ❌ | Stable |  
 | Redmi K20 Pro | All | raphael | [4.14/SOVIET-ANDROID/SOVIET-STAR-OSS](https://github.com/SOVIET-ANDROID/kernel_xiaomi_raphael) | Based-AOSP | 15 | AnyKernel3 | rsuntk | ✅ | ✅ | ❌ | ❌ | Stable |  
+| LG Nexus 5 | All | hammerhead | [3.4/acroreiser/LineageOS](https://github.com/acroreiser/android_kernel_lge_hammerhead) | LineageOS 22.2 | 15 | AnyKernel3 | SukiSU(U) | ❌ | ✅ | ❌ | ❌ | Stop |  
 
 **English**:  
 - OnePlus 8 OxygenOS/ColorOS 13.1 has been tested and can be used on the OnePlus 8, 8T, 8 Pro and 9R.
