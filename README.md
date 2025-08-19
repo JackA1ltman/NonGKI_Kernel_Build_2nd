@@ -7,7 +7,6 @@
 > [!NOTE]
 > **Version 2.0** 
 
-**The project is still building, please be patient.**  
 ### Introduction
 
 The initial goal of this project was to provide a relatively stable channel for compiling and updating **KernelSU** and **SuSFS** for a wider range of **Non-GKI** kernels.  
