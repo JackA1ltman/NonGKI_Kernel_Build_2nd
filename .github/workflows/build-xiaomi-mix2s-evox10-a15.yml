@@ -2,6 +2,7 @@ name: Build Xiaomi Mix2s (Evolution X 10 A15)
 
 on:
   workflow_call:
+  workflow_dispatch:
 
 env:
   # Device env

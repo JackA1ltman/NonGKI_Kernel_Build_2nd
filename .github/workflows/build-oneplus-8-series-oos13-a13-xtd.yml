@@ -2,6 +2,7 @@ name: Build Onelus 8 Series (OxygenOS 13 A13) (XTD Kernel)
 
 on:
   workflow_call:
+  workflow_dispatch:
 
 env:
   # Device env

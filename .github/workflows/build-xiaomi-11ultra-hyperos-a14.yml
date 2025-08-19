@@ -2,6 +2,7 @@ name: Build Xiaomi 11 Ultra (HyperOS A14)
 
 on:
   workflow_call:
+  workflow_dispatch:
 
 env:
   # Device env

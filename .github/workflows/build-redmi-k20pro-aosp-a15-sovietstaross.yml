@@ -2,6 +2,7 @@ name: Build Redmi K20 Pro (Soviet-Star-OSS)(Based-AOSP A15)
 
 on:
   workflow_call:
+  workflow_dispatch:
 
 env:
   # Device env
