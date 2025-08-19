@@ -1,18 +1,1 @@
 blank_issues_enabled: false
-issue_forms:
-
-name: 🐛 Bug Report
-about: Report a bug you've found in this project.
-url: .github/ISSUE_TEMPLATE/bug_report.yml
-
-name: ✨ Feature Request
-about: Suggest a new feature or enhancement.
-url: .github/ISSUE_TEMPLATE/feature_request.yml
-
-name: 📱 Device Request
-about: Request kernel adaptation for a specific device and ROM.
-url: .github/ISSUE_TEMPLATE/device_request.yml
-
-name: 🙋 Question
-about: Ask a general question about the project.
-url: .github/ISSUE_TEMPLATE/question.yml

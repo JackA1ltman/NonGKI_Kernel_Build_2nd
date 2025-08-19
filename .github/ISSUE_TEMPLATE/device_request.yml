@@ -1,4 +1,4 @@
-name: Device Request
+name: 📱 Device Request
 description: Request a kernel port for a specific device and ROM
 title: "[DevicePort]"
 labels: ["help wanted"]
