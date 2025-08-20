@@ -31,6 +31,7 @@ runs:
           if [ ${#REJ_FILES[@]} -eq 0 ]; then
             echo "Your kernel have no any rej files."
           else
+            echo "======================="
             for CAT_REJ in "${REJ_FILES[@]}"; do
                 echo "Found .rej file: $CAT_REJ"
                 cat $CAT_REJ
