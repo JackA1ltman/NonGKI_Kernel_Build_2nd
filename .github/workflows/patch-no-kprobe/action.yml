@@ -53,7 +53,7 @@ runs:
 
           # Check tracepoint hook
           elif [[ ${{ env.HOOK_METHOD }} == "tracepoint" ]]; then
-            if [[ "${{ env.KERNELSU_SOURCE }}" == *SukiSU* ]]; then
+            if [[ "${{ env.KERNELSU_SOURCE }}" != *SukiSU* ]]; then
                 echo "your kernelsu branch could not supported tracepoint, use SukiSU-Ultra please."
                 false
             fi
