@@ -7,10 +7,16 @@ runs:
         shell: bash
         run: |
           cd $GITHUB_WORKSPACE/device_kernel
+          # Check hook
           if grep -q "CONFIG_KSU" "fs/exec.c"; then
             echo "Your kernel source code appears to have been manually patched, so this step is skipped."
 
+          # Check normal hook
           elif [[ ${{ env.HOOK_METHOD }} == "normal" ]]; then
+            if [[ ${{ env.FIRST_VERSION }} -le 3 ]] && [[ ${{ env.SECOND_VERSION }} -le 10 ]]; then
+                echo "normal hook cannot supported for kernel ${{ env.KERNEL_VERSION }}."
+                false
+            fi
             cp /tmp/Patches/normal_hook_patches.sh ./
             cp /tmp/Patches/backport_patches_early.sh ./
 
@@ -19,6 +25,7 @@ runs:
 
             echo "execuated normal hook and backport patch successfully."
 
+          # Check syscall hook
           elif [[ ${{ env.HOOK_METHOD }} == "syscall" ]]; then
             if [[ "${{ env.HOOK_OLDER }}" == "true" ]]; then
                 cp /tmp/Patches/syscall_hook_patches_older.sh ./
@@ -32,19 +39,40 @@ runs:
                 echo "execuated syscall hook successfully."
             fi
 
-            cp /tmp/Patches/backport_patches.sh ./
-            bash backport_patches.sh
+            if [[ ${{ env.FIRST_VERSION }} -le 3 ]] && [[ ${{ env.SECOND_VERSION }} -le 10 ]]; then
+                cp /tmp/Patches/backport_patches_early.sh ./
+                bash backport_patches_early.sh
 
-            echo "execuated backport patch successfully."
+                echo "kernel ${{ env.KERNEL_VERSION }} cannot supported patch kernel_write and kernel_read,so only execuated backport patch older."
+            else
+                cp /tmp/Patches/backport_patches.sh ./
+                bash backport_patches.sh
 
+                echo "execuated backport patch successfully."
+            fi
+
+          # Check tracepoint hook
           elif [[ ${{ env.HOOK_METHOD }} == "tracepoint" ]]; then
+            if [[ "${{ env.KERNELSU_SOURCE }}" == *SukiSU* ]]; then
+                echo "your kernelsu branch could not supported tracepoint, use SukiSU-Ultra please."
+                false
+            fi
             cp /tmp/Patches/tracepoint_hook_patches.sh ./
-            cp /tmp/Patches/backport_patches.sh ./
-
             bash tracepoint_hook_patches.sh ./
-            bash backport_patches.sh
 
             echo "execuated tracepoint hook and backport patch successfully."
+
+            if [[ ${{ env.FIRST_VERSION }} -le 3 ]] && [[ ${{ env.SECOND_VERSION }} -le 10 ]]; then
+                cp /tmp/Patches/backport_patches_early.sh ./
+                bash backport_patches_early.sh
+
+                echo "kernel ${{ env.KERNEL_VERSION }} cannot supported patch kernel_write and kernel_read,so only execuated backport patch older."
+            else
+                cp /tmp/Patches/backport_patches.sh ./
+                bash backport_patches.sh
+
+                echo "execuated backport patch successfully."
+            fi
 
           else
             echo "please input vaild option!"
