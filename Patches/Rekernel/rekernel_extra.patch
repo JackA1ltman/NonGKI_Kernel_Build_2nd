@@ -23,27 +23,41 @@
 +endmenu
 
 --- /dev/null	2025-08-22 09:20:30.742723248 +0800
-+++ b/drivers/rekernel/rekernel.h	2025-08-22 18:35:35.237534294 +0800
-@@ -0,0 +1,99 @@
++++ b/drivers/rekernel/rekernel.h	2025-08-22 19:24:19.789504500 +0800
+@@ -0,0 +1,9 @@
++#ifndef __REKERNEL_H__
++#define __REKERNEL_H__
++#define NETLINK_REKERNEL_MAX     26
++#define NETLINK_REKERNEL_MIN     22
++#define USER_PORT                100
++
++int start_rekernel_server(void);
++
++#endif /* __REKERNEL_H__ */
+
+--- /dev/null	2025-08-22 09:20:30.742723248 +0800
++++ b/drivers/rekernel/rekernel.c	2025-08-22 19:25:19.328800281 +0800
+@@ -0,0 +1,104 @@
++#include "rekernel.h"
++
 +#include <linux/init.h>
 +#include <linux/types.h>
 +#include <net/sock.h>
 +#include <linux/netlink.h>
 +#include <linux/proc_fs.h>
 +#include <linux/freezer.h>
++#include <linux/seq_file.h>
 +
-+#define NETLINK_REKERNEL_MAX     		26
-+#define NETLINK_REKERNEL_MIN     		22
-+#define USER_PORT        			100
-+#define PACKET_SIZE 				128
-+#define MIN_USERAPP_UID 			(10000)
-+#define MAX_SYSTEM_UID  			(2000)
-+#define RESERVE_ORDER				17
-+#define WARN_AHEAD_SPACE			(1 << RESERVE_ORDER)
++#define PACKET_SIZE                 128
++#define MIN_USERAPP_UID             (10000)
++#define MAX_SYSTEM_UID              (2000)
++#define RESERVE_ORDER               17
++#define WARN_AHEAD_SPACE            (1 << RESERVE_ORDER)
 +
 +static struct sock *rekernel_netlink = NULL;
 +extern struct net init_net;
 +static int netlink_unit = NETLINK_REKERNEL_MIN;
++static struct proc_dir_entry *rekernel_dir, *rekernel_unit_entry;
 +
 +static inline bool line_is_frozen(struct task_struct *task)
 +{
@@ -56,22 +70,23 @@
 +
 +    skbuffer = nlmsg_new(len, GFP_ATOMIC);
 +    if (!skbuffer) {
-+        printk("netlink alloc failure.\n");
++        pr_err("rekernel: netlink alloc failure.\n");
 +        return -1;
 +    }
 +
 +    nlhdr = nlmsg_put(skbuffer, 0, 0, netlink_unit, len, 0);
 +    if (!nlhdr) {
-+        printk("nlmsg_put failaure.\n");
++        pr_err("rekernel: nlmsg_put failure.\n");
 +        nlmsg_free(skbuffer);
 +        return -1;
 +    }
 +
 +    memcpy(nlmsg_data(nlhdr), msg, len);
++
 +    return netlink_unicast(rekernel_netlink, skbuffer, USER_PORT, MSG_DONTWAIT);
 +}
 +
-+static void netlink_rcv_msg(struct sk_buff *skbuffer) { // Ignore recv msg.
++static void netlink_rcv_msg(struct sk_buff *skbuffer) {
 +}
 +
 +static struct netlink_kernel_cfg rekernel_cfg = {
@@ -90,37 +105,41 @@
 +}
 +
 +static const struct file_operations rekernel_unit_fops = {
-+    .open   = rekernel_unit_open,
-+    .read   = seq_read,
-+    .llseek   = seq_lseek,
++    .open      = rekernel_unit_open,
++    .read      = seq_read,
++    .llseek    = seq_lseek,
 +    .release   = single_release,
-+    .owner   = THIS_MODULE,
++    .owner     = THIS_MODULE,
 +};
 +
-+static struct proc_dir_entry *rekernel_dir, *rekernel_unit_entry;
-+
-+static int start_rekernel_server(void) {
++int start_rekernel_server(void) {
 +    if (rekernel_netlink != NULL)
 +        return 0;
++
 +    for (netlink_unit = NETLINK_REKERNEL_MIN; netlink_unit < NETLINK_REKERNEL_MAX; netlink_unit++) {
 +        rekernel_netlink = (struct sock *)netlink_kernel_create(&init_net, netlink_unit, &rekernel_cfg);
 +        if (rekernel_netlink != NULL)
 +            break;
 +    }
++
 +    if (rekernel_netlink == NULL) {
-+        printk("Failed to create Re:Kernel server!\n");
-+        return -1;
++        pr_err("rekernel: Failed to create Re:Kernel server!\n");
++        return -EPROTONOSUPPORT;
 +    }
-+    printk("Created Re:Kernel server! NETLINK UNIT: %d\n", netlink_unit);
++
++    pr_info("rekernel: Created Re:Kernel server! NETLINK UNIT: %d\n", netlink_unit);
++
 +    rekernel_dir = proc_mkdir("rekernel", NULL);
-+    if (!rekernel_dir)
-+        printk("create /proc/rekernel failed!\n");
-+    else {
-+        char buff[32];
-+        sprintf(buff, "%d", netlink_unit);
-+        rekernel_unit_entry = proc_create(buff, 0644, rekernel_dir, &rekernel_unit_fops);
++    if (!rekernel_dir) {
++        pr_warn("rekernel: create /proc/rekernel failed!\n");
++    } else {
++
++        char buff[4];
++        snprintf(buff, sizeof(buff), "%d", netlink_unit);
++        rekernel_unit_entry = proc_create(buff, 0444, rekernel_dir, &rekernel_unit_fops);
 +        if (!rekernel_unit_entry)
-+            printk("create rekernel unit failed!\n");
++            pr_warn("rekernel: create rekernel unit proc entry failed!\n");
 +    }
 +    return 0;
 +}
+
