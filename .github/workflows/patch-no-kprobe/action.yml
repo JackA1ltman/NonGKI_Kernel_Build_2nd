@@ -44,6 +44,14 @@ runs:
                 bash backport_patches_early.sh
 
                 echo "kernel ${{ env.KERNEL_VERSION }} cannot supported patch kernel_write and kernel_read,so only execuated backport patch older."
+            elif [[ ${{ env.FIRST_VERSION }} -le 4 ]] && [[ ${{ env.SECOND_VERSION }} -le 9 ]]; then
+                cp /tmp/Patches/backport_patches.sh ./
+                cp /tmp/Patches/Patch/backport_kernel_read_and_kernel_write_to_ksu.patch ./
+
+                bash backport_patches.sh
+                patch -p1 < backport_kernel_read_and_kernel_write_to_ksu.patch || true
+
+                echo "execuated backport patch (contain kernel_read and kernel_write patch) successfully."
             else
                 cp /tmp/Patches/backport_patches.sh ./
                 bash backport_patches.sh
@@ -67,6 +75,14 @@ runs:
                 bash backport_patches_early.sh
 
                 echo "kernel ${{ env.KERNEL_VERSION }} cannot supported patch kernel_write and kernel_read,so only execuated backport patch older."
+            elif [[ ${{ env.FIRST_VERSION }} -le 4 ]] && [[ ${{ env.SECOND_VERSION }} -le 9 ]]; then
+                cp /tmp/Patches/backport_patches.sh ./
+                cp /tmp/Patches/Patch/backport_kernel_read_and_kernel_write_to_ksu.patch ./
+
+                bash backport_patches.sh
+                patch -p1 < backport_kernel_read_and_kernel_write_to_ksu.patch || true
+
+                echo "execuated backport patch (contain kernel_read and kernel_write patch) successfully."
             else
                 cp /tmp/Patches/backport_patches.sh ./
                 bash backport_patches.sh
