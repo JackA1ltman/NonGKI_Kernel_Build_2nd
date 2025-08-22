@@ -4,8 +4,6 @@
 # Tested kernel versions: 5.4, 4.19, 4.14, 4.9, 4.4, 3.18
 # 20250822
 patch_files=(
-    drivers/Kconfig
-    drivers/Makefile
     drivers/android/binder.c
     drivers/android/binder_alloc.c
     kernel/signal.c
@@ -24,16 +22,6 @@ for i in "${patch_files[@]}"; do
 
     case $i in
     # drivers/ changes
-    ## Kconfig
-    drivers/Kconfig)
-        sed -i '/endmenu/i\source "drivers/rekernel/Kconfig"' drivers/Kconfig
-        ;;
-
-    ## Makefile
-    drivers/Makefile)
-        sed -i '$a\obj-$(CONFIG_REKERNEL) += rekernel/' drivers/Makefile
-        ;;
-
     ## android/binder.c
     drivers/android/binder.c)
         sed -i '/#include <linux\/spinlock.h>/a /* REKERNEL */\n#include <../rekernel/rekernel.h>\n/* REKERNEL */' drivers/android/binder.c
