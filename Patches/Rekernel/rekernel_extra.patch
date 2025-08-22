@@ -1,10 +1,10 @@
 --- /dev/null	2025-08-22 09:20:30.742723248 +0800
-+++ drivers/rekernel/Makefile	2025-08-22 18:36:13.308466462 +0800
++++ b/drivers/rekernel/Makefile	2025-08-22 18:36:13.308466462 +0800
 @@ -0,0 +1 @@
 +obj-$(CONFIG_REKERNEL) += rekernel.o
 
 --- /dev/null	2025-08-22 09:20:30.742723248 +0800
-+++ drivers/rekernel/Kconfig	2025-08-22 18:36:31.129246173 +0800
++++ b/drivers/rekernel/Kconfig	2025-08-22 18:36:31.129246173 +0800
 @@ -0,0 +1,15 @@
 +menu "Re:Kernel"
 +
@@ -23,7 +23,7 @@
 +endmenu
 
 --- /dev/null	2025-08-22 09:20:30.742723248 +0800
-+++ drivers/rekernel/rekernel.h	2025-08-22 18:35:35.237534294 +0800
++++ b/drivers/rekernel/rekernel.h	2025-08-22 18:35:35.237534294 +0800
 @@ -0,0 +1,99 @@
 +#include <linux/init.h>
 +#include <linux/types.h>
