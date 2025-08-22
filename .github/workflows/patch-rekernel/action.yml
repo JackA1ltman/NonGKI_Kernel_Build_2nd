@@ -15,7 +15,4 @@ runs:
           cp /tmp/Patches/Rekernel/rekernel_extra.patch ./
           patch -p1 < rekernel_extra.patch || true
 
-          echo "CONFIG_REKERNEL=y" >> ./arch/${{ env.KERNEL_ARCH }}/configs/${{ env.DEFCONFIG_NAME }}
-          echo "CONFIG_REKERNEL_NETWORK=n" >> ./arch/${{ env.KERNEL_ARCH }}/configs/${{ env.DEFCONFIG_NAME }}
-
           echo "Patched Re:Kernel for your kernel successfully."
