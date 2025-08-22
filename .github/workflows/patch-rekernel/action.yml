@@ -8,41 +8,13 @@ runs:
         shell: bash
         run: |
           cd $GITHUB_WORKSPACE/device_kernel/
-          PATCH_FILE="/tmp/Patches/Rekernel/rekernel-${{ env.KERNEL_VERSION }}.patch"
+          cp /tmp/Patches/Rekernel/rekernel_patches.sh ./
+          bash rekernel_patches.sh
 
-          if [ -f "$PATCH_FILE" ]; then
-            cp /tmp/Patches/Rekernel/rekernel-${{ env.KERNEL_VERSION }}.patch ./
-            patch -p1 < rekernel-${{ env.KERNEL_VERSION }}.patch || true
-            echo "Re:Kernel Patched."
-          else
-            echo "Your kernel not supported it."
-          fi
+          git clone https://github.com/Sakion-Team/Re-Kernel.git -b main ReKernel
+          mv ReKernel/Integrate/rekernel drivers/
 
-          # Extra ReKernel Patch
-          # cp NonGKI_Kernel_Patches/[patch_folder]/[patch_file].patch ./
+          echo "CONFIG_REKERNEL=y" >> ./arch/${{ env.KERNEL_ARCH }}/configs/${{ env.DEFCONFIG_NAME }}
+          echo "CONFIG_REKERNEL_NETWORK=n" >> ./arch/${{ env.KERNEL_ARCH }}/configs/${{ env.DEFCONFIG_NAME }}
 
-          # patch -p1 < [patch_file].patch || true
-
-      - name: ReKernel Patch Fixed
-        if: env.REKERNEL_ENABLE == 'true'
-        shell: bash
-        run: |
-          cd $GITHUB_WORKSPACE/device_kernel/
-
-          if [[ -z "${{ env.REKERNEL_FOLDER-FIXED }}" ]]; then
-            echo "Your doesn't powered any patch file."
-          else
-            IFS=',' read -ra FIXED_LIST <<< "${{ env.REKERNEL_FIXED }}"
-            echo "<<<<<<<<<<<<<<<<<<<<<>>>>>>>>>>>>>>>>>>>>>>>>>>"
-            for i in "${!FIXED_LIST[@]}"; do
-              echo "Patching -> ${FIXED_LIST[$i]}"
-              if [[ -z "${{ env.REKERNEL_FOLDER_FIXED }}" ]]; then
-                cp NonGKI_Kernel_Patches/${FIXED_LIST[$i]}.patch ./
-              else
-                cp NonGKI_Kernel_Patches/"${{ env.REKERNEL_FOLDER_FIXED }}"/${FIXED_LIST[$i]}.patch ./
-              fi
-              patch -p1 < ${FIXED_LIST[$i]}.patch || true
-              echo "Patch fine!"
-              echo "<<<<<<<<<<<<<<<<<<<<<>>>>>>>>>>>>>>>>>>>>>>>>>>"
-            done
-          fi
+          echo "Patched Re:Kernel for your kernel successfully."
