@@ -11,8 +11,9 @@ runs:
           cp /tmp/Patches/Rekernel/rekernel_patches.sh ./
           bash rekernel_patches.sh
 
-          git clone https://github.com/Sakion-Team/Re-Kernel.git -b main ReKernel
-          mv ReKernel/Integrate/rekernel drivers/
+          mkdir -p drivers/rekernel
+          cp /tmp/Patches/Rekernel/rekernel_extra.patch ./
+          patch -p1 < rekernel_extra.patch || true
 
           echo "CONFIG_REKERNEL=y" >> ./arch/${{ env.KERNEL_ARCH }}/configs/${{ env.DEFCONFIG_NAME }}
           echo "CONFIG_REKERNEL_NETWORK=n" >> ./arch/${{ env.KERNEL_ARCH }}/configs/${{ env.DEFCONFIG_NAME }}
