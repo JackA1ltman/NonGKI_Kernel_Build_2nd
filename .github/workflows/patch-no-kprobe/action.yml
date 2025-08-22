@@ -68,7 +68,7 @@ runs:
             cp /tmp/Patches/tracepoint_hook_patches.sh ./
             bash tracepoint_hook_patches.sh ./
 
-            echo "execuated tracepoint hook and backport patch successfully."
+            echo "execuated tracepoint hook successfully."
 
             if [[ ${{ env.FIRST_VERSION }} -le 3 ]] && [[ ${{ env.SECOND_VERSION }} -le 10 ]]; then
                 cp /tmp/Patches/backport_patches_early.sh ./
