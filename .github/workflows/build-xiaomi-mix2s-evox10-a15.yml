@@ -104,6 +104,10 @@ jobs:
       - name: ⚙️ Compilation preparation
         uses: ./.github/workflows/build-ready
 
+
+      - name: 🔗 Patch for no-kprobe
+        uses: ./.github/workflows/patch-no-kprobe
+
       - name: 🪛 Extra Kernel Options
         run: |
           # Only ${{ env.DEVICE_NAME }} use it.
@@ -116,10 +120,6 @@ jobs:
           # Patch Binder
           wget https://raw.githubusercontent.com/JackA1ltman/NonGKI_Kernel_Patches/refs/heads/mi_kernel/mix2s_evox_a15/binder_freezer_to_49.patch
           patch -p1 < binder_freezer_to_49.patch
-
-          # Patch set_memory
-          cp /tmp/Patches/Patch/set_memory_to_49_and_low.patch ./
-          patch -p1 < set_memory_to_49_and_low.patch || true
 
           # Patch LZ4KD
           wget https://raw.githubusercontent.com/JackA1ltman/NonGKI_Kernel_Patches/refs/heads/mi_kernel/mix2s_evox_a15/lz4kd_to_49.patch
@@ -145,9 +145,6 @@ jobs:
           # Zram Writeback
           echo "CONFIG_ZRAM_WRITEBACK=y" >> ./arch/arm64/configs/${{ env.DEFCONFIG_NAME }}
           echo "CONFIG_ZRAM_ENTROPY=y" >> ./arch/arm64/configs/${{ env.DEFCONFIG_NAME }}
-
-      - name: 🔗 Patch for no-kprobe
-        uses: ./.github/workflows/patch-no-kprobe
 
       - name: 🪝 Patch Kernel of SUSFS
         uses: ./.github/workflows/patch-susfs
