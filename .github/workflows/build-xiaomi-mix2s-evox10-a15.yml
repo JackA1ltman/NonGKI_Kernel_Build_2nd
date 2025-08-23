@@ -102,7 +102,6 @@ jobs:
       - name: ⚙️ Compilation preparation
         uses: ./.github/workflows/build-ready
 
-
       - name: 🔗 Patch for no-kprobe
         uses: ./.github/workflows/patch-no-kprobe
 
