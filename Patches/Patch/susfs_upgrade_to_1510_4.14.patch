@@ -1,16 +1,3 @@
-diff --git a/fs/dcache.c.rej b/fs/dcache.c.rej
-index 33398b5..64ed2e5 100644
---- a/fs/dcache.c.rej
-+++ b/fs/dcache.c.rej
-@@ -5,7 +5,7 @@
-  			if (dentry_cmp(dentry, str, hashlen_len(hashlen)) != 0)
-  				continue;
- +#ifdef CONFIG_KSU_SUSFS_SUS_PATH
--+			if (dentry->d_inode && unlikely(dentry->d_inode->i_state & INODE_STATE_SUS_PATH) && likely(current->susfs_task_state & TASK_STRUCT_NON_ROOT_USER_APP_PROC)) {
-++			if (dentry->d_inode && unlikely(dentry->d_inode->i_state & INODE_STATE_SUS_PATH)) {
- +				continue;
- +			}
- +#endif
 diff --git a/fs/namei.c b/fs/namei.c
 index d154aec..ded27a0 100644
 --- a/fs/namei.c
