@@ -1,4 +1,4 @@
-name: Build ss tab a7 t505 (Kernel 4.19)  # 🔄 CHANGE: Update to "Build Galaxy Tab A7 T505 (Based AOSP A15) (Kernel 4.19)"
+name: Build Onelus 8 Series (OxygenOS 13 A13) (XTD Kernel)  # 🔄 CHANGE: Update to "Build Galaxy Tab A7 T505 (Based AOSP A15) (Kernel 4.19)"
 
 on:
   workflow_call:
@@ -6,48 +6,48 @@ on:
 
 env:
   # Device env
-  DEVICE_NAME : "galaxy_t505" 
-  DEVICE_CODENAME : "gta4l"
+  DEVICE_NAME : "oneplus_8_cn"  # 🔄 CHANGE: Update to "samsung_galaxy_tab_a7"
+  DEVICE_CODENAME : "instantnoodle"  # 🔄 CHANGE: Update to "gta7wifi"
 
   CUSTOM_CMDS : "CLANG_TRIPLE=aarch64-linux-gnu-"
-  EXTRA_CMDS : "LLVM=1 LLVM_IAS=1"
+  EXTRA_CMDS : "LD=ld.lld"
 
-  KERNEL_SOURCE : "https://github.com/thanhsangdcs/Kernel-sst505.git"
-  KERNEL_BRANCH : "main" 
+  KERNEL_SOURCE : "https://github.com/thanhsangdcs/Kernel-sst505.git"  # 🔄 CHANGE: Update to Galaxy Tab A7 T505 kernel source
+  KERNEL_BRANCH : "main"  # 🔄 CHANGE: Update to appropriate branch for T505
 
   CLANG_SOURCE : "https://github.com/llvm/llvm-project/releases/download/llvmorg-19.1.7/LLVM-19.1.7-Linux-X64.tar.xz"
   CLANG_BRANCH : ""
 
   GCC_GNU : false
-  GCC_64_SOURCE : "https://android.googlesource.com/platform/prebuilts/gcc/linux-x86/aarch64/aarch64-linux-android-4.9.git"
-  GCC_64_BRANCH : "android12L-release"
-  GCC_32_SOURCE : "https://android.googlesource.com/platform/prebuilts/gcc/linux-x86/arm/arm-linux-androideabi-4.9.git"
-  GCC_32_BRANCH : "android12L-release"
+  GCC_64_SOURCE : "https://github.com/JackA1ltman/Google-GCC-Android-4.9.git"  # 🔄 CHANGE: May need original GCC source
+  GCC_64_BRANCH : "aarch64"
+  GCC_32_SOURCE : "https://github.com/JackA1ltman/Google-GCC-Android-4.9.git"  # 🔄 CHANGE: May need original GCC source
+  GCC_32_BRANCH : "arm32"
 
-  DEFCONFIG_SOURCE: ""  # 🔄 CHANGE: May need to specify defconfig source for T505
-  DEFCONFIG_NAME : "gta4l_eur_open_defconfig"  # 🔄 CHANGE: Update to T505 defconfig (e.g., "exynos9610_defconfig" or similar)
+  DEFCONFIG_SOURCE: ""
+  DEFCONFIG_NAME : "gta4l_eur_open_defconfig"  # 🔄 CHANGE: Update to "vendor/gta4l_eur_open_defconfig"
   DEFCONFIG_ORIGIN_IMAGE: ""
   DEFCONFIG_FROM_BOOT: false
 
-  KERNELSU_SOURCE : "https://raw.githubusercontent.com/SukiSU-Ultra/SukiSU-Ultra/refs/heads/susfs-main/kernel/setup.sh"
-  KERNELSU_BRANCH : "susfs-main"
+  KERNELSU_SOURCE : "https://raw.githubusercontent.com/backslashxx/KernelSU/refs/heads/master/kernel/setup.sh"  # 🔄 CHANGE: May need different KernelSU version
+  KERNELSU_BRANCH : "12124+155"  # 🔄 CHANGE: May need different branch
 
-  KERNELSU_AUTO_GET : "false"
-  KERNELSU_AUTO_FORK : "" # magic, rsuntk , next and sukisu
+  KERNELSU_AUTO_GET : "true" # if u want easy setting kernelsu, u can true.
+  KERNELSU_AUTO_FORK : "rsuntk" # magic, rsuntk , next and sukisu
 
   SUSFS_ENABLE : true
   SUSFS_FIXED : true
-  SUSFS_UPDATE : true
+  SUSFS_UPDATE : false
 
   AK3_SOURCE : "https://github.com/JackA1ltman/OP8_AnyKernel3.git"  # 🔄 CHANGE: Update to AnyKernel3 for Galaxy Tab A7
   AK3_BRANCH : "main"  # 🔄 CHANGE: Update to appropriate branch
 
-  BOOT_SOURCE : ""  # 🔄 CHANGE: May need boot image source for T505
+  BOOT_SOURCE : ""
 
   NEED_DTBO : false  # 🔄 CHANGE: Check if T505 needs DTBO
   NEED_SAFE_DTBO : false  # 🔄 CHANGE: Check if T505 needs safe DTBO
 
-  ROM_TEXT : "based_aosp_a15"  # 🔄 CHANGE: Update ROM type if different
+  ROM_TEXT : "oxygen13.1_a13"  # 🔄 CHANGE: Update to "based_aosp_a15" or appropriate ROM
 
   # Other env
   PYTHON_VERSION: "3"
@@ -56,35 +56,35 @@ env:
 
   KERNELSU_METHOD: "shell"
 
-  PATCHES_SOURCE: "JackA1ltman/NonGKI_Kernel_Patches"  # 🔄 CHANGE: May need different patches for Exynos
-  PATCHES_BRANCH: "mi_kernel"  # 🔄 CHANGE: Update branch
+  PATCHES_SOURCE: "JackA1ltman/NonGKI_Kernel_Patches"  # 🔄 CHANGE: May need different patches for T505
+  PATCHES_BRANCH: "op_kernel"  # 🔄 CHANGE: Update branch
 
-  SUSFS_FOLDER_FIXED: "mix2s_aosp_a15_419"  # 🔄 CHANGE: Update to "gta7wifi_aosp_a15_419" or similar
-  SUSFS_155_FIXED: "susfs_155_fixed,stat_fixed"  # 🔄 CHANGE: May need different patches for Exynos
-  SUSFS_LATEST_FIXED: "sched_fixed"  # 🔄 CHANGE: May need different patches
+  SUSFS_FOLDER_FIXED: "kona_oos"  # 🔄 CHANGE: Update to "gta7wifi_aosp" or similar
+  SUSFS_155_FIXED: "namespace_fixed,task_mmu_fixed"  # 🔄 CHANGE: May need different patches
+  SUSFS_LATEST_FIXED: ""  # 🔄 CHANGE: May need different patches
 
   REKERNEL_ENABLE: "false"
 
-  HOOK_METHOD: "tracepoint"
+  HOOK_METHOD: "normal"  # 🔄 CHANGE: May need "tracepoint" for kernel 4.19
   HOOK_OLDER: "false"
 
   KPM_ENABLE: "false"
   KPM_PATCH_SOURCE: "https://raw.githubusercontent.com/SukiSU-Ultra/SukiSU_patch/refs/heads/main/kpm/patch_linux"
 
   GENERATE_DTB: "false"  # 🔄 CHANGE: Check if T505 needs DTB generation
-  GENERATE_CHIP: "qcom"  # 🔄 CHANGE: Update to "exynos" for Samsung
+  GENERATE_CHIP: "qcom"  # ✅ KEEP: Snapdragon 662 is Qualcomm
 
   BUILD_DEBUGGER: "false"
   SKIP_PATCH: "false"
 
-  BUILD_OTHER_CONFIG: "false"  # 🔄 CHANGE: No merge needed
-  MERGE_CONFIG_FILES: ""  # 🔄 CHANGE: Empty string
+  BUILD_OTHER_CONFIG: "false"  # ✅ KEEP: No merge config needed for T505
+  MERGE_CONFIG_FILES: "vendor/debugfs.config,vendor/lahaina_QGKI.config"  # 🔄 CHANGE: Empty or remove since BUILD_OTHER_CONFIG is false
 
   FREE_MORE_SPACE: "false"
 
 jobs:
   build-kernel:
-    name: Xiaomi Mix2s (Based AOSP A15) (Kernel 4.19)  # 🔄 CHANGE: Update to "Galaxy Tab A7 T505 (Based AOSP A15) (Kernel 4.19)"
+    name: Onelus 8 Series (OxygenOS 13 A13) (XTD Kernel)  # 🔄 CHANGE: Update to "Galaxy Tab A7 T505 (Based AOSP A15) (Kernel 4.19)"
     runs-on: ubuntu-22.04
     env:
       CCACHE_COMPILERCHECK: "%compiler% -dumpmachine; %compiler% -dumpversion"
@@ -111,17 +111,18 @@ jobs:
         run: |
           # Only ${{ env.DEVICE_NAME }} use it.
           cd $GITHUB_WORKSPACE/device_kernel
+          echo "CONFIG_CPU_BIG_ENDIAN=n" >> ./arch/arm64/configs/${{ env.DEFCONFIG_NAME }}
+          echo "CONFIG_COMPAT_VDSO=y" >> ./arch/arm64/configs/${{ env.DEFCONFIG_NAME }}
+          echo "CONFIG_LTO_NONE=y" >> ./arch/arm64/configs/${{ env.DEFCONFIG_NAME }}
+          echo "CONFIG_INIT_STACK_NONE=y" >> ./arch/arm64/configs/${{ env.DEFCONFIG_NAME }}
+          echo "CONFIG_KPROBES=n" >> ./arch/arm64/configs/${{ env.DEFCONFIG_NAME }}
+          sed -i 's/# CONFIG_SECCOMP is not set/CONFIG_SECCOMP=y/' ./arch/arm64/configs/${{ env.DEFCONFIG_NAME }}
 
-          # Get neccssary components
-          git clone https://github.com/duckyduckG/kernel_techpack_mi845_419.git -b main techpack/mi845  # 🔄 CHANGE: Update to Exynos techpack if needed
-          git clone https://github.com/duckyduckG/devicetree_qcom-sdm845_419.git -b main arch/arm64/boot/dts/qcom-sdm845  # 🔄 CHANGE: Update to Exynos devicetree
-          git clone https://github.com/duckyduckG/devicetree_xiaomi_419.git -b master-dipper arch/arm64/boot/dts/xiaomi  # 🔄 CHANGE: Update to Samsung devicetree
+          # sed -i 's|\$(obj)/config_data.gz: [^ ]* FORCE|\$(obj)/config_data.gz: $(KCONFIG_CONFIG) FORCE|' kernel/Makefile
 
-          # Build config
-          echo "CONFIG_COMPAT_VDSO=y" >> ./arch/arm64/configs/${{ env.DEFCONFIG_NAME }}  # 🔄 CHANGE: Verify these configs work with Exynos
-          echo "CONFIG_LTO_NONE=n" >> ./arch/arm64/configs/${{ env.DEFCONFIG_NAME }}
-          echo "CONFIG_SHADOW_CALL_STACK=n" >> ./arch/arm64/configs/${{ env.DEFCONFIG_NAME }}
-          echo "CONFIG_RELR=n" >> ./arch/arm64/configs/${{ env.DEFCONFIG_NAME }}
+          # kernel_compat fixed  # 🔄 CHANGE: May need different patches for T505
+          cp NonGKI_Kernel_Patches/kona_oos/compat_fixed.patch ./
+          patch -p1 < compat_fixed.patch
 
       - name: 🧰 Patch Kernel of Re:Kernel
         uses: ./.github/workflows/patch-rekernel
