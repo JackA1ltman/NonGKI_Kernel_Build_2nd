@@ -1,4 +1,4 @@
-name: Build Xiaomi Mix2s (Based AOSP A15) (Kernel 4.19)  # 🔄 CHANGE: Update to "Build Galaxy Tab A7 T505 (Based AOSP A15) (Kernel 4.19)"
+name: Build ss tab a7 t505 (Kernel 4.19)  # 🔄 CHANGE: Update to "Build Galaxy Tab A7 T505 (Based AOSP A15) (Kernel 4.19)"
 
 on:
   workflow_call:
@@ -6,14 +6,14 @@ on:
 
 env:
   # Device env
-  DEVICE_NAME : "xiaomi_mix2s"  # 🔄 CHANGE: Update to "samsung_galaxy_tab_a7"
-  DEVICE_CODENAME : "polaris"  # 🔄 CHANGE: Update to "gta7wifi" or appropriate codename for T505
+  DEVICE_NAME : "galaxy_t505" 
+  DEVICE_CODENAME : "gta4l"
 
   CUSTOM_CMDS : "CLANG_TRIPLE=aarch64-linux-gnu-"
   EXTRA_CMDS : "LLVM=1 LLVM_IAS=1"
 
-  KERNEL_SOURCE : "https://github.com/duckyduckG/android_kernel_xiaomi_sdm845_419.git"  # 🔄 CHANGE: Update to Galaxy Tab A7 T505 kernel source
-  KERNEL_BRANCH : "perf"  # 🔄 CHANGE: Update to appropriate branch for T505 kernel
+  KERNEL_SOURCE : "https://github.com/thanhsangdcs/Kernel-sst505.git"
+  KERNEL_BRANCH : "main" 
 
   CLANG_SOURCE : "https://github.com/llvm/llvm-project/releases/download/llvmorg-19.1.7/LLVM-19.1.7-Linux-X64.tar.xz"
   CLANG_BRANCH : ""
@@ -25,7 +25,7 @@ env:
   GCC_32_BRANCH : "android12L-release"
 
   DEFCONFIG_SOURCE: ""  # 🔄 CHANGE: May need to specify defconfig source for T505
-  DEFCONFIG_NAME : "vendor/sdm845-perf_defconfig"  # 🔄 CHANGE: Update to T505 defconfig (e.g., "exynos9610_defconfig" or similar)
+  DEFCONFIG_NAME : "vendor/gta7lte_defconfig"  # 🔄 CHANGE: Update to T505 defconfig (e.g., "exynos9610_defconfig" or similar)
   DEFCONFIG_ORIGIN_IMAGE: ""
   DEFCONFIG_FROM_BOOT: false
 
