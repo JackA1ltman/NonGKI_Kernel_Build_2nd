@@ -1,0 +1,136 @@
+name: Build Xiaomi Mix2s (Based AOSP A15) (Kernel 4.19)  # 🔄 CHANGE: Update to "Build Galaxy Tab A7 T505 (Based AOSP A15) (Kernel 4.19)"
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+env:
+  # Device env
+  DEVICE_NAME : "xiaomi_mix2s"  # 🔄 CHANGE: Update to "samsung_galaxy_tab_a7"
+  DEVICE_CODENAME : "polaris"  # 🔄 CHANGE: Update to "gta7wifi" or appropriate codename for T505
+
+  CUSTOM_CMDS : "CLANG_TRIPLE=aarch64-linux-gnu-"
+  EXTRA_CMDS : "LLVM=1 LLVM_IAS=1"
+
+  KERNEL_SOURCE : "https://github.com/duckyduckG/android_kernel_xiaomi_sdm845_419.git"  # 🔄 CHANGE: Update to Galaxy Tab A7 T505 kernel source
+  KERNEL_BRANCH : "perf"  # 🔄 CHANGE: Update to appropriate branch for T505 kernel
+
+  CLANG_SOURCE : "https://github.com/llvm/llvm-project/releases/download/llvmorg-19.1.7/LLVM-19.1.7-Linux-X64.tar.xz"
+  CLANG_BRANCH : ""
+
+  GCC_GNU : false
+  GCC_64_SOURCE : "https://android.googlesource.com/platform/prebuilts/gcc/linux-x86/aarch64/aarch64-linux-android-4.9.git"
+  GCC_64_BRANCH : "android12L-release"
+  GCC_32_SOURCE : "https://android.googlesource.com/platform/prebuilts/gcc/linux-x86/arm/arm-linux-androideabi-4.9.git"
+  GCC_32_BRANCH : "android12L-release"
+
+  DEFCONFIG_SOURCE: ""  # 🔄 CHANGE: May need to specify defconfig source for T505
+  DEFCONFIG_NAME : "vendor/sdm845-perf_defconfig"  # 🔄 CHANGE: Update to T505 defconfig (e.g., "exynos9610_defconfig" or similar)
+  DEFCONFIG_ORIGIN_IMAGE: ""
+  DEFCONFIG_FROM_BOOT: false
+
+  KERNELSU_SOURCE : "https://raw.githubusercontent.com/SukiSU-Ultra/SukiSU-Ultra/refs/heads/susfs-main/kernel/setup.sh"
+  KERNELSU_BRANCH : "susfs-main"
+
+  KERNELSU_AUTO_GET : "false"
+  KERNELSU_AUTO_FORK : "" # magic, rsuntk , next and sukisu
+
+  SUSFS_ENABLE : true
+  SUSFS_FIXED : true
+  SUSFS_UPDATE : true
+
+  AK3_SOURCE : "https://github.com/JackA1ltman/OP8_AnyKernel3.git"  # 🔄 CHANGE: Update to AnyKernel3 for Galaxy Tab A7
+  AK3_BRANCH : "main"  # 🔄 CHANGE: Update to appropriate branch
+
+  BOOT_SOURCE : ""  # 🔄 CHANGE: May need boot image source for T505
+
+  NEED_DTBO : false  # 🔄 CHANGE: Check if T505 needs DTBO
+  NEED_SAFE_DTBO : false  # 🔄 CHANGE: Check if T505 needs safe DTBO
+
+  ROM_TEXT : "based_aosp_a15"  # 🔄 CHANGE: Update ROM type if different
+
+  # Other env
+  PYTHON_VERSION: "3"
+
+  PACK_METHOD: "Anykernel3"
+
+  KERNELSU_METHOD: "shell"
+
+  PATCHES_SOURCE: "JackA1ltman/NonGKI_Kernel_Patches"  # 🔄 CHANGE: May need different patches for Exynos
+  PATCHES_BRANCH: "mi_kernel"  # 🔄 CHANGE: Update branch
+
+  SUSFS_FOLDER_FIXED: "mix2s_aosp_a15_419"  # 🔄 CHANGE: Update to "gta7wifi_aosp_a15_419" or similar
+  SUSFS_155_FIXED: "susfs_155_fixed,stat_fixed"  # 🔄 CHANGE: May need different patches for Exynos
+  SUSFS_LATEST_FIXED: "sched_fixed"  # 🔄 CHANGE: May need different patches
+
+  REKERNEL_ENABLE: "false"
+
+  HOOK_METHOD: "tracepoint"
+  HOOK_OLDER: "false"
+
+  KPM_ENABLE: "false"
+  KPM_PATCH_SOURCE: "https://raw.githubusercontent.com/SukiSU-Ultra/SukiSU_patch/refs/heads/main/kpm/patch_linux"
+
+  GENERATE_DTB: "false"  # 🔄 CHANGE: Check if T505 needs DTB generation
+  GENERATE_CHIP: "qcom"  # 🔄 CHANGE: Update to "exynos" for Samsung
+
+  BUILD_DEBUGGER: "false"
+  SKIP_PATCH: "false"
+
+  BUILD_OTHER_CONFIG: "true"  # 🔄 CHANGE: May need to set to false or update config files
+  MERGE_CONFIG_FILES: "vendor/xiaomi/sdm845-common.config,vendor/xiaomi/polaris.config"  # 🔄 CHANGE: Update to Samsung config files
+
+  FREE_MORE_SPACE: "false"
+
+jobs:
+  build-kernel:
+    name: Xiaomi Mix2s (Based AOSP A15) (Kernel 4.19)  # 🔄 CHANGE: Update to "Galaxy Tab A7 T505 (Based AOSP A15) (Kernel 4.19)"
+    runs-on: ubuntu-22.04
+    env:
+      CCACHE_COMPILERCHECK: "%compiler% -dumpmachine; %compiler% -dumpversion"
+      CCACHE_NOHASHDIR: "true"
+      CCACHE_HARDLINK: "true"
+
+    steps:
+      - name: ⏰ Checkout repository
+        uses: actions/checkout@v4
+
+      - name: ⌛️ Compilation environment preparation
+        uses: ./.github/workflows/build-env
+
+      - name: ⚙️ Get neccssary tools
+        uses: ./.github/workflows/build-ready
+
+      - name: 🪝 Patch Kernel of SUSFS
+        uses: ./.github/workflows/patch-susfs
+
+      - name: 🔗 Patch for no-kprobe
+        uses: ./.github/workflows/patch-no-kprobe
+
+      - name: 🪛 Extra Kernel Options
+        run: |
+          # Only ${{ env.DEVICE_NAME }} use it.
+          cd $GITHUB_WORKSPACE/device_kernel
+
+          # Get neccssary components
+          git clone https://github.com/duckyduckG/kernel_techpack_mi845_419.git -b main techpack/mi845  # 🔄 CHANGE: Update to Exynos techpack if needed
+          git clone https://github.com/duckyduckG/devicetree_qcom-sdm845_419.git -b main arch/arm64/boot/dts/qcom-sdm845  # 🔄 CHANGE: Update to Exynos devicetree
+          git clone https://github.com/duckyduckG/devicetree_xiaomi_419.git -b master-dipper arch/arm64/boot/dts/xiaomi  # 🔄 CHANGE: Update to Samsung devicetree
+
+          # Build config
+          echo "CONFIG_COMPAT_VDSO=y" >> ./arch/arm64/configs/${{ env.DEFCONFIG_NAME }}  # 🔄 CHANGE: Verify these configs work with Exynos
+          echo "CONFIG_LTO_NONE=n" >> ./arch/arm64/configs/${{ env.DEFCONFIG_NAME }}
+          echo "CONFIG_SHADOW_CALL_STACK=n" >> ./arch/arm64/configs/${{ env.DEFCONFIG_NAME }}
+          echo "CONFIG_RELR=n" >> ./arch/arm64/configs/${{ env.DEFCONFIG_NAME }}
+
+      - name: 🧰 Patch Kernel of Re:Kernel
+        uses: ./.github/workflows/patch-rekernel
+
+      - name: 🚀 Build Process
+        uses: ./.github/workflows/build-process
+
+      - name: 🔩 Pack Process
+        uses: ./.github/workflows/pack-process
+
+      - name: ✏️ Upload Artifacts
+        uses: ./.github/workflows/upload-files
