@@ -25,7 +25,7 @@ env:
   GCC_32_BRANCH : "android12L-release"
 
   DEFCONFIG_SOURCE: ""  # 🔄 CHANGE: May need to specify defconfig source for T505
-  DEFCONFIG_NAME : "vendor/gta4l_eur_open_defconfig"  # 🔄 CHANGE: Update to T505 defconfig (e.g., "exynos9610_defconfig" or similar)
+  DEFCONFIG_NAME : "gta4l_eur_open_defconfig"  # 🔄 CHANGE: Update to T505 defconfig (e.g., "exynos9610_defconfig" or similar)
   DEFCONFIG_ORIGIN_IMAGE: ""
   DEFCONFIG_FROM_BOOT: false
 
