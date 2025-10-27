@@ -235,6 +235,15 @@ runs:
             echo "Your kernelsu fork cannot supported SuSFS 1.5.11, Skipped."
           fi
 
+          # Upgrade 1.5.12
+          cp /tmp/Patches/Patch/susfs_upgrade_to_1512_${{ env.KERNEL_VERSION }}.patch ./
+          patch -p1 < susfs_upgrade_to_1512_${{ env.KERNEL_VERSION }}.patch || true
+          echo "================="
+          echo "=Upgraded 1.5.12="
+          echo "================="
+
+          REJ_FOUND "1.5.12"
+
       - name: Updated SUSFS Patch Fixed
         if: env.SUSFS_ENABLE == 'true' && env.SUSFS_UPDATE == 'true' && env.SUSFS_SKIP != 'true'
         shell: bash
