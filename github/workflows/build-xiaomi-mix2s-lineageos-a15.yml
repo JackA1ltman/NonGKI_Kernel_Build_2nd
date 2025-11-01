@@ -1,0 +1,72 @@
+name: Build Xiaomi Mix2s (LineageOS 22.2 A15)
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+env:
+  # 设备信息
+  DEVICE_NAME: "xiaomi_mix2s"
+  DEVICE_CODENAME: "polaris"
+  
+  # 编译命令
+  CUSTOM_CMDS: "CLANG_TRIPLE=aarch64-linux-gnu-"
+  EXTRA_CMDS: "LD=ld.lld LLVM=1 LLVM_IAS=1"
+  
+  # 内核源码
+  KERNEL_SOURCE: "https://github.com/lizmic137/android_kernel_xiaomi_sdm845.git"
+  KERNEL_BRANCH: "lineage-22.2"
+  
+  # 编译器配置
+  CLANG_SOURCE: "https://github.com/ZyCromerZ/Clang/releases/download/20.0.0git-20250129-release/Clang-20.0.0git-20250129.tar.gz"
+  CLANG_BRANCH: ""
+  
+  # GCC 配置
+  GCC_GNU: false
+  GCC_64_SOURCE: "https://android.googlesource.com/platform/prebuilts/gcc/linux-x86/aarch64/aarch64-linux-android-4.9.git"
+  GCC_64_BRANCH: "android12L-release"
+  GCC_32_SOURCE: "https://android.googlesource.com/platform/prebuilts/gcc/linux-x86/arm/arm-linux-androideabi-4.9.git"
+  GCC_32_BRANCH: "android12L-release"
+  
+  # defconfig 配置
+  DEFCONFIG_SOURCE: ""
+  DEFCONFIG_NAME: "polaris_defconfig"
+  DEFCONFIG_ORIGIN_IMAGE: ""
+  DEFCONFIG_FROM_BOOT: false
+  
+  # KernelSU 配置 - 使用 SukiSU-Ultra
+  KERNELSU_SOURCE: "https://raw.githubusercontent.com/ShirkNeko/SukiSU-Ultra/refs/heads/susfs-main/kernel/setup.sh"
+  KERNELSU_BRANCH: "susfs-main"
+  KERNELSU_NAME: "KernelSU"
+  KERNELSU_METHOD: "shell"
+  
+  # KPM 配置 - 关键！
+  KPM_ENABLE: true
+  KPM_FIX: true
+  
+  # Hook 方法
+  HOOK_METHOD: "tracepoint"
+  
+  # SUSFS 配置
+  SUSFS_ENABLE: true
+  SUSFS_FIXED: true
+  SUSFS_UPDATE: true
+  
+  # 打包配置
+  AK3_SOURCE: "https://github.com/osm0sis/AnyKernel3.git"
+  AK3_BRANCH: "master"
+  
+  # 实验性功能
+  LXC_ENABLE: false
+  HAVE_NO_DTBO: false
+  HAVE_NO_DTBO_TOOL: false
+  
+  # ROM 信息
+  ROM_TEXT: "lineageos_android15"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/build
