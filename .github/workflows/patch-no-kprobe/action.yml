@@ -53,7 +53,7 @@ runs:
           # Check normal hook
           elif [[ ${{ env.HOOK_METHOD }} == "normal" ]]; then
             if [[ ${{ env.FIRST_VERSION }} -le 3 ]] && [[ ${{ env.SECOND_VERSION }} -le 10 ]]; then
-                echo "normal hook cannot supported for kernel ${{ env.KERNEL_VERSION }}."
+                echo "normal hook is not supported for kernel ${{ env.KERNEL_VERSION }}."
                 false
             fi
             cp /tmp/Patches/normal_hook_patches.sh ./
@@ -62,7 +62,7 @@ runs:
             bash normal_hook_patches.sh ./
             bash backport_patches_early.sh
 
-            echo "execuated normal hook and backport patch successfully."
+            echo "executed normal hook and backport patch successfully."
 
           # Check syscall hook
           elif [[ ${{ env.HOOK_METHOD }} == "syscall" ]]; then
@@ -70,12 +70,12 @@ runs:
                 cp /tmp/Patches/syscall_hook_patches_older.sh ./
                 bash syscall_hook_patches_older.sh ./
 
-                echo "execuated syscall hook older successfully."
+                echo "executed syscall hook older successfully."
             else
                 cp /tmp/Patches/syscall_hook_patches.sh ./
                 bash syscall_hook_patches.sh ./
 
-                echo "execuated syscall hook successfully."
+                echo "executed syscall hook successfully."
             fi
 
             if [[ ${{ env.FIRST_VERSION }} -le 3 ]] && [[ ${{ env.SECOND_VERSION }} -le 10 ]]; then
@@ -91,7 +91,7 @@ runs:
                 if grep -q "kernel_read" "fs/read_write.c"; then
                     echo ">>>>>>>>>>>>>>>Backport Patch<<<<<<<<<<<<<<<<"
                     echo ">                                           <"
-                    echo "Your kernel patched the kernel patch, Skipped"
+                    echo "Your kernel is already backported, skipping"
                     echo ">                                           <"
                     echo ">>>>>>>>>>>>>>>>>>>>>><<<<<<<<<<<<<<<<<<<<<<<"
                 else
@@ -99,31 +99,31 @@ runs:
                     REJ_FOUND
                 fi
 
-                echo "execuated backport patch (contain kernel_read and kernel_write patch) successfully."
+                echo "executed backport patch (contain kernel_read and kernel_write patch) successfully."
             else
                 cp /tmp/Patches/backport_patches.sh ./
                 bash backport_patches.sh
 
-                echo "execuated backport patch successfully."
+                echo "executed backport patch successfully."
             fi
 
           # Check tracepoint hook
           elif [[ ${{ env.HOOK_METHOD }} == "tracepoint" ]]; then
             if [[ "${{ env.KERNELSU_AUTO_GET }}" == "true" ]] && [[ "${{ env.KERNELSU_AUTO_FORK }}" != "sukisu" ]]; then
                 echo "======================================Error======================================"
-                echo "= your kernelsu branch could not supported tracepoint, use SukiSU-Ultra please. ="
+                echo "= your kernelsu branch doesn't support tracepoint, use SukiSU-Ultra please. ="
                 echo "================================================================================="
                 false
             elif [[ "${{ env.KERNELSU_AUTO_GET }}" != "true" ]] && [[ "${{ env.KERNELSU_SOURCE }}" != *SukiSU* ]]; then
                 echo "======================================Error======================================"
-                echo "= your kernelsu branch could not supported tracepoint, use SukiSU-Ultra please. ="
+                echo "= your kernelsu branch does not support tracepoint, use SukiSU-Ultra please. ="
                 echo "================================================================================="
                 false
             fi
             cp /tmp/Patches/tracepoint_hook_patches.sh ./
             bash tracepoint_hook_patches.sh ./
 
-            echo "execuated tracepoint hook successfully."
+            echo "executed tracepoint hook successfully."
 
             if [[ ${{ env.FIRST_VERSION }} -le 3 ]] && [[ ${{ env.SECOND_VERSION }} -le 10 ]]; then
                 cp /tmp/Patches/backport_patches_early.sh ./
@@ -137,12 +137,12 @@ runs:
                 bash backport_patches.sh
                 patch -p1 < backport_kernel_read_and_kernel_write_to_ksu.patch || true
 
-                echo "execuated backport patch (contain kernel_read and kernel_write patch) successfully."
+                echo "executed backport patch (contain kernel_read and kernel_write patch) successfully."
             else
                 cp /tmp/Patches/backport_patches.sh ./
                 bash backport_patches.sh
 
-                echo "execuated backport patch successfully."
+                echo "executed backport patch successfully."
             fi
 
           else
