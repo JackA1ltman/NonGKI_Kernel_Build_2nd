@@ -13,7 +13,7 @@ env:
   EXTRA_CMDS : "LD=ld.lld"
 
   KERNEL_SOURCE : "https://github.com/dev-sm6375/kernel_xiaomi_sm6375.git"
-  KERNEL_BRANCH : "ksu"
+  KERNEL_BRANCH : "main"
 
   CLANG_SOURCE : "https://github.com/llvm/llvm-project/releases/download/llvmorg-21.1.3/LLVM-21.1.3-Linux-X64.tar.xz"
   CLANG_BRANCH : ""
@@ -65,7 +65,7 @@ env:
 
   REKERNEL_ENABLE: "false" # if u need Re:Kernel.
 
-  HOOK_METHOD: "normal" # manual hook method,can choice : normal, syscall and tracepoint.
+  HOOK_METHOD: "syscall" # manual hook method,can choice : normal, syscall and tracepoint.
   HOOK_OLDER: "false" # contain backport older patch and syscall older patch.
 
   KPM_ENABLE: "true" # Only use it for SukiSU-Ultra.

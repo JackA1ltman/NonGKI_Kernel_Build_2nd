@@ -47,7 +47,7 @@ runs:
           }
 
           # Check hook
-          if grep -q "CONFIG_KSU" "fs/exec.c"; then
+          if grep -q "ksu_handle" "fs/exec.c"; then
             echo "Your kernel source code appears to have been manually patched, so this step is skipped."
 
           # Check normal hook

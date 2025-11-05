@@ -94,12 +94,12 @@ runs:
             if [[ "${{ env.KERNELSU_AUTO_FORK }}" == "magic" ]]; then
                 KERNELSU_AUTHOR="backslashxx"
                 KERNELSU_NAME="KernelSU"
-                KERNELSU_ORIGIN_BRANCH="master"
+                KERNELSU_ORIGIN_BRANCH="staging"
                 if [[ "${{ env.SUSFS_ENABLE }}" == "true" ]]; then
                     echo "${{ env.KERNELSU_AUTO_FORK }} doesn't support SuSFS! "
                     false
                 else
-                    KERNELSU_BRANCH="master"
+                    KERNELSU_BRANCH="staging"
                 fi
             elif [[ "${{ env.KERNELSU_AUTO_FORK }}" == "rsuntk" ]]; then
                 KERNELSU_AUTHOR="rsuntk"
