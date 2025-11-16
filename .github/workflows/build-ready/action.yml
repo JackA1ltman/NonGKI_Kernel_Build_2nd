@@ -275,7 +275,7 @@ runs:
             else
                 false
             fi
-          elif [[ "${{ env.KERNELSU_SOURCE }}" == *SukiSU* ]]
+          elif [[ "${{ env.KERNELSU_SOURCE }}" == *SukiSU* ]]; then
             echo "======================================================================================================="
             echo "=                                                                                                     ="
             echo "= SukiSU-Ultra has a large number of problems with the Non-GKI kernel that cause compilation failures ="
