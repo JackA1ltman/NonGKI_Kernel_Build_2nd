@@ -1370,6 +1370,11 @@ index 80cf724..74b15cd 100644
  	struct list_head                        list;
  	struct st_susfs_sus_mount               info;
  };
++struct st_susfs_sus_mount {
++   char                                    target_pathname[SUSFS_MAX_LEN_PATHNAME];
++   int                                     err;
++};
++
 +
 +struct st_susfs_hide_sus_mnts_for_all_procs {
 +	bool                                    enabled;
