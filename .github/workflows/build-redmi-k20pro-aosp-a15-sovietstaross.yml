@@ -1,4 +1,4 @@
-name: Build Redmi K20 Pro (Based-AOSP A15) (Soviet-Star-OSS)
+name: Build Redmi K20 Pro
 
 on:
   workflow_call:
@@ -12,8 +12,8 @@ env:
   CUSTOM_CMDS : "CLANG_TRIPLE=aarch64-linux-gnu-"
   EXTRA_CMDS : "LLVM=1 LLVM_IAS=1"
 
-  KERNEL_SOURCE : "https://github.com/JackA1ltman/kernel_xiaomi_raphael_noksu.git"
-  KERNEL_BRANCH : "15.0"
+  KERNEL_SOURCE : "https://github.com/MochizukiNyako/IRIS_Kernel_a15.git"
+  KERNEL_BRANCH : "main"
 
   CLANG_SOURCE : "https://raw.githubusercontent.com/Neutron-Toolchains/antman/main/antman"
   CLANG_BRANCH : ""
@@ -87,7 +87,7 @@ env:
 
 jobs:
   build-kernel:
-    name: Redmi K20 Pro (Based-AOSP A15) (Soviet-Star-OSS)
+    name: Redmi K20 Pro
     runs-on: ubuntu-latest # u can changed to ubuntu 22.04, and need container set ubuntu-latest
     # container: archlinux/archlinux:latest # if u need use arch linux -> archlinux/archlinux:latest or ubuntu 20.04 -> ubuntu:focal
     env:
