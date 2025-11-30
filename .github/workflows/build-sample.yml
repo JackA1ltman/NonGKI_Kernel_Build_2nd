@@ -1,4 +1,4 @@
-name: Build Sample YAML
+name: Build Redmi K20 Pro
 
 on:
   workflow_call:
@@ -6,40 +6,40 @@ on:
 
 env:
   # Device env
-  DEVICE_NAME : "device_name"
-  DEVICE_CODENAME : "device_codename"
+  DEVICE_NAME : "redmi_k20_pro"
+  DEVICE_CODENAME : "raphael"
 
   CUSTOM_CMDS : "CLANG_TRIPLE=aarch64-linux-gnu-"
-  EXTRA_CMDS : "LD=ld.lld LLVM=1 LLVM_IAS=1"
+  EXTRA_CMDS : "LLVM=1 LLVM_IAS=1"
 
-  KERNEL_SOURCE : "https://github.com/kernel_author/android_kernel_codename.git"
-  KERNEL_BRANCH : "system_os"
+  KERNEL_SOURCE : "https://github.com/MochizukiNyako/IRIS_Kernel.git"
+  KERNEL_BRANCH : "main"
 
-  CLANG_SOURCE : "https://github.com/llvm/llvm-project/releases/download/llvmorg-19.1.7/LLVM-19.1.7-Linux-X64.tar.xz"
+  CLANG_SOURCE : "https://raw.githubusercontent.com/Neutron-Toolchains/antman/main/antman"
   CLANG_BRANCH : ""
 
   GCC_GNU : false
-  GCC_64_SOURCE : "https://android.googlesource.com/platform/prebuilts/gcc/linux-x86/aarch64/aarch64-linux-android-4.9.git"
-  GCC_64_BRANCH : "android12L-release"
-  GCC_32_SOURCE : "https://android.googlesource.com/platform/prebuilts/gcc/linux-x86/arm/arm-linux-androideabi-4.9.git"
-  GCC_32_BRANCH : "android12L-release"
+  GCC_64_SOURCE : ""
+  GCC_64_BRANCH : ""
+  GCC_32_SOURCE : ""
+  GCC_32_BRANCH : ""
 
   DEFCONFIG_SOURCE: ""
-  DEFCONFIG_NAME : "codename_defconfig"
+  DEFCONFIG_NAME : "raphael_defconfig"
   DEFCONFIG_ORIGIN_IMAGE: ""
   DEFCONFIG_FROM_BOOT: false
 
-  KERNELSU_SOURCE : "https://raw.githubusercontent.com/tiann/KernelSU/refs/heads/main/kernel/setup.sh"
-  KERNELSU_BRANCH : "v0.9.5"
+  KERNELSU_SOURCE : "https://github.com/rsuntk/KernelSU.git"
+  KERNELSU_BRANCH : "susfs-main"
 
-  KERNELSU_AUTO_GET : "false" # if u want easy setting kernelsu, u can true.
-  KERNELSU_AUTO_FORK : "" # magic, rsuntk, next, wild, jingmatrix and sukisu
+  KERNELSU_AUTO_GET : "true"
+  KERNELSU_AUTO_FORK : "sukisu" # magic, rsuntk , next and sukisu
 
-  SUSFS_ENABLE : false
-  SUSFS_FIXED : false
-  SUSFS_UPDATE : false
+  SUSFS_ENABLE : true
+  SUSFS_FIXED : true
+  SUSFS_UPDATE : true
 
-  AK3_SOURCE : "https://github.com/osm0sis/AnyKernel3.git"
+  AK3_SOURCE : "https://github.com/SOVIET-ANDROID/AnyKernel3.git"
   AK3_BRANCH : "master"
 
   BOOT_SOURCE : ""
@@ -47,7 +47,7 @@ env:
   NEED_DTBO : false
   NEED_SAFE_DTBO : false
 
-  ROM_TEXT : "rom_android"
+  ROM_TEXT : "based_aosp_a15"
 
   # Other env
   PYTHON_VERSION: "3" # Only 2(Ubuntu 22.04 and Ubuntu 20.04) or 3(Any OS Versions).
@@ -56,17 +56,16 @@ env:
 
   KERNELSU_METHOD: "shell" # shell, manual and only.
 
-  PATCHES_SOURCE: "author/source" # [your_name]/[your_patch] -> gooder123/NonGKI_Patcher
-  PATCHES_BRANCH: "branch" # [your_branch] -> main
+  PATCHES_SOURCE: "JackA1ltman/NonGKI_Kernel_Patches" # [your_name]/[your_patch] -> gooder123/NonGKI_Patcher
+  PATCHES_BRANCH: "mi_kernel" # [your_branch] -> main
 
-  SUSFS_FOLDER_FIXED: "" # Fill in your patch prefix directory here. Leave it blank if there isn't one. -> your_folder
-  SUSFS_155_FIXED: "" # Fill in your patches here. If there are multiple patches, please separate them with a comma. Leave it blank if there isn't one. -> patch1,patch2 (Only v1.5.5 SuSFS)
-  SUSFS_151X_FIXED: "" # Fill in your patches here. If there are multiple patches, please separate them with a comma. Leave it blank if there isn't one. -> patch1,patch2 (Only v1.5.1X SuSFS)
+  SUSFS_FOLDER_FIXED: "k20p_aosp_sovietstar_a15" # Fill in your patch prefix directory here. Leave it blank if there isn't one. -> your_folder
+  SUSFS_155_FIXED: "susfs_155_fixed" # Fill in your patches here. If there are multiple patches, please separate them with a comma. Leave it blank if there isn't one. -> patch1,patch2 (Only v1.5.5 SuSFS)
   SUSFS_LATEST_FIXED: "" # Fill in your patches here. If there are multiple patches, please separate them with a comma. Leave it blank if there isn't one. -> patch1,patch2
 
   REKERNEL_ENABLE: "false" # if u need Re:Kernel.
 
-  HOOK_METHOD: "syscall" # Manual hook method -> syscall and tracepoint.
+  HOOK_METHOD: "syscall" # Manual hook method ->  syscall and tracepoint.
   HOOK_OLDER: "false" # contain backport older patch and syscall older patch.
 
   KPM_ENABLE: "false" # Only use it for SukiSU-Ultra.
@@ -74,8 +73,6 @@ env:
 
   BASEBAND_GUARD_ENABLE: "false" #if u want prevent unauthorized writes to critical partitions/device nodes.
   BASEBAND_GUARD_BOOT: "false" #if u want to protect boot partition.
-
-  HIDE_STUFF: "false" # hide some of the features
 
   GENERATE_DTB: "false" # if u kernel need DTB , but cannot auto generate it. (Only Anykernel3).
   GENERATE_CHIP: "qcom" # only supported for qcom and mediatek.
@@ -90,7 +87,7 @@ env:
 
 jobs:
   build-kernel:
-    name: Build Kernel
+    name: Redmi K20 Pro (Based-AOSP A15) (Soviet-Star-OSS)
     runs-on: ubuntu-latest # u can changed to ubuntu 22.04, and need container set ubuntu-latest
     # container: archlinux/archlinux:latest # if u need use arch linux -> archlinux/archlinux:latest or ubuntu 20.04 -> ubuntu:focal
     env:
@@ -118,16 +115,15 @@ jobs:
         run: |
           # Only ${{ env.DEVICE_NAME }} use it.
           cd $GITHUB_WORKSPACE/device_kernel
-          # Nothing
+
+          # Remove SuSFS from dcache
+          sed -i '/#ifdef CONFIG_KSU_SUSFS/,/#endif/d' fs/dcache.c
 
       - name: 🧰 Patch Kernel of Re:Kernel
         uses: ./.github/workflows/patch-rekernel
 
       - name: 🔒 Patch Kernel of Baseband Guard
         uses: ./.github/workflows/patch-baseband-guard
-
-      - name: 🔧 Patch Hide Stuff
-        uses: ./.github/workflows/patch-hide-stuff
 
       - name: 🚀 Build Process
         uses: ./.github/workflows/build-process
