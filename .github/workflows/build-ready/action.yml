@@ -226,12 +226,28 @@ runs:
             echo "[+] Detected set_memory."
             echo "CONFIG_KPM=y" >> ./arch/arm64/configs/${{ env.DEFCONFIG_NAME }}
             ${{ env.CURLX }} "${{ env.KPM_PATCH_SOURCE }}" patch
-            chmod a+x patch
 
             if [ -f "patch" ]; then
-                echo "[+] Set KPM successfully !"
+                chmod a+x patch
+                echo "[+] Get KPM Tools successfully !"
             else
-                echo "[-] Get KPM patch failed !"
+                echo "[-] Get KPM Tools failed !"
+                false
+            fi
+
+          }
+
+          GET_KPATCH_NEXT_TOOLS(){
+
+            REPO="KernelSU-Next/KPatch-Next"
+            ${{ env.CURLX }} "https://github.com/$REPO/releases/latest/download/kpimg-linux" kpimg-linux
+            ${{ env.CURLX }} "https://github.com/$REPO/releases/latest/download/kptools-linux" kptools-linux
+
+            if [ -f "kptools-linux" ]; then
+                chmod a+x kptools-linux
+                echo "[+] Get KPatch-Next Tools successfully !"
+            else
+                echo "[-] Get KPatch-Next Tools failed !"
                 false
             fi
 
@@ -254,8 +270,11 @@ runs:
             fi
 
           elif [[ "${{ env.KERNELSU_SOURCE }}" != *SukiSU* ]] || [[ "${{ env.KERNELSU_AUTO_FORK }}" != "sukisu" ]] && [[ "${{ env.KPM_INLINE }}" == "true" ]]; then
-            echo "[-] KernelSU not supported KPM Inline!"
+            echo "[-] Your KernelSU Fork could not support KPM Inline!"
             false
+
+          elif [[ "${{ env.KPM_KPATCH_NEXT }}" == "true" ]]; then
+            GET_KPATCH_NEXT_TOOLS
 
           else
             ENABLE_KPM_CONFIGS

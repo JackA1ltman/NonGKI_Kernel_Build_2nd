@@ -221,7 +221,7 @@ runs:
           bash pack_error_files.sh
 
       - name: KPM Patcher (Experiment)
-        if: env.KPM_ENABLE == 'true' && env.KPM_INLINE == 'true'
+        if: env.KPM_ENABLE == 'true' && env.KPM_INLINE == 'true' || env.KPM_KPATCH_NEXT == 'true'
         shell: bash
         run: |
           cd $GITHUB_WORKSPACE/device_kernel/
@@ -257,9 +257,22 @@ runs:
                   fi
 
                   rm -f "$IMAGE_DIR/Image.gz-dtb" "$IMAGE_DIR/Image.gz"
-                  cp patch "$IMAGE_DIR/"
+
+                  if [[ "${{ env.KPM_INLINE }}" == "true" ]]; then
+                    cp patch "$IMAGE_DIR/"
+                  else
+                    cp kpimg-linux "$IMAGE_DIR/"
+                    cp kptools-linux "$IMAGE_DIR/"
+                  fi
+
                   cd "$IMAGE_DIR/" || exit 1
-                  ./patch
+
+                  if [[ "${{ env.KPM_INLINE }}" == "true" ]]; then
+                    ./patch
+                  else
+                    ./kptools-linux -p -k kptools-linux -i Image -o oImage
+                  fi
+
                   rm -f Image
                   mv oImage Image
                   gzip -c Image > Image.gz
@@ -271,18 +284,44 @@ runs:
               ;;
             gz)
               rm -f "$IMAGE_DIR/Image.gz"
-              cp patch "$IMAGE_DIR/"
+
+              if [[ "${{ env.KPM_INLINE }}" == "true" ]]; then
+                cp patch "$IMAGE_DIR/"
+              else
+                cp kpimg-linux "$IMAGE_DIR/"
+                cp kptools-linux "$IMAGE_DIR/"
+              fi
+
               cd "$IMAGE_DIR/" || exit 1
-              ./patch
+
+              if [[ "${{ env.KPM_INLINE }}" == "true" ]]; then
+                ./patch
+              else
+                ./kptools-linux -p -k kptools-linux -i Image -o oImage
+              fi
+
               rm -f Image
               mv oImage Image
               gzip -c Image > Image.gz
               echo "Hook Image successfully !"
               ;;
             plain)
-              cp patch "$IMAGE_DIR/"
+
+              if [[ "${{ env.KPM_INLINE }}" == "true" ]]; then
+                cp patch "$IMAGE_DIR/"
+              else
+                cp kpimg-linux "$IMAGE_DIR/"
+                cp kptools-linux "$IMAGE_DIR/"
+              fi
+
               cd "$IMAGE_DIR/" || exit 1
-              ./patch
+
+              if [[ "${{ env.KPM_INLINE }}" == "true" ]]; then
+                ./patch
+              else
+                ./kptools-linux -p -k kptools-linux -i Image -o oImage
+              fi
+
               mv oImage Image
               echo "Hook Image successfully !"
               ;;
