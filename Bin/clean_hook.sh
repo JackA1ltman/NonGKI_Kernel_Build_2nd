@@ -26,7 +26,6 @@ done
 # Removal of KernelSU Hook
 
 for file in "${KSU_CLEAN_FILES[@]}"; do
-    perl -i -0777 -pe 's/#ifndef CONFIG_KSU[^\n]*\n(.*?)#else\n(.*?)#endif\n/$1/gs; s/#ifdef CONFIG_KSU[^\n]*\n(.*?)#else\n(.*?)#endif\n/$1/gs' "${file}"
     sed -i '/#ifdef CONFIG_KSU/,/#endif/d' "${file}"
 
     if grep -q "CONFIG_KSU" "${file}"; then
