@@ -137,6 +137,15 @@ runs:
                 else
                     KERNELSU_BRANCH="legacy"
                 fi
+            elif [[ "${{ env.KERNELSU_AUTO_FORK }}" == "resukisu" ]]; then
+                KERNELSU_AUTHOR="ReSukiSU"
+                KERNELSU_NAME="ReSukiSU"
+                KERNELSU_ORIGIN_BRANCH="main"
+                if [[ "${{ env.SUSFS_ENABLE }}" == "true" ]]; then
+                    KERNELSU_BRANCH="builtin"
+                else
+                    KERNELSU_BRANCH="builtin"
+                fi
             else
                 echo "Please input vaild fork name!"
                 false
@@ -253,7 +262,7 @@ runs:
 
           }
 
-          if [[ "${{ env.KERNELSU_SOURCE }}" == *SukiSU* ]] || [[ "${{ env.KERNELSU_AUTO_FORK }}" == "sukisu" ]] && [[ "${{ env.KPM_INLINE }}" == "true" ]]; then
+          if [[ "${{ env.KERNELSU_SOURCE }}" == *SukiSU* ]] || [[ "${{ env.KERNELSU_AUTO_FORK }}" == "sukisu" ]]  || [[ "${{ env.KERNELSU_SOURCE }}" == *ReSukiSU* ]] || [[ "${{ env.KERNELSU_AUTO_FORK }}" == "resukisu" ]] && [[ "${{ env.KPM_INLINE }}" == "true" ]]; then
             echo "[+] Detected SukiSU-Ultra and enabled KPM Inline."
             ENABLE_KPM_CONFIGS
 
@@ -269,7 +278,7 @@ runs:
 
             fi
 
-          elif [[ "${{ env.KERNELSU_SOURCE }}" != *SukiSU* ]] || [[ "${{ env.KERNELSU_AUTO_FORK }}" != "sukisu" ]] && [[ "${{ env.KPM_INLINE }}" == "true" ]]; then
+          elif [[ "${{ env.KERNELSU_SOURCE }}" != *SukiSU* ]] || [[ "${{ env.KERNELSU_AUTO_FORK }}" != "sukisu" ]] || [[ "${{ env.KERNELSU_SOURCE }}" != *ReSukiSU* ]] || [[ "${{ env.KERNELSU_AUTO_FORK }}" != "resukisu" ]] && [[ "${{ env.KPM_INLINE }}" == "true" ]]; then
             echo "[-] Your KernelSU Fork could not support KPM Inline!"
             false
 
@@ -293,7 +302,7 @@ runs:
           echo "CONFIG_HAVE_SYSCALL_TRACEPOINTS=y" >> ./arch/${{ env.KERNEL_ARCH }}/configs/${{ env.DEFCONFIG_NAME }}
 
           # Fork
-          if [[ "${{ env.KERNELSU_SOURCE }}" == *rsuntk* ]] || [[ "${{ env.KERNELSU_SOURCE }}" == *SukiSU* ]] || [[ "${{ env.KERNELSU_SOURCE }}" == *next* ]] || [[ "${{ env.KERNELSU_AUTO_FORK }}" == "sukisu" ]] || [[ "${{ env.KERNELSU_AUTO_FORK }}" == "rsuntk" ]] || [[ "${{ env.KERNELSU_AUTO_FORK }}" == "next" ]]; then
+          if [[ "${{ env.KERNELSU_SOURCE }}" == *rsuntk* ]] || [[ "${{ env.KERNELSU_SOURCE }}" == *SukiSU* ]] || [[ "${{ env.KERNELSU_SOURCE }}" == *next* ]] || [[ "${{ env.KERNELSU_AUTO_FORK }}" == "sukisu" ]] || [[ "${{ env.KERNELSU_AUTO_FORK }}" == "rsuntk" ]] || [[ "${{ env.KERNELSU_AUTO_FORK }}" == "next" ]] || [[ "${{ env.KERNELSU_SOURCE }}" == *ReSukiSU* ]] || [[ "${{ env.KERNELSU_AUTO_FORK }}" == "resukisu" ]]; then
             if [[ ${{ env.SUSFS_ENABLE }} != "true" ]]; then
 
                 echo "CONFIG_KSU_MANUAL_HOOK=y" >> ./arch/${{ env.KERNEL_ARCH }}/configs/${{ env.DEFCONFIG_NAME }}
@@ -310,7 +319,7 @@ runs:
             fi
           fi
 
-          if [[ "${{ env.KERNELSU_SOURCE }}" == *SukiSU* ]] || [[ "${{ env.KERNELSU_AUTO_FORK }}" == "sukisu" ]]; then
+          if [[ "${{ env.KERNELSU_SOURCE }}" == *SukiSU* ]] || [[ "${{ env.KERNELSU_AUTO_FORK }}" == "sukisu" ]] || [[ "${{ env.KERNELSU_SOURCE }}" == *ReSukiSU* ]] || [[ "${{ env.KERNELSU_AUTO_FORK }}" == "resukisu" ]]; then
             echo "CONFIG_KSU_MANUAL_SU=y" >> ./arch/${{ env.KERNEL_ARCH }}/configs/${{ env.DEFCONFIG_NAME }}
 
             if [[ "${{ env.SUSFS_ENABLE }}" != true ]]; then
