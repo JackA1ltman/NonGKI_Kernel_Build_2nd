@@ -1984,10 +1984,10 @@ index 4960c69..7647d9c 100644
  
 diff --git a/fs/susfs.c b/fs/susfs.c
 new file mode 100644
-index 0000000..77b65a8
+index 0000000..2e66c27
 --- /dev/null
 +++ b/fs/susfs.c
-@@ -0,0 +1,1206 @@
+@@ -0,0 +1,1222 @@
 +#include <linux/version.h>
 +#include <linux/cred.h>
 +#include <linux/fs.h>
@@ -2007,6 +2007,7 @@ index 0000000..77b65a8
 +#include <linux/kthread.h>
 +#include <linux/delay.h>
 +#include <linux/fsnotify_backend.h>
++#include <linux/version.h> // We need check kernel version.
 +#include <linux/susfs.h>
 +#include "mount.h"
 +
@@ -3084,9 +3085,7 @@ index 0000000..77b65a8
 +	}
 +}
 +
-+static int susfs_handle_sdcard_inode_event(struct fsnotify_mark *mark, u32 mask,
-+											struct inode *inode, struct inode *dir,
-+											const struct qstr *file_name, u32 cookie)
++static SUSFS_DECL_FSNOTIFY_OPS(susfs_handle_sdcard_inode_event)
 +{
 +	static bool target_path_is_found = false;
 +
@@ -3111,23 +3110,40 @@ index 0000000..77b65a8
 +	return 0;
 +}
 +
-+static const struct fsnotify_ops fsnotify_ops = {
++static const struct fsnotify_ops ksu_ops = {
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 9, 0)
 +	.handle_inode_event = susfs_handle_sdcard_inode_event,
++#else
++	.handle_event = susfs_handle_sdcard_inode_event,
++#endif
 +};
 +
 +static int add_mark_on_inode(struct inode *inode, u32 mask,
 +								struct fsnotify_mark **out)
 +{
 +	struct fsnotify_mark *m;
++	int ret;
 +
 +	m = kzalloc(sizeof(*m), GFP_KERNEL);
 +	if (!m)
 +		return -ENOMEM;
 +
++/* From KernelSU */
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 18, 0)
 +	fsnotify_init_mark(m, g);
 +	m->mask = mask;
++	ret = fsnotify_add_inode_mark(m, inode, 0);
++#elif LINUX_VERSION_CODE >= KERNEL_VERSION(4, 12, 0)
++	fsnotify_init_mark(m, g);
++	m->mask = mask;
++	ret = fsnotify_add_mark(m, inode, NULL, 0);
++#else
++	fsnotify_init_mark(m, m_free);
++	m->mask = mask;
++	ret = fsnotify_add_mark(m, g, inode, NULL, 0);
++#endif
 +
-+	if (fsnotify_add_inode_mark(m, inode, 0)) {
++	if (ret) {
 +		fsnotify_put_mark(m);
 +		return -EINVAL;
 +	}
@@ -3441,14 +3457,15 @@ index 0000000..ab1e428
 +#endif
 diff --git a/include/linux/susfs_def.h b/include/linux/susfs_def.h
 new file mode 100644
-index 0000000..5f1a990
+index 0000000..6519ac4
 --- /dev/null
 +++ b/include/linux/susfs_def.h
-@@ -0,0 +1,86 @@
+@@ -0,0 +1,127 @@
 +#ifndef KSU_SUSFS_DEF_H
 +#define KSU_SUSFS_DEF_H
 +
 +#include <linux/bits.h>
++#include <linux/version.h> // We need check kernel version.
 +
 +/********/
 +/* ENUM */
@@ -3522,6 +3539,46 @@ index 0000000..5f1a990
 +#define ND_FLAGS_LOOKUP_LAST		0x2000000
 + 
 +#define MAGIC_MOUNT_WORKDIR "/debug_ramdisk/workdir"
++
++/* From KernelSU */
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 2, 0)
++typedef const struct qstr *susfs_fname_t;
++#define susfs_fname_len(f) ((f)->len)
++#define susfs_fname_arg(f) ((f)->name)
++#else
++typedef const unsigned char *susfs_fname_t;
++#define susfs_fname_len(f) (strlen(f))
++#define susfs_fname_arg(f) (f)
++#endif
++
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 9, 0)
++#define SUSFS_DECL_FSNOTIFY_OPS(name)                                            \
++int name(struct fsnotify_mark *mark, u32 mask, struct inode *inode,    \
++struct inode *dir, const struct qstr *file_name, u32 cookie)
++#elif LINUX_VERSION_CODE >= KERNEL_VERSION(5, 2, 0)
++#define SUSFS_DECL_FSNOTIFY_OPS(name)                                            \
++int name(struct fsnotify_group *group, struct inode *inode, u32 mask,  \
++const void *data, int data_type, susfs_fname_t file_name,       \
++u32 cookie, struct fsnotify_iter_info *iter_info)
++#elif LINUX_VERSION_CODE >= KERNEL_VERSION(4, 18, 0)
++#define SUSFS_DECL_FSNOTIFY_OPS(name)                                            \
++int name(struct fsnotify_group *group, struct inode *inode, u32 mask,  \
++const void *data, int data_type, susfs_fname_t file_name,       \
++u32 cookie, struct fsnotify_iter_info *iter_info)
++#elif LINUX_VERSION_CODE >= KERNEL_VERSION(4, 12, 0)
++#define SUSFS_DECL_FSNOTIFY_OPS(name)                                            \
++int name(struct fsnotify_group *group, struct inode *inode,            \
++struct fsnotify_mark *inode_mark,                             \
++struct fsnotify_mark *vfsmount_mark, u32 mask,                \
++const void *data, int data_type, susfs_fname_t file_name,       \
++u32 cookie, struct fsnotify_iter_info *iter_info)
++#else
++#define SUSFS_DECL_FSNOTIFY_OPS(name)                                            \
++int name(struct fsnotify_group *group, struct inode *inode,            \
++struct fsnotify_mark *inode_mark,                             \
++struct fsnotify_mark *vfsmount_mark, u32 mask, void *data,    \
++int data_type, susfs_fname_t file_name, u32 cookie)
++#endif
 +
 +static inline bool susfs_is_current_proc_umounted(void) {
 +	return test_ti_thread_flag(&current->thread_info, TIF_PROC_UMOUNTED);
