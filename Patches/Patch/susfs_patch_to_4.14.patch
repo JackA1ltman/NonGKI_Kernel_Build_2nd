@@ -2036,10 +2036,10 @@ index e6ceb3e..f13ac70 100644
  
 diff --git a/fs/susfs.c b/fs/susfs.c
 new file mode 100644
-index 0000000..2e66c27
+index 0000000..70b7ec8
 --- /dev/null
 +++ b/fs/susfs.c
-@@ -0,0 +1,1222 @@
+@@ -0,0 +1,1229 @@
 +#include <linux/version.h>
 +#include <linux/cred.h>
 +#include <linux/fs.h>
@@ -3147,7 +3147,7 @@ index 0000000..2e66c27
 +		return 0;
 +	if (target_path_is_found)
 +		return 0;
-+	if (file_name->len == 7 && !memcmp(file_name->name, "Android", 7)) {
++	if (susfs_fname_len(file_name) == 7 && !memcmp(susfs_fname_arg(file_name), "Android", 7)) {
 +		SUSFS_LOGI("'%s' detected, mask: %d\n", SDCARD_ANDROID_DATA_PATH, mask);
 +		target_path_is_found = true;
 +		unwatch_one_dir(&g_watch);
@@ -3162,13 +3162,20 @@ index 0000000..2e66c27
 +	return 0;
 +}
 +
-+static const struct fsnotify_ops ksu_ops = {
++static const struct fsnotify_ops fsnotify_ops = {
 +#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 9, 0)
 +	.handle_inode_event = susfs_handle_sdcard_inode_event,
 +#else
 +	.handle_event = susfs_handle_sdcard_inode_event,
 +#endif
 +};
++
++static void __maybe_unused m_free(struct fsnotify_mark *m)
++{
++	if (m) {
++		kfree(m);
++	}
++}
 +
 +static int add_mark_on_inode(struct inode *inode, u32 mask,
 +								struct fsnotify_mark **out)
