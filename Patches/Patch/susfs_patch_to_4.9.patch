@@ -607,7 +607,7 @@ index e8537d4..9f7d9eb 100644
  	return filp;
  }
 diff --git a/fs/namespace.c b/fs/namespace.c
-index 5b253ad..ec0c9b4 100644
+index 5b253ad..813b809 100644
 --- a/fs/namespace.c
 +++ b/fs/namespace.c
 @@ -25,9 +25,23 @@
@@ -622,7 +622,7 @@ index 5b253ad..ec0c9b4 100644
  
 +#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
 +extern bool susfs_is_current_ksu_domain(void);
-+extern bool susfs_is_boot_completed_triggered;
++extern bool susfs_is_sdcard_android_data_decrypted;
 +
 +static DEFINE_IDA(susfs_ksu_mnt_group_ida);
 +static atomic64_t susfs_ksu_mounts = ATOMIC64_INIT(0);
@@ -662,7 +662,7 @@ index 5b253ad..ec0c9b4 100644
  	int res;
  
 +#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
-+	if (!susfs_is_boot_completed_triggered && mnt->mnt_id >= DEFAULT_KSU_MNT_ID) {
++	if (!susfs_is_sdcard_android_data_decrypted && mnt->mnt_id >= DEFAULT_KSU_MNT_ID) {
 +		if (!ida_pre_get(&susfs_ksu_mnt_group_ida, GFP_KERNEL))
 +			return -ENOMEM;
 +		// If so, assign a sus mnt_group id DEFAULT_KSU_MNT_GROUP_ID from susfs_ksu_mnt_group_ida
@@ -684,7 +684,7 @@ index 5b253ad..ec0c9b4 100644
 +#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
 +	// If mnt->mnt_group_id >= DEFAULT_KSU_MNT_GROUP_ID, it means 'mnt' is also sus mount,
 +	// then we free the mnt->mnt_group_id from susfs_ksu_mnt_group_ida
-+	if (!susfs_is_boot_completed_triggered && id >= DEFAULT_KSU_MNT_GROUP_ID) {
++	if (!susfs_is_sdcard_android_data_decrypted && id >= DEFAULT_KSU_MNT_GROUP_ID) {
 +		ida_remove(&susfs_ksu_mnt_group_ida, id);
 +		if (susfs_mnt_group_start > id)
 +			susfs_mnt_group_start = id;
@@ -879,7 +879,7 @@ index 5b253ad..ec0c9b4 100644
  
 +#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
 +	// We won't check it anymore if boot-completed stage is triggered.
-+	if (susfs_is_boot_completed_triggered) {
++	if (susfs_is_sdcard_android_data_decrypted) {
 +		goto skip_checking_for_ksu_proc;
 +	}
 +	// First we must check for ksu process because of magic mount
@@ -1871,10 +1871,10 @@ index 083dc0a..3ef498e 100644
  
 diff --git a/fs/susfs.c b/fs/susfs.c
 new file mode 100644
-index 0000000..8485636
+index 0000000..c854bd1
 --- /dev/null
 +++ b/fs/susfs.c
-@@ -0,0 +1,1060 @@
+@@ -0,0 +1,1224 @@
 +#include <linux/version.h>
 +#include <linux/cred.h>
 +#include <linux/fs.h>
@@ -1891,6 +1891,9 @@ index 0000000..8485636
 +#include <linux/fdtable.h>
 +#include <linux/statfs.h>
 +#include <linux/random.h>
++#include <linux/kthread.h>
++#include <linux/delay.h>
++#include <linux/fsnotify_backend.h>
 +#include <linux/susfs.h>
 +#include "mount.h"
 +
@@ -2924,6 +2927,167 @@ index 0000000..8485636
 +	SUSFS_LOGI("CMD_SUSFS_SHOW_VERSION -> ret: %d\n", info.err);
 +}
 +
++/* kthread for checking if /sdcard/Android is accessible via fsnoitfy */
++/* code is straightly borrowed from KernelSU's pkg_observer.c */
++#define SDCARD_ANDROID_DATA_PATH "/sdcard/Android"
++extern void setup_selinux(const char *domain, struct cred *cred);
++extern bool susfs_is_current_ksu_domain(void);
++static struct task_struct *susfs_sdcard_monitor_thread;
++
++bool susfs_is_sdcard_android_data_decrypted __read_mostly = false;
++
++struct watch_dir {
++	const char *path;
++	u32 mask;
++	struct path kpath;
++	struct inode *inode;
++	struct fsnotify_mark *mark;
++};
++
++static struct fsnotify_group *g;
++
++static struct watch_dir g_watch = { .path = "/sdcard",
++									.mask = (FS_CREATE | FS_MOVE | FS_EVENT_ON_CHILD) };
++static int add_mark_on_inode(struct inode *inode, u32 mask,
++								struct fsnotify_mark **out);
++
++static int watch_one_dir(struct watch_dir *wd)
++{
++	int ret = kern_path(wd->path, 0, &wd->kpath);
++	if (ret) {
++		SUSFS_LOGI("path not ready: %s (%d)\n", wd->path, ret);
++		return ret;
++	}
++	wd->inode = d_inode(wd->kpath.dentry);
++	ihold(wd->inode);
++
++	ret = add_mark_on_inode(wd->inode, wd->mask, &wd->mark);
++	if (ret) {
++		SUSFS_LOGE("Add mark failed for %s (%d)\n", wd->path, ret);
++		path_put(&wd->kpath);
++		iput(wd->inode);
++		wd->inode = NULL;
++		return ret;
++	}
++	SUSFS_LOGI("watching %s\n", wd->path);
++	return 0;
++}
++
++static void unwatch_one_dir(struct watch_dir *wd)
++{
++	if (wd->mark) {
++		fsnotify_destroy_mark(wd->mark, g);
++		fsnotify_put_mark(wd->mark);
++		wd->mark = NULL;
++	}
++	if (wd->inode) {
++		iput(wd->inode);
++		wd->inode = NULL;
++	}
++	if (wd->kpath.dentry) {
++		path_put(&wd->kpath);
++		memset(&wd->kpath, 0, sizeof(wd->kpath));
++	}
++}
++
++static int susfs_handle_sdcard_inode_event(struct fsnotify_mark *mark, u32 mask,
++											struct inode *inode, struct inode *dir,
++											const struct qstr *file_name, u32 cookie)
++{
++	static bool target_path_is_found = false;
++
++	if (!file_name)
++		return 0;
++	if (mask & FS_ISDIR)
++		return 0;
++	if (target_path_is_found)
++		return 0;
++	if (file_name->len == 7 && !memcmp(file_name->name, "Android", 7)) {
++		SUSFS_LOGI("'%s' detected, mask: %d\n", SDCARD_ANDROID_DATA_PATH, mask);
++		target_path_is_found = true;
++		unwatch_one_dir(&g_watch);
++		fsnotify_put_group(g);
++		SUSFS_LOGI("sleeping for 5 more seconds just in case some other modules are still mounting stuff\n");
++		msleep(5000);
++		SUSFS_LOGI("set susfs_is_sdcard_android_data_decrypted to true\n");
++		WRITE_ONCE(susfs_is_sdcard_android_data_decrypted, true);
++		WRITE_ONCE(susfs_sdcard_monitor_thread, NULL);
++		SUSFS_LOGI("observer exit done\n");
++	}
++	return 0;
++}
++
++static const struct fsnotify_ops fsnotify_ops = {
++	.handle_inode_event = susfs_handle_sdcard_inode_event,
++};
++
++static int add_mark_on_inode(struct inode *inode, u32 mask,
++								struct fsnotify_mark **out)
++{
++	struct fsnotify_mark *m;
++
++	m = kzalloc(sizeof(*m), GFP_KERNEL);
++	if (!m)
++		return -ENOMEM;
++
++	fsnotify_init_mark(m, g);
++	m->mask = mask;
++
++	if (fsnotify_add_inode_mark(m, inode, 0)) {
++		fsnotify_put_mark(m);
++		return -EINVAL;
++	}
++	*out = m;
++	return 0;
++}
++
++static int susfs_sdcard_monitor_fn(void *data)
++{
++	struct cred *cred = prepare_creds();
++	int ret = 0;
++
++	if (!cred) {
++		SUSFS_LOGE("failed to prepare creds!\n");
++		return -ENOMEM;
++	}
++
++	setup_selinux("u:r:su:s0", cred);
++	commit_creds(cred);
++
++	if (!susfs_is_current_ksu_domain()) {
++		SUSFS_LOGE("domain is not su, exiting the thread\n");
++		susfs_sdcard_monitor_thread = NULL;
++		return -EINVAL;
++	}
++
++	SUSFS_LOGI("start monitoring path '%s' using fsnotify\n",
++				SDCARD_ANDROID_DATA_PATH);
++
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 0, 0)
++	g = fsnotify_alloc_group(&fsnotify_ops, 0);
++#else
++	g = fsnotify_alloc_group(&fsnotify_ops);
++#endif
++	if (IS_ERR(g)) {
++		return PTR_ERR(g);
++	}
++
++	ret = watch_one_dir(&g_watch);
++
++	SUSFS_LOGI("observer init done, ret: %d\n", ret);
++
++	return 0;
++}
++
++void susfs_start_sdcard_monitor_fn(void) {
++	susfs_sdcard_monitor_thread = kthread_run(susfs_sdcard_monitor_fn, NULL, "susfs_sdcard_monitor");
++	if (IS_ERR(susfs_sdcard_monitor_thread)) {
++		SUSFS_LOGE("failed to create thread susfs_sdcard_monitor\n");
++		SUSFS_LOGI("set susfs_is_sdcard_android_data_decrypted to true\n");
++		susfs_is_sdcard_android_data_decrypted = true;
++	}
++}
++
 +/* susfs_init */
 +void susfs_init(void) {
 +#ifdef CONFIG_KSU_SUSFS_SPOOF_UNAME
@@ -2951,10 +3115,10 @@ index 5615a9e..7d68cb6 100644
  struct file; /* forward dec */
 diff --git a/include/linux/susfs.h b/include/linux/susfs.h
 new file mode 100644
-index 0000000..3a6d173
+index 0000000..a5350b0
 --- /dev/null
 +++ b/include/linux/susfs.h
-@@ -0,0 +1,221 @@
+@@ -0,0 +1,223 @@
 +#ifndef KSU_SUSFS_H
 +#define KSU_SUSFS_H
 +
@@ -3171,6 +3335,8 @@ index 0000000..3a6d173
 +void susfs_get_enabled_features(void __user **user_info);
 +void susfs_show_variant(void __user **user_info);
 +void susfs_show_version(void __user **user_info);
++
++void susfs_start_sdcard_monitor_fn(void);
 +
 +/* susfs_init */
 +void susfs_init(void);
