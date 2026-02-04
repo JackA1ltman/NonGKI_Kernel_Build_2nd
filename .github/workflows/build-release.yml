@@ -95,7 +95,7 @@ jobs:
           KSU_SUKISU_ULTRA_VERSION=$(cd KernelSU-SukiSU-Ultra && expr $(/usr/bin/git rev-list --count HEAD) + 10200)
           git clone -b legacy https://github.com/KernelSU-Next/KernelSU-Next.git KernelSU-Next
           KSU_NEXT_VERSION=$(cd KernelSU-Next && expr $(/usr/bin/git rev-list --count HEAD) + 10200)
-          git clone -b builtin https://github.com/ReSukiSU/ReSukiSU.git KernelSU-ReSukiSU
+          git clone -b main https://github.com/ReSukiSU/ReSukiSU.git KernelSU-ReSukiSU
           KSU_RESUKISU_VERSION=$(cd KernelSU-ReSukiSU && expr $(/usr/bin/git rev-list --count HEAD) + 10200)
 
           # Input release note
