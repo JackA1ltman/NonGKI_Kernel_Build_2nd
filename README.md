@@ -73,8 +73,8 @@ It also aims to provide an easier compilation process using **GitHub Actions**, 
   - [rsuntk](https://github.com/rsuntk/KernelSU) - @rsuntk
   - [Magic](https://github.com/backslashxx/KernelSU) - @backslashxx
   - [SukiSU-Ultra](https://github.com/SukiSU-Ultra/SukiSU-Ultra) - @ShirkNeko
+    - [ReSukiSU](https://github.com/ReSukiSU/ReSukiSU) - @ReSukiSU Development
   - [Next](https://github.com/KernelSU-Next/KernelSU-Next) - @rifsxd
-    - [Wild](https://github.com/WildKernels/Wild_KSU) - @TheWildJames
 - [SuSFS](https://gitlab.com/simonpunk/susfs4ksu) - @simonpunk
 - [Re:Kernel](https://github.com/Sakion-Team/Re-Kernel) - @Sakion-Team
 - [Baseband Guard](https://github.com/vc-teahouse/Baseband-guard) - @秋刀鱼
