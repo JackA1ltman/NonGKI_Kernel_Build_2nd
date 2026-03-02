@@ -281,30 +281,6 @@ for i in "${patch_files[@]}"; do
 
         echo "======================================"
         ;;
-    ## kernel/sys.c
-    kernel/sys.c)
-        if grep -q "ksu_handle_setresuid" "drivers/kernelsu/setuid_hook.c" >/dev/null 2>&1; then
-
-            if grep -q "__sys_setresuid" "kernel/sys.c" >/dev/null 2>&1; then
-                sed -i '/^SYSCALL_DEFINE3(setresuid, uid_t, ruid, uid_t, euid, uid_t, suid)/i\#ifdef CONFIG_KSU\nextern int ksu_handle_setresuid(uid_t ruid, uid_t euid, uid_t suid);\n#endif\n' kernel/sys.c
-                sed -i '/return __sys_setresuid(ruid, euid, suid);/i\#ifdef CONFIG_KSU_SUSFS\n\tif (ksu_handle_setresuid(ruid, euid, suid)) {\n\t\tpr_info("Something wrong with ksu_handle_setresuid()\\\\n");\n\t}\n#endif\n' kernel/sys.c
-            else
-                sed -i '/^SYSCALL_DEFINE3(setresuid, uid_t, ruid, uid_t, euid, uid_t, suid)/i\#ifdef CONFIG_KSU\nextern int ksu_handle_setresuid(uid_t ruid, uid_t euid, uid_t suid);\n#endif\n' kernel/sys.c
-                sed -i '0,/\tif ((ruid != (uid_t) -1) && !uid_valid(kruid))/b; /\tif ((ruid != (uid_t) -1) && !uid_valid(kruid))/i\#ifdef CONFIG_KSU_SUSFS\n\tif (ksu_handle_setresuid(ruid, euid, suid)) {\n\t\tpr_info("Something wrong with ksu_handle_setresuid()\\\\n");\n\t}\n#endif' kernel/sys.c
-            fi
-
-            if grep -q "ksu_handle_setresuid" "kernel/sys.c"; then
-                echo "[+] kernel/sys.c Patched!"
-                echo "[+] Count: $(grep -c "ksu_handle_setresuid" "kernel/sys.c")"
-            else
-                echo "[-] kernel/sys.c patch failed for unknown reasons, please provide feedback in time."
-            fi
-        else
-            echo "[-] KernelSU have no ksu_handle_setresuid, Skipped."
-        fi
-
-        echo "======================================"
-        ;;
     esac
 
 done
