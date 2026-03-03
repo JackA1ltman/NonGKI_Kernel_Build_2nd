@@ -132,8 +132,7 @@ runs:
                 KERNELSU_NAME="KernelSU-Next"
                 KERNELSU_ORIGIN_BRANCH="legacy"
                 if [[ "${{ env.SUSFS_ENABLE }}" == "true" ]]; then
-                    echo "${{ env.KERNELSU_AUTO_FORK }} doesn't support SuSFS! "
-                    false
+                    KERNELSU_BRANCH="legacy_susfs"
                 else
                     KERNELSU_BRANCH="legacy"
                 fi
