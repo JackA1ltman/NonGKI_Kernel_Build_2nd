@@ -116,6 +116,9 @@ process_error_block() {
     elif grep -q "incompatible pointer types passing 'atomic_long_t *'" <<< "${error_block[@]}"; then
         error_type="源代码指针类型错误"
         suggestion="建议: 通常为嵌入手动修补后cred.h产生的错误，将代码中atomic_inc_not_zero更换成atomic_long_inc_not_zero即可"
+    elif grep -q "Error: junk at end of line, first unrecognized character is" <<< "${error_block[@]}"; then
+        error_type="Clang版本异常"
+        suggestion="建议：降低Clang版本例如从20到12到10，或者修改Makefile在KBUILD_CFLAGS增加-gdwarf-4来声明更低版本DWARF"
     fi
 
     echo "Error: $error_type"
