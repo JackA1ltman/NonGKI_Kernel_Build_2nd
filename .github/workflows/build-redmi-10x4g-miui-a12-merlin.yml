@@ -24,7 +24,7 @@ env:
   GCC_32_SOURCE : "https://android.googlesource.com/platform/prebuilts/gcc/linux-x86/arm/arm-linux-androideabi-4.9.git"
   GCC_32_BRANCH : "android12L-release"
 
-  DEFCONFIG_SOURCE: "https://github.com/Redmi-MT6768/android_kernel_xiaomi_mt6768/tree/twelve/arch%2Farm64%2Fconfigs"
+  DEFCONFIG_SOURCE: ""
   DEFCONFIG_NAME : "merlin_defconfig"
   DEFCONFIG_ORIGIN_IMAGE: ""
   DEFCONFIG_FROM_BOOT: false
