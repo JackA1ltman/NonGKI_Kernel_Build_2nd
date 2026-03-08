@@ -15,14 +15,14 @@ env:
   KERNEL_SOURCE : "https://github.com/Redmi-MT6768/android_kernel_xiaomi_mt6768"
   KERNEL_BRANCH : "twelve"
 
-  CLANG_SOURCE : "https://github.com/kdrag0n/proton-clang.git"
-  CLANG_BRANCH : "master"
+  CLANG_SOURCE : "https://github.com/LineageOS/android_prebuilts_clang_kernel_linux-x86_clang-r416183b.git"
+  CLANG_BRANCH : "lineage-20.0"
 
   GCC_GNU : false
-  GCC_64_SOURCE : "https://android.googlesource.com/platform/prebuilts/gcc/linux-x86/aarch64/aarch64-linux-android-4.9.git"
-  GCC_64_BRANCH : "android12-release"
-  GCC_32_SOURCE : "https://android.googlesource.com/platform/prebuilts/gcc/linux-x86/arm/arm-linux-androideabi-4.9.git"
-  GCC_32_BRANCH : "android12-release"
+  GCC_64_SOURCE : "https://github.com/JackA1ltman/Google-GCC-Android-4.9.git"
+  GCC_64_BRANCH : "aarch64"
+  GCC_32_SOURCE : "https://github.com/JackA1ltman/Google-GCC-Android-4.9.git"
+  GCC_32_BRANCH : "arm32"
 
   DEFCONFIG_SOURCE: ""
   DEFCONFIG_NAME : "merlin_defconfig"
@@ -64,7 +64,7 @@ env:
   REKERNEL_ENABLE: "false" # if u need Re:Kernel.
 
   HOOK_METHOD: "syscall" # Manual hook method -> syscall.
-  HOOK_OLDER: "true" # contain backport older patch and syscall older patch.
+  HOOK_OLDER: "false" # contain backport older patch and syscall older patch.
 
   KERNEL_PATCH: "true" # If your kernel version is <= 4.9, you have the option of enabling the patch to patch the kernel_write and kernel_read functions.
 
@@ -92,7 +92,7 @@ env:
 jobs:
   build-kernel:
     name: Build Redmi 10X 4G (merlin) (MIUI A12)
-    runs-on: ubuntu-22.04 # u can changed to ubuntu 22.04, and need container set ubuntu-latest
+    runs-on: ubuntu:focal # u can changed to ubuntu 22.04, and need container set ubuntu-latest
     # container: archlinux/archlinux:latest # if u need use arch linux -> archlinux/archlinux:latest or ubuntu 20.04 -> ubuntu:focal
     env:
       CCACHE_COMPILERCHECK: "%compiler% -dumpmachine; %compiler% -dumpversion"
