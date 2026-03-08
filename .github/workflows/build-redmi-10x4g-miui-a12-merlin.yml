@@ -84,7 +84,7 @@ env:
   BUILD_DEBUGGER: "true" # Output build errors.
   SKIP_PATCH: "true" # Ignore errors found in Patch Debugger.
 
-  BUILD_OTHER_CONFIG: "false" # Merge config files.
+  BUILD_OTHER_CONFIG: "true" # Merge config files.
   MERGE_CONFIG_FILES: "vendor/debugfs.config,vendor/lahaina_QGKI.config"
 
   FREE_MORE_SPACE: "false" # if u want get more space, enabled it.
