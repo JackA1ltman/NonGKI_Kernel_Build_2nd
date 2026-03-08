@@ -12,11 +12,11 @@ env:
   CUSTOM_CMDS : "CLANG_TRIPLE=aarch64-linux-gnu-"
   EXTRA_CMDS : "LD=ld.lld LLVM=1 LLVM_IAS=1"
 
-  KERNEL_SOURCE : "https://github.com/vq6oon/android_kernel_xiaomi_mt6768"
-  KERNEL_BRANCH : "kernel-tree"
+  KERNEL_SOURCE : "https://github.com/Redmi-MT6768/android_kernel_xiaomi_mt6768"
+  KERNEL_BRANCH : "twelve"
 
-  CLANG_SOURCE : "https://github.com/LineageOS/android_prebuilts_clang_kernel_linux-x86_clang-r416183b.git"
-  CLANG_BRANCH : "lineage-20.0"
+  CLANG_SOURCE : "https://github.com/kdrag0n/proton-clang.git"
+  CLANG_BRANCH : "master"
 
   GCC_GNU : false
   GCC_64_SOURCE : "https://android.googlesource.com/platform/prebuilts/gcc/linux-x86/aarch64/aarch64-linux-android-4.9.git"
