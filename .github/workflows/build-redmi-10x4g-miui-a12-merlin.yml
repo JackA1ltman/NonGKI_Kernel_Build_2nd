@@ -15,14 +15,14 @@ env:
   KERNEL_SOURCE : "https://github.com/Redmi-MT6768/android_kernel_xiaomi_mt6768"
   KERNEL_BRANCH : "twelve"
 
-  CLANG_SOURCE : "https://github.com/llvm/llvm-project/releases/download/llvmorg-22.1.0/LLVM-22.1.0-Linux-X64.tar.xz"
-  CLANG_BRANCH : ""
+  CLANG_SOURCE : "https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86"
+  CLANG_BRANCH : "android12-release"
 
   GCC_GNU : false
   GCC_64_SOURCE : "https://android.googlesource.com/platform/prebuilts/gcc/linux-x86/aarch64/aarch64-linux-android-4.9.git"
-  GCC_64_BRANCH : "android12L-release"
+  GCC_64_BRANCH : "android12-release"
   GCC_32_SOURCE : "https://android.googlesource.com/platform/prebuilts/gcc/linux-x86/arm/arm-linux-androideabi-4.9.git"
-  GCC_32_BRANCH : "android12L-release"
+  GCC_32_BRANCH : "android12-release"
 
   DEFCONFIG_SOURCE: ""
   DEFCONFIG_NAME : "merlin_defconfig"
