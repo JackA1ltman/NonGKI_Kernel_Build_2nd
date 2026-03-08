@@ -36,7 +36,7 @@ env:
   KERNELSU_AUTO_FORK : "sukisu" # magic, rsuntk, next, resukisu and sukisu
 
   SUSFS_ENABLE : true
-  SUSFS_FIXED : true
+  SUSFS_FIXED : false
 
   AK3_SOURCE : "https://github.com/osm0sis/AnyKernel3.git"
   AK3_BRANCH : "master"
