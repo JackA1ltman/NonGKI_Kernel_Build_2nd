@@ -15,7 +15,7 @@ env:
   KERNEL_SOURCE : "https://github.com/Redmi-MT6768/android_kernel_xiaomi_mt6768"
   KERNEL_BRANCH : "twelve"
 
-  CLANG_SOURCE : "https://github.com/LineageOS/android_prebuilts_clang_kernel_linux-x86_clang-r416183b"
+  CLANG_SOURCE : "https://github.com/LineageOS/android_prebuilts_clang_kernel_linux-x86_clang-r416183b.git"
   CLANG_BRANCH : "lineage-20.0"
 
   GCC_GNU : false
