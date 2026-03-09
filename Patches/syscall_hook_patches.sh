@@ -156,7 +156,7 @@ for i in "${patch_files[@]}"; do
     # drivers changes
     ## input/input.c
     drivers/input/input.c)
-        if grep -q "ksu_input_hook" "drivers/kernelsu/ksud.c" >/dev/null 2>&1; then
+        if grep -q "ksu_handle_input_handle_event" "drivers/kernelsu/ksud.c" >/dev/null 2>&1; then
             sed -i '/^void input_event(struct input_dev \*dev,/i \#ifdef CONFIG_KSU\nextern bool ksu_input_hook __read_mostly;\nextern __attribute__((cold)) int ksu_handle_input_handle_event(\n\t\t\tunsigned int *type, unsigned int *code, int *value);\n#endif' drivers/input/input.c
             sed -i '0,/if (is_event_supported(type, dev->evbit, EV_MAX)) {/{s/if (is_event_supported(type, dev->evbit, EV_MAX)) {/\n#ifdef CONFIG_KSU\n\tif (unlikely(ksu_input_hook))\n\t\tksu_handle_input_handle_event(\&type, \&code, \&value);\n#endif\n\tif (is_event_supported(type, dev->evbit, EV_MAX)) {/}' drivers/input/input.c
 
