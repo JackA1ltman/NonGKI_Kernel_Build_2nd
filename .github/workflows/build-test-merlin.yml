@@ -15,11 +15,11 @@ env:
   KERNEL_SOURCE : "https://github.com/MiCode/Xiaomi_Kernel_OpenSource.git"
   KERNEL_BRANCH : "merlin-r-oss"
 
-  CLANG_SOURCE : "https://github.com/kdrag0n/proton-clang.git"
-  CLANG_BRANCH : "master"
+  CLANG_SOURCE : "https://github.com/LineageOS/android_prebuilts_clang_kernel_linux-x86_clang-r416183b.git"
+  CLANG_BRANCH : "lineage-20.0"
 
   GCC_GNU : false
-  GCC_64_SOURCE : ""
+  GCC_64_SOURCE : "https://mirror.fsmg.org.nz/gnu/gcc/gcc-15.2.0/gcc-15.2.0.tar.xz"
   GCC_64_BRANCH : ""
   GCC_32_SOURCE : ""
   GCC_32_BRANCH : ""
