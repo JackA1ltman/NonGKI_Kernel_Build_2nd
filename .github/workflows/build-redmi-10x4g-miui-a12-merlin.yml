@@ -19,10 +19,10 @@ env:
   CLANG_BRANCH : "main"
 
   GCC_GNU : false
-  GCC_64_SOURCE : "https://gcc.gnu.org/git/gcc.git"
-  GCC_64_BRANCH : "releases/gcc-15.2.0"
-  GCC_32_SOURCE : "https://gcc.gnu.org/git/gcc.git"
-  GCC_32_BRANCH : "releases/gcc-15.2.0"
+  GCC_64_SOURCE : "https://ftp.tsukuba.wide.ad.jp/software/gcc/releases/gcc-15.2.0/gcc-15.2.0.tar.xz"
+  GCC_64_BRANCH : ""
+  GCC_32_SOURCE : "https://ftp.tsukuba.wide.ad.jp/software/gcc/releases/gcc-15.2.0/gcc-15.2.0.tar.xz"
+  GCC_32_BRANCH : ""
 
   DEFCONFIG_SOURCE: ""
   DEFCONFIG_NAME : "merlin_defconfig"
