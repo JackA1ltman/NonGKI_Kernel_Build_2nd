@@ -19,10 +19,10 @@ env:
   CLANG_BRANCH : "main"
 
   GCC_GNU : false
-  GCC_64_SOURCE : "https://github.com/gcc-mirror/gcc.git"
-  GCC_64_BRANCH : "releases/gcc-15"
-  GCC_32_SOURCE : "https://github.com/gcc-mirror/gcc.git"
-  GCC_32_BRANCH : "releases/gcc-15"
+  GCC_64_SOURCE : "https://gcc.gnu.org/git/gcc.git"
+  GCC_64_BRANCH : "releases/gcc-15.2.0"
+  GCC_32_SOURCE : "https://gcc.gnu.org/git/gcc.git"
+  GCC_32_BRANCH : "releases/gcc-15.2.0"
 
   DEFCONFIG_SOURCE: ""
   DEFCONFIG_NAME : "merlin_defconfig"
