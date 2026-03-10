@@ -19,9 +19,9 @@ env:
   CLANG_BRANCH : "main"
 
   GCC_GNU : false
-  GCC_64_SOURCE : "https://ftp.tsukuba.wide.ad.jp/software/gcc/releases/gcc-15.2.0/gcc-15.2.0.tar.xz"
+  GCC_64_SOURCE : "https://mirror.fsmg.org.nz/gnu/gcc/gcc-15.2.0/gcc-15.2.0.tar.xz"
   GCC_64_BRANCH : ""
-  GCC_32_SOURCE : "https://ftp.tsukuba.wide.ad.jp/software/gcc/releases/gcc-15.2.0/gcc-15.2.0.tar.xz"
+  GCC_32_SOURCE : "https://mirror.fsmg.org.nz/gnu/gcc/gcc-15.2.0/gcc-15.2.0.tar.xz"
   GCC_32_BRANCH : ""
 
   DEFCONFIG_SOURCE: ""
