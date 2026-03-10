@@ -15,14 +15,14 @@ env:
   KERNEL_SOURCE : "https://github.com/MiCode/Xiaomi_Kernel_OpenSource.git"
   KERNEL_BRANCH : "merlin-r-oss"
 
-  CLANG_SOURCE : "https://github.com/LineageOS/android_prebuilts_clang_kernel_linux-x86_clang-r416183b.git"
-  CLANG_BRANCH : "lineage-20.0"
+  CLANG_SOURCE : "https://github.com/llvm/llvm-project.git"
+  CLANG_BRANCH : "main"
 
   GCC_GNU : false
-  GCC_64_SOURCE : "https://mirror.fsmg.org.nz/gnu/gcc/gcc-15.2.0/gcc-15.2.0.tar.xz"
-  GCC_64_BRANCH : ""
-  GCC_32_SOURCE : ""
-  GCC_32_BRANCH : ""
+  GCC_64_SOURCE : "https://github.com/gcc-mirror/gcc.git"
+  GCC_64_BRANCH : "releases/gcc-15"
+  GCC_32_SOURCE : "https://github.com/gcc-mirror/gcc.git"
+  GCC_32_BRANCH : "releases/gcc-15"
 
   DEFCONFIG_SOURCE: ""
   DEFCONFIG_NAME : "merlin_defconfig"
