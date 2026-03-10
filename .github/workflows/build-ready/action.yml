@@ -99,7 +99,7 @@ runs:
 
           # Function
           KERNELSU_AUTO(){
-            if [[ "${{ env.KERNELSU_AUTO_FORK }}" == "magic" ]]; then
+            if [[ "${{ env.KERNELSU_AUTO_FORK }}" == "xxksu" ]]; then
                 KERNELSU_AUTHOR="backslashxx"
                 KERNELSU_NAME="KernelSU"
                 KERNELSU_ORIGIN_BRANCH="master"
@@ -308,7 +308,7 @@ runs:
             fi
           fi
 
-          if [[ "${{ env.KERNELSU_SOURCE }}" == *blackslashxx* ]] || [[ "${{ env.KERNELSU_AUTO_FORK }}" == "magic" ]]; then
+          if [[ "${{ env.KERNELSU_SOURCE }}" == *blackslashxx* ]] || [[ "${{ env.KERNELSU_AUTO_FORK }}" == "xxksu" ]]; then
             echo "CONFIG_KSU_KPROBES_KSUD=n" >> ./arch/${{ env.KERNEL_ARCH }}/configs/${{ env.DEFCONFIG_NAME }}
 
             if [ "${{ env.FIRST_VERSION }}" -lt 5 ] && [ "${{ env.SECOND_VERSION }}" -lt 2 ]; then
