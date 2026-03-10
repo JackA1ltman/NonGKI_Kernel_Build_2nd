@@ -77,7 +77,7 @@ env:
   BASEBAND_GUARD_BOOT: "false" #if u want to protect boot partition.
 
   GENERATE_DTB: "false" # if u kernel need DTB , but cannot auto generate it. (Only Anykernel3).
-  GENERATE_CHIP: "qcom" # only supported for qcom and mediatek.
+  GENERATE_CHIP: "mediatek" # only supported for qcom and mediatek.
 
   BUILD_DEBUGGER: "false" # Output build errors.
   SKIP_PATCH: "false" # Ignore errors found in Patch Debugger.
