@@ -1498,7 +1498,7 @@ index 5b8d065..803734d 100644
  	if (sb->s_op->show_devname) {
  		seq_puts(m, "device ");
 diff --git a/fs/readdir.c b/fs/readdir.c
-index 07a3b5b..209c17e 100644
+index 07a3b5b..3801b23 100644
 --- a/fs/readdir.c
 +++ b/fs/readdir.c
 @@ -21,6 +21,10 @@
@@ -1569,7 +1569,17 @@ index 07a3b5b..209c17e 100644
  	error = iterate_dir(f.file, &buf.ctx);
  	if (buf.result)
  		error = buf.result;
-@@ -229,6 +253,9 @@ static int filldir(struct dir_context *ctx, const char *name, int namlen,
+@@ -213,6 +237,9 @@ struct linux_dirent {
+ struct getdents_callback {
+ 	struct dir_context ctx;
+ 	struct linux_dirent __user * current_dir;
++#ifdef CONFIG_KSU_SUSFS_SUS_PATH
++	struct super_block *sb;
++#endif
+ 	int prev_reclen;
+ 	int count;
+ 	int error;
+@@ -229,6 +256,9 @@ static int filldir(struct dir_context *ctx, const char *name, int namlen,
  		sizeof(long));
  	int prev_reclen;
  
@@ -1579,7 +1589,36 @@ index 07a3b5b..209c17e 100644
  	buf->error = verify_dirent_name(name, namlen);
  	if (unlikely(buf->error))
  		return buf->error;
-@@ -304,6 +331,9 @@ SYSCALL_DEFINE3(getdents, unsigned int, fd,
+@@ -243,6 +273,18 @@ static int filldir(struct dir_context *ctx, const char *name, int namlen,
+ 	prev_reclen = buf->prev_reclen;
+ 	if (prev_reclen && signal_pending(current))
+ 		return -EINTR;
++#ifdef CONFIG_KSU_SUSFS_SUS_PATH
++	inode = ilookup(buf->sb, ino);
++	if (!inode) {
++		goto orig_flow;
++	}
++	if (susfs_is_inode_sus_path(inode)) {
++		iput(inode);
++		return 0;
++	}
++	iput(inode);
++orig_flow:
++#endif
+ 	dirent = buf->current_dir;
+ 	prev = (void __user *) dirent - prev_reclen;
+ 	if (!user_access_begin(prev, reclen + prev_reclen))
+@@ -285,6 +327,9 @@ SYSCALL_DEFINE3(getdents, unsigned int, fd,
+ 	if (!f.file)
+ 		return -EBADF;
+ 
++#ifdef CONFIG_KSU_SUSFS_SUS_PATH
++	buf.sb = f.file->f_inode->i_sb;
++#endif
+ 	error = iterate_dir(f.file, &buf.ctx);
+ 	if (error >= 0)
+ 		error = buf.error;
+@@ -304,6 +349,9 @@ SYSCALL_DEFINE3(getdents, unsigned int, fd,
  struct getdents_callback64 {
  	struct dir_context ctx;
  	struct linux_dirent64 __user * current_dir;
@@ -1589,7 +1628,7 @@ index 07a3b5b..209c17e 100644
  	int prev_reclen;
  	int count;
  	int error;
-@@ -319,6 +349,9 @@ static int filldir64(struct dir_context *ctx, const char *name, int namlen,
+@@ -319,6 +367,9 @@ static int filldir64(struct dir_context *ctx, const char *name, int namlen,
  		sizeof(u64));
  	int prev_reclen;
  
@@ -1599,7 +1638,7 @@ index 07a3b5b..209c17e 100644
  	buf->error = verify_dirent_name(name, namlen);
  	if (unlikely(buf->error))
  		return buf->error;
-@@ -329,6 +362,20 @@ static int filldir64(struct dir_context *ctx, const char *name, int namlen,
+@@ -329,6 +380,20 @@ static int filldir64(struct dir_context *ctx, const char *name, int namlen,
  	if (prev_reclen && signal_pending(current))
  		return -EINTR;
  	dirent = buf->current_dir;
@@ -1620,7 +1659,7 @@ index 07a3b5b..209c17e 100644
  	prev = (void __user *)dirent - prev_reclen;
  	if (!user_access_begin(prev, reclen + prev_reclen))
  		goto efault;
-@@ -371,6 +418,9 @@ int ksys_getdents64(unsigned int fd, struct linux_dirent64 __user *dirent,
+@@ -371,6 +436,9 @@ int ksys_getdents64(unsigned int fd, struct linux_dirent64 __user *dirent,
  	if (!f.file)
  		return -EBADF;
  
@@ -1630,7 +1669,7 @@ index 07a3b5b..209c17e 100644
  	error = iterate_dir(f.file, &buf.ctx);
  	if (error >= 0)
  		error = buf.error;
-@@ -406,6 +456,9 @@ struct compat_old_linux_dirent {
+@@ -406,6 +474,9 @@ struct compat_old_linux_dirent {
  struct compat_readdir_callback {
  	struct dir_context ctx;
  	struct compat_old_linux_dirent __user *dirent;
@@ -1640,7 +1679,7 @@ index 07a3b5b..209c17e 100644
  	int result;
  };
  
-@@ -417,9 +470,13 @@ static int compat_fillonedir(struct dir_context *ctx, const char *name,
+@@ -417,9 +488,13 @@ static int compat_fillonedir(struct dir_context *ctx, const char *name,
  		container_of(ctx, struct compat_readdir_callback, ctx);
  	struct compat_old_linux_dirent __user *dirent;
  	compat_ulong_t d_ino;
@@ -1654,7 +1693,7 @@ index 07a3b5b..209c17e 100644
  	buf->result = verify_dirent_name(name, namlen);
  	if (buf->result < 0)
  		return buf->result;
-@@ -428,6 +485,18 @@ static int compat_fillonedir(struct dir_context *ctx, const char *name,
+@@ -428,6 +503,18 @@ static int compat_fillonedir(struct dir_context *ctx, const char *name,
  		buf->result = -EOVERFLOW;
  		return -EOVERFLOW;
  	}
@@ -1673,7 +1712,7 @@ index 07a3b5b..209c17e 100644
  	buf->result++;
  	dirent = buf->dirent;
  	if (!access_ok(dirent,
-@@ -459,6 +528,9 @@ COMPAT_SYSCALL_DEFINE3(old_readdir, unsigned int, fd,
+@@ -459,6 +546,9 @@ COMPAT_SYSCALL_DEFINE3(old_readdir, unsigned int, fd,
  	if (!f.file)
  		return -EBADF;
  
@@ -1683,7 +1722,7 @@ index 07a3b5b..209c17e 100644
  	error = iterate_dir(f.file, &buf.ctx);
  	if (buf.result)
  		error = buf.result;
-@@ -477,6 +549,9 @@ struct compat_linux_dirent {
+@@ -477,6 +567,9 @@ struct compat_linux_dirent {
  struct compat_getdents_callback {
  	struct dir_context ctx;
  	struct compat_linux_dirent __user *current_dir;
@@ -1693,7 +1732,7 @@ index 07a3b5b..209c17e 100644
  	struct compat_linux_dirent __user *previous;
  	int count;
  	int error;
-@@ -491,10 +566,14 @@ static int compat_filldir(struct dir_context *ctx, const char *name, int namlen,
+@@ -491,10 +584,14 @@ static int compat_filldir(struct dir_context *ctx, const char *name, int namlen,
  	compat_ulong_t d_ino;
  	int reclen = ALIGN(offsetof(struct compat_linux_dirent, d_name) +
  		namlen + 2, sizeof(compat_long_t));
@@ -1708,7 +1747,7 @@ index 07a3b5b..209c17e 100644
  	d_ino = ino;
  	if (sizeof(d_ino) < sizeof(ino) && d_ino != ino) {
  		buf->error = -EOVERFLOW;
-@@ -504,6 +583,18 @@ static int compat_filldir(struct dir_context *ctx, const char *name, int namlen,
+@@ -504,6 +601,18 @@ static int compat_filldir(struct dir_context *ctx, const char *name, int namlen,
  	if (dirent) {
  		if (signal_pending(current))
  			return -EINTR;
@@ -1727,7 +1766,7 @@ index 07a3b5b..209c17e 100644
  		if (__put_user(offset, &dirent->d_off))
  			goto efault;
  	}
-@@ -547,6 +638,9 @@ COMPAT_SYSCALL_DEFINE3(getdents, unsigned int, fd,
+@@ -547,6 +656,9 @@ COMPAT_SYSCALL_DEFINE3(getdents, unsigned int, fd,
  	if (!f.file)
  		return -EBADF;
  
