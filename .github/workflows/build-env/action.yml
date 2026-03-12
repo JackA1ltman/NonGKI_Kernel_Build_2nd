@@ -59,6 +59,23 @@ runs:
               false
           fi
 
+      - name: Free Disk Space (Ubuntu)
+        if: env.FREE_MORE_SPACE == 'true' && env.SYSTEM_VERSION == 'newer' || env.SYSTEM_VERSION == 'older'
+        uses: jlumbroso/free-disk-space@main
+        with:
+          # this might remove tools that are actually needed,
+          # if set to "true" but frees about 6 GB
+          tool-cache: true
+
+          # all of these default to true, but feel free to set to
+          # "false" if necessary for your workflow
+          android: false
+          dotnet: true
+          haskell: true
+          large-packages: true
+          docker-images: true
+          swap-storage: true
+
       - name: Remove useless tools
         if: env.SYSTEM_VERSION == 'newer' || env.SYSTEM_VERSION == 'older'
         shell: bash
