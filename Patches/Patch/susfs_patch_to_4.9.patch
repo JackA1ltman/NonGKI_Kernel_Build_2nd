@@ -519,7 +519,7 @@ index e8537d4..d91cc4c 100644
  	return filp;
  }
 diff --git a/fs/namespace.c b/fs/namespace.c
-index 5b253ad..3cfbd1f 100644
+index 5b253ad..ed50b1d 100644
 --- a/fs/namespace.c
 +++ b/fs/namespace.c
 @@ -25,9 +25,23 @@
@@ -719,7 +719,7 @@ index 5b253ad..3cfbd1f 100644
  static struct mount *alloc_vfsmnt(const char *name)
  {
  	struct mount *mnt = kmem_cache_zalloc(mnt_cache, GFP_KERNEL);
-@@ -240,20 +399,17 @@ static struct mount *alloc_vfsmnt(const char *name)
+@@ -240,9 +399,6 @@ static struct mount *alloc_vfsmnt(const char *name)
  		INIT_LIST_HEAD(&mnt->mnt_slave);
  		INIT_HLIST_NODE(&mnt->mnt_mp_list);
  		INIT_LIST_HEAD(&mnt->mnt_umounting);
@@ -729,20 +729,6 @@ index 5b253ad..3cfbd1f 100644
  		init_fs_pin(&mnt->mnt_umount, drop_mountpoint);
  	}
  	return mnt;
- 
- #ifdef CONFIG_SMP
--out_free_devname:
-+	out_free_devname:
- 	kfree_const(mnt->mnt_devname);
- #endif
--out_free_id:
-+	out_free_id:
- 	mnt_free_id(mnt);
--out_free_cache:
-+	out_free_cache:
- 	kmem_cache_free(mnt_cache, mnt);
- 	return NULL;
- }
 @@ -983,7 +1139,20 @@ vfs_kern_mount(struct file_system_type *type, int flags, const char *name, void
  	if (!type)
  		return ERR_PTR(-ENODEV);
