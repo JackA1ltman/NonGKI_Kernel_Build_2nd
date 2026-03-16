@@ -43,7 +43,7 @@ for i in "${patch_files[@]}"; do
     fs/exec.c)
         echo "======================================"
 
-        if grep -q "ksu_handle_execve_sucompat" "drivers/kernelsu/sucompat.c" >/dev/null 2>&1; then
+        if grep -q "ksu_handle_execve_sucompat" "drivers/kernelsu/sucompat.c" && ! grep -q "ksu_handle_execve_sucompat_tp_internal" "drivers/kernelsu/sucompat.c" >/dev/null 2>&1; then
             echo "[+] Checked ksu_handle_execve_sucompat existed in KernelSU!"
 
             sed -i '/^SYSCALL_DEFINE3(execve,/i\#ifdef CONFIG_KSU\n__attribute__((hot))\nextern int ksu_handle_execve_sucompat(int *fd, const char __user **filename_user,\n\t\t\t       void *__never_use_argv, void *__never_use_envp,\n\t\t\t       int *__never_use_flags);\n#endif\n' fs/exec.c
@@ -115,7 +115,7 @@ for i in "${patch_files[@]}"; do
         sed -i '/^#if !defined(__ARCH_WANT_STAT64) || defined(__ARCH_WANT_SYS_NEWFSTATAT)/i\#ifdef CONFIG_KSU\n__attribute__((hot))\nextern int ksu_handle_stat(int *dfd, const char __user **filename_user,\n\t\t\t\tint *flags);\n#endif\n' fs/stat.c
         sed -i '/error = vfs_fstatat(dfd, filename, \&stat, flag);/i\#ifdef CONFIG_KSU\n\tksu_handle_stat(\&dfd, \&filename, \&flag);\n#endif' fs/stat.c
 
-        if grep -q "ksu_handle_newfstat_ret" "drivers/kernelsu/syscall_table_hook.c" >/dev/null 2>&1; then
+        if grep -q "ksu_handle_newfstat_ret" "drivers/kernelsu/syscall_table_hook.c" || grep -q "ksu_handle_newfstat_ret" "drivers/kernelsu/ksud.c" >/dev/null 2>&1; then
             sed -i '/SYSCALL_DEFINE2(newfstat, unsigned int, fd, struct stat __user \*, statbuf)/i\#ifdef CONFIG_KSU\nextern void ksu_handle_newfstat_ret(unsigned int *fd, struct stat __user **statbuf_ptr);\n#if defined(__ARCH_WANT_STAT64) || defined(__ARCH_WANT_COMPAT_STAT64)\nextern void ksu_handle_fstat64_ret(unsigned int *fd, struct stat64 __user **statbuf_ptr); \/\/ optional\n#endif\n#endif\n' fs/stat.c
             sed -i '/error = cp_new_stat(\&stat, statbuf);/a\#ifdef CONFIG_KSU\n\tksu_handle_newfstat_ret(\&fd, \&statbuf);\n#endif\n' fs/stat.c
             awk '/error = cp_new_stat64\(&stat, statbuf\);/{line=$0; lnum=NR} {lines[NR]=$0} END {for(i=1;i<=NR;i++) {print lines[i]; if(i==lnum) {print "#ifdef CONFIG_KSU // for 32-bit"; print "\tksu_handle_fstat64_ret(&fd, &statbuf);"; print "#endif"}}}' fs/stat.c > fs/stat.c.tmp && mv fs/stat.c.tmp fs/stat.c
