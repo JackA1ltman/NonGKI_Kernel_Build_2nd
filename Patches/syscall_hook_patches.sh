@@ -43,23 +43,10 @@ for i in "${patch_files[@]}"; do
     fs/exec.c)
         echo "======================================"
 
-        if grep -q "ksu_handle_execve_sucompat" "drivers/kernelsu/sucompat.c" && ! grep -q "ksu_handle_execve_sucompat_tp_internal" "drivers/kernelsu/sucompat.c" >/dev/null 2>&1; then
-            echo "[+] Checked ksu_handle_execve_sucompat existed in KernelSU!"
+        sed -i '/int do_execve(struct filename \*filename,/i\#ifdef CONFIG_KSU\n__attribute__((hot))\nextern int ksu_handle_execveat(int *fd, struct filename **filename_ptr,\n\t\t\t\tvoid *argv, void *envp, int *flags);\n#endif\n' fs/exec.c
+        sed -i '/return do_execveat_common(AT_FDCWD, filename, argv, envp, 0);/i\#ifdef CONFIG_KSU\n\tksu_handle_execveat((int \*)AT_FDCWD, \&filename, \&argv, \&envp, 0);\n#endif\n' fs/exec.c
 
-            sed -i '/^SYSCALL_DEFINE3(execve,/i\#ifdef CONFIG_KSU\n__attribute__((hot))\nextern int ksu_handle_execve_sucompat(int *fd, const char __user **filename_user,\n\t\t\t       void *__never_use_argv, void *__never_use_envp,\n\t\t\t       int *__never_use_flags);\n#endif\n' fs/exec.c
-            sed -i '/return do_execve(getname(filename), argv, envp);/i\#ifdef CONFIG_KSU\n\tksu_handle_execve_sucompat((int *)AT_FDCWD, \&filename, NULL, NULL, NULL);\n#endif' fs/exec.c
-            sed -i '/return compat_do_execve(getname(filename), argv, envp);/i\#ifdef CONFIG_KSU\n\tksu_handle_execve_sucompat((int *)AT_FDCWD, \&filename, NULL, NULL, NULL);\n#endif' fs/exec.c
-        else
-            echo "[-] KernelSU have no execve_sucompat."
-
-            sed -i '/^static int do_execveat_common(int fd, struct filename \*filename,/i\ #ifdef CONFIG_KSU\nextern bool ksu_execveat_hook __read_mostly;\nextern int ksu_handle_execveat(int *fd, struct filename **filename_ptr, void *argv,\n\t\t\tvoid *envp, int *flags);\nextern int ksu_handle_execveat_sucompat(int *fd, struct filename **filename_ptr,\n\t\t\t\t void *argv, void *envp, int *flags);\n#endif\n' fs/exec.c
-            sed -i '/if (IS_ERR(filename))/i\#ifdef CONFIG_KSU\n\tif (unlikely(ksu_execveat_hook))\n\t\tksu_handle_execveat(\&fd, \&filename, \&argv, \&envp, \&flags);\n\telse\n\t\tksu_handle_execveat_sucompat(\&fd, \&filename, \&argv, \&envp, \&flags);\n#endif\n' fs/exec.c
-        fi
-
-        if grep -q "ksu_handle_execve_sucompat" "fs/exec.c"; then
-            echo "[+] fs/exec.c Patched!"
-            echo "[+] Count: $(grep -c "ksu_handle_execve_sucompat" "fs/exec.c")"
-        elif grep -q "ksu_handle_execveat" "fs/exec.c"; then
+        if grep -q "ksu_handle_execveat" "fs/exec.c"; then
             echo "[+] fs/exec.c Patched!"
             echo "[+] Count: $(grep -c "ksu_handle_execveat" "fs/exec.c")"
         else
@@ -89,36 +76,49 @@ for i in "${patch_files[@]}"; do
         ;;
     ## read_write.c
     fs/read_write.c)
-        if grep -q "sys_read" "drivers/kernelsu/arch.h" >/dev/null 2>&1; then
-            if [ "$FIRST_VERSION" -lt 5 ] && [ "$SECOND_VERSION" -lt 19 ]; then
-                sed -i '/^SYSCALL_DEFINE3(read, unsigned int, fd, char __user \*, buf, size_t, count)/i \#ifdef CONFIG_KSU\nextern bool ksu_vfs_read_hook __read_mostly;\nextern __attribute__((cold)) int ksu_handle_sys_read(unsigned int fd,\n\t\t\tchar __user **buf_ptr, size_t *count_ptr);\n#endif' fs/read_write.c
-                sed -i '0,/if (f\.file) {/{s/if (f\.file) {/\n#ifdef CONFIG_KSU\n\tif (unlikely(ksu_vfs_read_hook))\n\t\tksu_handle_sys_read(fd, \&buf, \&count);\n#endif\n\tif (f.file) {/}' fs/read_write.c
-            else
-                sed -i '/^SYSCALL_DEFINE3(read, unsigned int, fd, char __user \*, buf, size_t, count)/i \#ifdef CONFIG_KSU\nextern bool ksu_vfs_read_hook __read_mostly;\nextern __attribute__((cold)) int ksu_handle_sys_read(unsigned int fd,\n\t\t\tchar __user **buf_ptr, size_t *count_ptr);\n#endif' fs/read_write.c
-                sed -i '/return ksys_read(fd, buf, count);/i\#ifdef CONFIG_KSU\n\tif (unlikely(ksu_vfs_read_hook))\n\t\tksu_handle_sys_read(fd, &buf, &count);\n#endif' fs/read_write.c
-            fi
+        if grep -q "ksu_vfs_read_hook" "drivers/kernelsu/ksud.c" >/dev/null 2>&1; then
+            sed -i '/ssize_t vfs_read(struct file \*file, char __user \*buf, size_t count, loff_t \*pos)/i\#ifdef CONFIG_KSU\nextern bool ksu_init_rc_hook __read_mostly;\nextern int ksu_handle_vfs_read(struct file **file_ptr, char __user **buf_ptr,\n\t\t\tsize_t *count_ptr, loff_t **pos);\n#endif\n' fs/read_write.c
 
-            if grep -q "ksu_handle_sys_read" "fs/read_write.c"; then
-                echo "[+] fs/read_write.c Patched!"
-                echo "[+] Count: $(grep -c "ksu_handle_sys_read" "fs/read_write.c")"
+            if [ "$FIRST_VERSION" -lt 5 ] && [ "$SECOND_VERSION" -lt 19 ]; then
+                sed -i '0,/if (f\.file) {/{s/if (f\.file) {/\n#ifdef CONFIG_KSU\n\tif (unlikely(ksu_init_rc_hook))\n\t\tksu_handle_sys_read(fd, \&buf, \&count);\n#endif\n\tif (f.file) {/}' fs/read_write.c
             else
-                echo "[-] fs/read_write.c patch failed for unknown reasons, please provide feedback in time."
+                sed -i '/return ksys_read(fd, buf, count);/i\#ifdef CONFIG_KSU\n\tif (unlikely(ksu_init_rc_hook))\n\t\tksu_handle_sys_read(fd, &buf, &count);\n#endif' fs/read_write.c
             fi
         else
-            echo "[-] KernelSU have no sys_read, Skipped."
+            sed -i '/ssize_t vfs_read(struct file \*file, char __user \*buf, size_t count, loff_t \*pos)/i\#ifdef CONFIG_KSU\nextern bool ksu_vfs_read_hook __read_mostly;\nextern int ksu_handle_vfs_read(struct file **file_ptr, char __user **buf_ptr,\n\t\t\tsize_t *count_ptr, loff_t **pos);\n#endif\n' fs/read_write.c
+
+            if [ "$FIRST_VERSION" -lt 5 ] && [ "$SECOND_VERSION" -lt 19 ]; then
+                sed -i '0,/if (f\.file) {/{s/if (f\.file) {/\n#ifdef CONFIG_KSU\n\tif (unlikely(ksu_vfs_read_hook))\n\t\tksu_handle_sys_read(fd, \&buf, \&count);\n#endif\n\tif (f.file) {/}' fs/read_write.c
+            else
+                sed -i '/return ksys_read(fd, buf, count);/i\#ifdef CONFIG_KSU\n\tif (unlikely(ksu_vfs_read_hook))\n\t\tksu_handle_sys_read(fd, &buf, &count);\n#endif' fs/read_write.c
+            fi
+        fi
+
+        if grep -q "ksu_handle_sys_read" "fs/read_write.c"; then
+            echo "[+] fs/read_write.c Patched!"
+            echo "[+] Count: $(grep -c "ksu_handle_sys_read" "fs/read_write.c")"
+        else
+            echo "[-] fs/read_write.c patch failed for unknown reasons, please provide feedback in time."
         fi
 
         echo "======================================"
         ;;
     ## stat.c
     fs/stat.c)
-        sed -i '/^#if !defined(__ARCH_WANT_STAT64) || defined(__ARCH_WANT_SYS_NEWFSTATAT)/i\#ifdef CONFIG_KSU\n__attribute__((hot))\nextern int ksu_handle_stat(int *dfd, const char __user **filename_user,\n\t\t\t\tint *flags);\n#endif\n' fs/stat.c
-        sed -i '/error = vfs_fstatat(dfd, filename, \&stat, flag);/i\#ifdef CONFIG_KSU\n\tksu_handle_stat(\&dfd, \&filename, \&flag);\n#endif' fs/stat.c
+        if grep -q "ksu_handle_newfstat_ret" "drivers/kernelsu/ksud.c" >/dev/null 2>&1; then
+            sed -i '/#if !defined(__ARCH_WANT_STAT64) || defined(__ARCH_WANT_SYS_NEWFSTATAT)/i\#ifdef CONFIG_KSU\nextern void ksu_handle_newfstat_ret(unsigned int *fd, struct stat __user **statbuf_ptr);\n#if defined(__ARCH_WANT_STAT64) || defined(__ARCH_WANT_COMPAT_STAT64)\nextern void ksu_handle_fstat64_ret(unsigned long *fd, struct stat64 __user **statbuf_ptr);\n#endif\n#endif\n' fs/stat.c
+            sed -i '/extern void ksu_handle_newfstat_ret/i\__attribute__((hot))\nextern int ksu_handle_stat(int *dfd, const char __user **filename_user,\n\t\t\t\tint *flags);\n' fs/stat.c
+        elif "vfs_fstat" "fs/stat.c"; then
+            sed -i '/EXPORT_SYMBOL(vfs_statx_fd);/a\#ifdef CONFIG_KSU\nextern int ksu_handle_stat(int *dfd, const char __user **filename_user, int *flags);\n#endif\n' fs/stat.c
+        else
+            sed -i '/EXPORT_SYMBOL(vfs_fstat);/a\#ifdef CONFIG_KSU\nextern int ksu_handle_stat(int *dfd, const char __user **filename_user, int *flags);\n#endif\n' fs/stat.c
+        fi
 
-        if grep -q "ksu_handle_newfstat_ret" "drivers/kernelsu/syscall_table_hook.c" || grep -q "ksu_handle_newfstat_ret" "drivers/kernelsu/ksud.c" >/dev/null 2>&1; then
-            sed -i '/SYSCALL_DEFINE2(newfstat, unsigned int, fd, struct stat __user \*, statbuf)/i\#ifdef CONFIG_KSU\nextern void ksu_handle_newfstat_ret(unsigned int *fd, struct stat __user **statbuf_ptr);\n#if defined(__ARCH_WANT_STAT64) || defined(__ARCH_WANT_COMPAT_STAT64)\nextern void ksu_handle_fstat64_ret(unsigned int *fd, struct stat64 __user **statbuf_ptr); \/\/ optional\n#endif\n#endif\n' fs/stat.c
+        sed -i '/error = vfs_fstatat(dfd, filename, \&stat, flag);/i\#ifdef CONFIG_KSU\n\tksu_handle_stat(\&dfd, \&filename, \&flag);\n#endif\n' fs/stat.c
+
+        if grep -q "ksu_handle_newfstat_ret" "drivers/kernelsu/ksud.c" >/dev/null 2>&1; then
             sed -i '/error = cp_new_stat(\&stat, statbuf);/a\#ifdef CONFIG_KSU\n\tksu_handle_newfstat_ret(\&fd, \&statbuf);\n#endif\n' fs/stat.c
-            awk '/error = cp_new_stat64\(&stat, statbuf\);/{line=$0; lnum=NR} {lines[NR]=$0} END {for(i=1;i<=NR;i++) {print lines[i]; if(i==lnum) {print "#ifdef CONFIG_KSU // for 32-bit"; print "\tksu_handle_fstat64_ret(&fd, &statbuf);"; print "#endif"}}}' fs/stat.c > fs/stat.c.tmp && mv fs/stat.c.tmp fs/stat.c
+            sed -i '0,/error = cp_new_stat64(\&stat, statbuf);/b; 0,/error = cp_new_stat64(\&stat, statbuf);/b; /error = cp_new_stat64(\&stat, statbuf);/a\#ifdef CONFIG_KSU\n\tksu_handle_fstat64_ret(\&fd, \&statbuf);\n#endif\n' fs/stat.c
         fi
 
         if grep -q "ksu_handle_stat" "fs/stat.c"; then
@@ -251,32 +251,16 @@ for i in "${patch_files[@]}"; do
     # kernel/ changes
     ## kernel/reboot.c
     kernel/reboot.c)
-        if grep -q "ksu_handle_sys_reboot" "drivers/kernelsu/core_hook.c" >/dev/null 2>&1; then
-            echo "[+] Checked ksu_handle_sys_reboot existed in KernelSU!"
+        echo "[+] Checked ksu_handle_sys_reboot existed in KernelSU!"
 
-            sed -i '/SYSCALL_DEFINE4(reboot, int, magic1, int, magic2, unsigned int, cmd,/i \#ifdef CONFIG_KSU\n\extern int ksu_handle_sys_reboot(int magic1, int magic2, unsigned int cmd, void __user **arg);\n\#endif' kernel/reboot.c
-            sed -i '/int ret = 0;/a \#ifdef CONFIG_KSU\n\tksu_handle_sys_reboot(magic1, magic2, cmd, &arg);\n\#endif' kernel/reboot.c
+        sed -i '/SYSCALL_DEFINE4(reboot, int, magic1, int, magic2, unsigned int, cmd,/i\#ifdef CONFIG_KSU\nextern int ksu_handle_sys_reboot(int magic1, int magic2, unsigned int cmd, void __user **arg);\n#endif\n' kernel/reboot.c
+        sed -i '/if (!ns_capable(pid_ns->user_ns, CAP_SYS_BOOT))/i\#ifdef CONFIG_KSU\n\tksu_handle_sys_reboot(magic1, magic2, cmd, \&arg);\n#endif\n' kernel/reboot.c
 
-            if grep -q "ksu_handle_sys_reboot" "kernel/reboot.c"; then
-                echo "[+] kernel/reboot.c Patched!"
-                echo "[+] Count: $(grep -c "ksu_handle_sys_reboot" "kernel/reboot.c")"
-            else
-                echo "[-] kernel/reboot.c patch failed for unknown reasons, please provide feedback in time."
-            fi
-        elif grep -q "ksu_handle_sys_reboot" "drivers/kernelsu/supercalls.c" >/dev/null 2>&1; then
-            echo "[+] Checked ksu_handle_sys_reboot existed in KernelSU!"
-
-            sed -i '/SYSCALL_DEFINE4(reboot, int, magic1, int, magic2, unsigned int, cmd,/i \#ifdef CONFIG_KSU\n\extern int ksu_handle_sys_reboot(int magic1, int magic2, unsigned int cmd, void __user **arg);\n\#endif' kernel/reboot.c
-            sed -i '/int ret = 0;/a \#ifdef CONFIG_KSU\n\tksu_handle_sys_reboot(magic1, magic2, cmd, &arg);\n\#endif' kernel/reboot.c
-
-            if grep -q "ksu_handle_sys_reboot" "kernel/reboot.c"; then
-                echo "[+] kernel/reboot.c Patched!"
-                echo "[+] Count: $(grep -c "ksu_handle_sys_reboot" "kernel/reboot.c")"
-            else
-                echo "[-] kernel/reboot.c patch failed for unknown reasons, please provide feedback in time."
-            fi
+        if grep -q "ksu_handle_sys_reboot" "kernel/reboot.c"; then
+            echo "[+] kernel/reboot.c Patched!"
+            echo "[+] Count: $(grep -c "ksu_handle_sys_reboot" "kernel/reboot.c")"
         else
-            echo "[-] KernelSU have no sys_reboot, Skipped."
+            echo "[-] kernel/reboot.c patch failed for unknown reasons, please provide feedback in time."
         fi
 
         echo "======================================"
@@ -286,11 +270,15 @@ for i in "${patch_files[@]}"; do
         if grep -q "ksu_handle_setresuid" "drivers/kernelsu/setuid_hook.c" >/dev/null 2>&1; then
 
             if grep -q "__sys_setresuid" "kernel/sys.c" >/dev/null 2>&1; then
-                sed -i '/^SYSCALL_DEFINE3(setresuid, uid_t, ruid, uid_t, euid, uid_t, suid)/i\#ifdef CONFIG_KSU\nextern int ksu_handle_setresuid(uid_t ruid, uid_t euid, uid_t suid);\n#endif\n' kernel/sys.c
-                sed -i '/return __sys_setresuid(ruid, euid, suid);/i\#ifdef CONFIG_KSU_SUSFS\n\tif (ksu_handle_setresuid(ruid, euid, suid)) {\n\t\tpr_info("Something wrong with ksu_handle_setresuid()\\\\n");\n\t}\n#endif\n' kernel/sys.c
+                sed -i '/long __sys_setresuid(uid_t ruid, uid_t euid, uid_t suid)/i\#ifdef CONFIG_KSU\nextern int ksu_handle_setresuid(uid_t ruid, uid_t euid, uid_t suid);\n#endif\n' kernel/sys.c
+                if grep -q "ruid_new" "kernel/sys.c"; then
+                    sed -i '/bool ruid_new, euid_new, suid_new;/a\#ifdef CONFIG_KSU\n\t(void)ksu_handle_setresuid(ruid, euid, suid);\n#endif\n' 文件名
+                else
+                    sed -i '/kuid_t kruid, keuid, ksuid;/a\#ifdef CONFIG_KSU\n\t(void)ksu_handle_setresuid(ruid, euid, suid);\n#endif\n' kernel/sys.c
+                fi
             else
                 sed -i '/^SYSCALL_DEFINE3(setresuid, uid_t, ruid, uid_t, euid, uid_t, suid)/i\#ifdef CONFIG_KSU\nextern int ksu_handle_setresuid(uid_t ruid, uid_t euid, uid_t suid);\n#endif\n' kernel/sys.c
-                sed -i '0,/\tif ((ruid != (uid_t) -1) && !uid_valid(kruid))/b; /\tif ((ruid != (uid_t) -1) && !uid_valid(kruid))/i\#ifdef CONFIG_KSU_SUSFS\n\tif (ksu_handle_setresuid(ruid, euid, suid)) {\n\t\tpr_info("Something wrong with ksu_handle_setresuid()\\\\n");\n\t}\n#endif' kernel/sys.c
+                sed -i '/kuid_t kruid, keuid, ksuid;/a\#ifdef CONFIG_KSU\n\t(void)ksu_handle_setresuid(ruid, euid, suid);\n#endif\n' kernel/sys.c
             fi
 
             if grep -q "ksu_handle_setresuid" "kernel/sys.c"; then
