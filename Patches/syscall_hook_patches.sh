@@ -76,8 +76,8 @@ for i in "${patch_files[@]}"; do
         ;;
     ## read_write.c
     fs/read_write.c)
-        if grep -q "ksu_vfs_read_hook" "drivers/kernelsu/ksud.c" >/dev/null 2>&1; then
-            sed -i '/ssize_t vfs_read(struct file \*file, char __user \*buf, size_t count, loff_t \*pos)/i\#ifdef CONFIG_KSU\nextern bool ksu_init_rc_hook __read_mostly;\nextern int ksu_handle_vfs_read(struct file **file_ptr, char __user **buf_ptr,\n\t\t\tsize_t *count_ptr, loff_t **pos);\n#endif\n' fs/read_write.c
+        if ! grep -q "bool ksu_vfs_read_hook" "drivers/kernelsu/ksud.c" >/dev/null 2>&1; then
+            sed -i '/SYSCALL_DEFINE3(read, unsigned int, fd, char __user \*, buf, size_t, count)/i\#ifdef CONFIG_KSU\nextern bool ksu_init_rc_hook __read_mostly;\nextern __attribute__((cold)) int ksu_handle_sys_read(unsigned int fd,\n\t\t\t\tchar __user **buf_ptr, size_t *count_ptr);\n#endif\n' fs/read_write.c
 
             if [ "$FIRST_VERSION" -lt 5 ] && [ "$SECOND_VERSION" -lt 19 ]; then
                 sed -i '0,/if (f\.file) {/{s/if (f\.file) {/\n#ifdef CONFIG_KSU\n\tif (unlikely(ksu_init_rc_hook))\n\t\tksu_handle_sys_read(fd, \&buf, \&count);\n#endif\n\tif (f.file) {/}' fs/read_write.c
@@ -85,7 +85,7 @@ for i in "${patch_files[@]}"; do
                 sed -i '/return ksys_read(fd, buf, count);/i\#ifdef CONFIG_KSU\n\tif (unlikely(ksu_init_rc_hook))\n\t\tksu_handle_sys_read(fd, &buf, &count);\n#endif' fs/read_write.c
             fi
         else
-            sed -i '/ssize_t vfs_read(struct file \*file, char __user \*buf, size_t count, loff_t \*pos)/i\#ifdef CONFIG_KSU\nextern bool ksu_vfs_read_hook __read_mostly;\nextern int ksu_handle_vfs_read(struct file **file_ptr, char __user **buf_ptr,\n\t\t\tsize_t *count_ptr, loff_t **pos);\n#endif\n' fs/read_write.c
+            sed -i '/SYSCALL_DEFINE3(read, unsigned int, fd, char __user \*, buf, size_t, count)/i\#ifdef CONFIG_KSU\nextern bool ksu_vfs_read_hook __read_mostly;\nextern __attribute__((cold)) int ksu_handle_sys_read(unsigned int fd,\n\t\t\t\tchar __user **buf_ptr, size_t *count_ptr);\n#endif\n' fs/read_write.c
 
             if [ "$FIRST_VERSION" -lt 5 ] && [ "$SECOND_VERSION" -lt 19 ]; then
                 sed -i '0,/if (f\.file) {/{s/if (f\.file) {/\n#ifdef CONFIG_KSU\n\tif (unlikely(ksu_vfs_read_hook))\n\t\tksu_handle_sys_read(fd, \&buf, \&count);\n#endif\n\tif (f.file) {/}' fs/read_write.c
