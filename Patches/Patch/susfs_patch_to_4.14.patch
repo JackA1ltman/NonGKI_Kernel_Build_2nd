@@ -1022,15 +1022,15 @@ index c62a87e..584c760 100644
  			   inode_mark->wd, inode->i_ino, inode->i_sb->s_dev,
  			   inotify_mark_user_mask(mark));
 diff --git a/fs/open.c b/fs/open.c
-index f9b82c7..49cebec 100644
+index f9b82c7..3289914 100644
 --- a/fs/open.c
 +++ b/fs/open.c
-@@ -1077,22 +1077,44 @@ struct file *filp_clone_open(struct file *oldfile)
+@@ -1077,11 +1077,19 @@ struct file *filp_clone_open(struct file *oldfile)
  }
  EXPORT_SYMBOL(filp_clone_open);
  
 +#ifdef CONFIG_KSU_SUSFS_OPEN_REDIRECT
-+extern int susfs_open_redirect_spoof_do_sys_openat(struct inode *inode, struct filename **tmp_filename);
++extern struct filename *susfs_open_redirect_spoof_do_sys_openat(struct inode *inode);
 +#endif // #ifdef CONFIG_KSU_SUSFS_OPEN_REDIRECT
 +
  long do_sys_open(int dfd, const char __user *filename, int flags, umode_t mode)
@@ -1039,29 +1039,31 @@ index f9b82c7..49cebec 100644
  	int fd = build_open_flags(flags, mode, &op);
  	struct filename *tmp;
 +#ifdef CONFIG_KSU_SUSFS_OPEN_REDIRECT
++	struct filename *fake_filename = NULL;
 +	bool is_inode_open_redirect = false;
 +#endif // #ifdef CONFIG_KSU_SUSFS_OPEN_REDIRECT
  
  	if (fd)
  		return fd;
- 
- 	tmp = getname(filename);
-+#ifdef CONFIG_KSU_SUSFS_OPEN_REDIRECT
-+retry:
-+#endif // #ifdef CONFIG_KSU_SUSFS_OPEN_REDIRECT
- 	if (IS_ERR(tmp))
+@@ -1091,8 +1099,26 @@ long do_sys_open(int dfd, const char __user *filename, int flags, umode_t mode)
  		return PTR_ERR(tmp);
  
  	fd = get_unused_fd_flags(flags);
++#ifdef CONFIG_KSU_SUSFS_OPEN_REDIRECT
++retry:
++#endif // #ifdef CONFIG_KSU_SUSFS_OPEN_REDIRECT
  	if (fd >= 0) {
  		struct file *f = do_filp_open(dfd, tmp, &op);
 +#ifdef CONFIG_KSU_SUSFS_OPEN_REDIRECT
-+		if (f && !IS_ERR(f) && !is_inode_open_redirect) {
-+			if (SUSFS_IS_INODE_OPEN_REDIRECT_WITHOUT_UID_CHECK(file_inode(f))) {
-+				if (!susfs_open_redirect_spoof_do_sys_openat(file_inode(f), &tmp)) {
++		if (!is_inode_open_redirect && f && !IS_ERR(f)) {
++			struct inode *inode = file_inode(f);
++			if (SUSFS_IS_INODE_OPEN_REDIRECT_WITHOUT_UID_CHECK(inode)) {
++				fake_filename = susfs_open_redirect_spoof_do_sys_openat(inode);
++				if (fake_filename && !IS_ERR(fake_filename)) {
 +					is_inode_open_redirect = true;
 +					filp_close(f, NULL);
-+					put_unused_fd(fd);
++					putname(tmp);
++					tmp = fake_filename;
 +					goto retry;
 +				}
 +			}
@@ -1141,14 +1143,14 @@ index e2244c1..8746024 100644
  {
  	enum ovl_path_type type = ovl_path_type(dentry);
 diff --git a/fs/proc/base.c b/fs/proc/base.c
-index 0495111..918f5a9 100644
+index 0495111..386031b 100644
 --- a/fs/proc/base.c
 +++ b/fs/proc/base.c
 @@ -95,6 +95,9 @@
  #include <linux/flex_array.h>
  #include <linux/posix-timers.h>
  #include <linux/cpufreq_times.h>
-+#if defined(CONFIG_KSU_SUSFS_SUS_MAP) && defined(CONFIG_KSU_SUSFS_OPEN_REDIRECT)
++#if defined(CONFIG_KSU_SUSFS_SUS_MAP) || defined(CONFIG_KSU_SUSFS_OPEN_REDIRECT)
 +#include <linux/susfs_def.h>
 +#endif
  #ifdef CONFIG_HARDWALL
@@ -2012,10 +2014,10 @@ index e6ceb3e..9af3977 100644
  		buf->f_flags = calculate_f_flags(path->mnt);
 diff --git a/fs/susfs.c b/fs/susfs.c
 new file mode 100644
-index 0000000..109511c
+index 0000000..7c0dbb0
 --- /dev/null
 +++ b/fs/susfs.c
-@@ -0,0 +1,1455 @@
+@@ -0,0 +1,1447 @@
 +#include <linux/version.h>
 +#include <linux/cred.h>
 +#include <linux/fs.h>
@@ -2139,7 +2141,7 @@ index 0000000..109511c
 +		goto out_copy_to_user;
 +	}
 +
-+	new_list = kmalloc(sizeof(struct st_susfs_sus_path_list), GFP_KERNEL);
++	new_list = kzalloc(sizeof(struct st_susfs_sus_path_list), GFP_KERNEL);
 +	if (!new_list) {
 +		info.err = -ENOMEM;
 +		goto out_copy_to_user;
@@ -2344,7 +2346,7 @@ index 0000000..109511c
 +		goto out_copy_to_user;
 +	}
 +
-+	new_entry = kmalloc(sizeof(struct st_susfs_sus_kstat_hlist), GFP_KERNEL);
++	new_entry = kzalloc(sizeof(struct st_susfs_sus_kstat_hlist), GFP_KERNEL);
 +	if (!new_entry) {
 +		info.err = -ENOMEM;
 +		goto out_copy_to_user;
@@ -2431,7 +2433,7 @@ index 0000000..109511c
 +		goto out_copy_to_user;
 +	}
 +
-+	new_entry = kmalloc(sizeof(struct st_susfs_sus_kstat_hlist), GFP_KERNEL);
++	new_entry = kzalloc(sizeof(struct st_susfs_sus_kstat_hlist), GFP_KERNEL);
 +	if (!new_entry) {
 +		info.err = -ENOMEM;
 +		goto out_copy_to_user;
@@ -2815,13 +2817,13 @@ index 0000000..109511c
 +		goto out_path_put_target_path;
 +	}
 +
-+	new_entry_target = kmalloc(sizeof(struct st_susfs_open_redirect_hlist), GFP_KERNEL);
++	new_entry_target = kzalloc(sizeof(struct st_susfs_open_redirect_hlist), GFP_KERNEL);
 +	if (!new_entry_target) {
 +		info.err = -ENOMEM;
 +		goto out_path_put_target_path;
 +	}
 +
-+	new_entry_redirected = kmalloc(sizeof(struct st_susfs_open_redirect_hlist), GFP_KERNEL);
++	new_entry_redirected = kzalloc(sizeof(struct st_susfs_open_redirect_hlist), GFP_KERNEL);
 +	if (!new_entry_redirected) {
 +		info.err = -ENOMEM;
 +		kfree(new_entry_target);
@@ -2909,11 +2911,10 @@ index 0000000..109511c
 +	SUSFS_LOGI("CMD_SUSFS_ADD_OPEN_REDIRECT -> ret: %d\n", info.err);
 +}
 +
-+int susfs_open_redirect_spoof_do_sys_openat(struct inode *inode, struct filename **tmp_filename) {
++struct filename *susfs_open_redirect_spoof_do_sys_openat(struct inode *inode) {
 +	struct st_susfs_open_redirect_hlist *entry = NULL;
 +	struct filename *new_filename = NULL;
 +	int srcu_idx = srcu_read_lock(&susfs_srcu_open_redirect);
-+	int err = -ENOENT;
 +
 +	hash_for_each_possible_rcu(OPEN_REDIRECT_HLIST, entry, node, inode->i_ino) {
 +		if (!entry->reversed_lookup_only &&
@@ -2947,20 +2948,13 @@ index 0000000..109511c
 +			SUSFS_LOGI("redirect path '%s' to '%s', uid_scheme: %d\n",
 +					entry->info.target_pathname, entry->info.redirected_pathname, entry->info.uid_scheme);
 +			new_filename = getname_kernel(entry->info.redirected_pathname);
-+			if (IS_ERR(new_filename)) {
-+				SUSFS_LOGE("no memory\n");
-+				err = -ENOMEM;
-+				goto out_srcu_read_unlock;
-+			}
-+			putname(*tmp_filename);
-+			*tmp_filename = new_filename;
-+			err = 0;
-+			goto out_srcu_read_unlock;
++			srcu_read_unlock(&susfs_srcu_open_redirect, srcu_idx);
++			return new_filename;
 +		}
 +	}
 +out_srcu_read_unlock:
 +	srcu_read_unlock(&susfs_srcu_open_redirect, srcu_idx);
-+	return err;
++	return new_filename;
 +}
 +
 +int susfs_open_redirect_spoof_vfs_readlink(struct inode *inode, char __user *buffer, int buflen) {
@@ -3008,7 +3002,7 @@ index 0000000..109511c
 +				srcu_read_unlock(&susfs_srcu_open_redirect, srcu_idx);
 +				return -ENAMETOOLONG;
 +			}
-+			strncpy(tmp_buf, entry->info.redirected_pathname, strlen(entry->info.redirected_pathname));
++			strncpy(tmp_buf, entry->info.redirected_pathname, SUSFS_MAX_LEN_PATHNAME - 1);
 +			srcu_read_unlock(&susfs_srcu_open_redirect, srcu_idx);
 +			return 0;
 +		}
@@ -3070,7 +3064,7 @@ index 0000000..109511c
 +			entry->target_ino == inode->i_ino &&
 +			entry->target_dev == inode->i_sb->s_dev)
 +		{
-+			spoofed_name = kmalloc(SUSFS_MAX_LEN_PATHNAME, GFP_KERNEL);
++			spoofed_name = kzalloc(SUSFS_MAX_LEN_PATHNAME, GFP_KERNEL);
 +			if (!spoofed_name) {
 +				SUSFS_LOGE("no enough memeory\n");
 +				srcu_read_unlock(&susfs_srcu_open_redirect, srcu_idx);
