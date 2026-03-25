@@ -526,7 +526,7 @@ index 80b743c..731fe6f 100644
  		if (!d_is_symlink(dentry))
  			return -EINVAL;
 diff --git a/fs/namespace.c b/fs/namespace.c
-index d772fe4..7908891 100644
+index d772fe4..e9b8fa5 100644
 --- a/fs/namespace.c
 +++ b/fs/namespace.c
 @@ -27,10 +27,24 @@
@@ -739,15 +739,15 @@ index d772fe4..7908891 100644
 +	// - We will just stop checking for ksu process if /sdcard/Android is accessible,
 +	//   for the sake of performance
 +	if (!READ_ONCE(susfs_is_sdcard_android_data_decrypted) && susfs_is_current_ksu_domain()) {
-+		mnt = susfs_alloc_non_unshare_ksu_vfsmnt(name ?: "none");
-+		goto bypass_orig_alloc;
++		mnt = susfs_alloc_non_unshare_ksu_vfsmnt(name);
++		goto bypass_orig_flow;
 +	}
 +#endif
 +
  	mnt = alloc_vfsmnt(name);
 +
 +#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
-+bypass_orig_alloc:
++bypass_orig_flow:
 +#endif
  	if (!mnt)
  		return ERR_PTR(-ENOMEM);
