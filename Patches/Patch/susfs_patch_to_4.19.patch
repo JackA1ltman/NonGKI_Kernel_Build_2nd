@@ -1238,16 +1238,16 @@ index fa762c5..c981cd6 100644
  	seq_putc(m, '\n');
  	return 0;
 diff --git a/fs/proc/fd.c b/fs/proc/fd.c
-index 81882a1..18115b0 100644
+index 81882a1..20f1d9c 100644
 --- a/fs/proc/fd.c
 +++ b/fs/proc/fd.c
 @@ -12,17 +12,35 @@
  #include <linux/fs.h>
  
  #include <linux/proc_fs.h>
-+#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
++#if defined(CONFIG_KSU_SUSFS_SUS_MOUNT) || defined(CONFIG_KSU_SUSFS_OPEN_REDIRECT)
 +#include <linux/susfs_def.h>
-+#endif
++#endif // #if defined(CONFIG_KSU_SUSFS_SUS_MOUNT) || defined(CONFIG_KSU_SUSFS_OPEN_REDIRECT)
  
  #include "../mount.h"
  #include "internal.h"

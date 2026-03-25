@@ -536,7 +536,7 @@ index fd6caf2..310a59a 100644
  	do_delayed_call(&done);
  	return res;
 diff --git a/fs/namespace.c b/fs/namespace.c
-index 7955b65..7acd6be 100644
+index 7955b65..7336165 100644
 --- a/fs/namespace.c
 +++ b/fs/namespace.c
 @@ -30,10 +30,24 @@
@@ -750,7 +750,7 @@ index 7955b65..7acd6be 100644
  		if (err)
  			goto out_free_cache;
  
-@@ -937,11 +1101,28 @@ struct vfsmount *vfs_create_mount(struct fs_context *fc)
+@@ -937,11 +1101,24 @@ struct vfsmount *vfs_create_mount(struct fs_context *fc)
  	struct mount *mnt;
  	struct super_block *sb;
  
@@ -760,10 +760,6 @@ index 7955b65..7acd6be 100644
  	sb = fc->root->d_sb;
  
 +#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
-+	// We won't check it anymore if boot-completed stage is triggered.
-+	if (susfs_is_sdcard_android_data_decrypted) {
-+		goto orig_flow;
-+	}
 +	// - We will just stop checking for ksu process if /sdcard/Android is accessible,
 +	//   for the sake of performance
 +	if (!READ_ONCE(susfs_is_sdcard_android_data_decrypted) && susfs_is_current_ksu_domain()) {
@@ -779,7 +775,7 @@ index 7955b65..7acd6be 100644
  	if (!mnt)
  		return ERR_PTR(-ENOMEM);
  
-@@ -1034,7 +1215,43 @@ static struct mount *clone_mnt(struct mount *old, struct dentry *root,
+@@ -1034,7 +1211,43 @@ static struct mount *clone_mnt(struct mount *old, struct dentry *root,
  	struct mount *mnt;
  	int err;
  
@@ -823,7 +819,7 @@ index 7955b65..7acd6be 100644
  	if (!mnt)
  		return ERR_PTR(-ENOMEM);
  
-@@ -1060,11 +1277,18 @@ static struct mount *clone_mnt(struct mount *old, struct dentry *root,
+@@ -1060,11 +1273,18 @@ static struct mount *clone_mnt(struct mount *old, struct dentry *root,
  	mnt->mnt.mnt_flags = old->mnt.mnt_flags;
  	mnt->mnt.mnt_flags &= ~(MNT_WRITE_HOLD|MNT_MARKED|MNT_INTERNAL);
  
@@ -842,7 +838,7 @@ index 7955b65..7acd6be 100644
  	lock_mount_hash();
  	list_add_tail(&mnt->mnt_instance, &sb->s_mounts);
  	unlock_mount_hash();
-@@ -1779,7 +2003,7 @@ struct mount *copy_tree(struct mount *mnt, struct dentry *dentry,
+@@ -1779,7 +1999,7 @@ struct mount *copy_tree(struct mount *mnt, struct dentry *dentry,
  					int flag)
  {
  	struct mount *res, *p, *q, *r, *parent;
@@ -851,7 +847,7 @@ index 7955b65..7acd6be 100644
  	if (!(flag & CL_COPY_UNBINDABLE) && IS_MNT_UNBINDABLE(mnt))
  		return ERR_PTR(-EINVAL);
  
-@@ -1795,6 +2019,7 @@ struct mount *copy_tree(struct mount *mnt, struct dentry *dentry,
+@@ -1795,6 +2015,7 @@ struct mount *copy_tree(struct mount *mnt, struct dentry *dentry,
  	p = mnt;
  	list_for_each_entry(r, &mnt->mnt_mounts, mnt_child) {
  		struct mount *s;
@@ -859,7 +855,7 @@ index 7955b65..7acd6be 100644
  		if (!is_subdir(r->mnt_mountpoint, dentry))
  			continue;
  
-@@ -1824,6 +2049,7 @@ struct mount *copy_tree(struct mount *mnt, struct dentry *dentry,
+@@ -1824,6 +2045,7 @@ struct mount *copy_tree(struct mount *mnt, struct dentry *dentry,
  			q = clone_mnt(p, p->mnt.mnt_root, flag);
  			if (IS_ERR(q))
  				goto out;
@@ -867,7 +863,7 @@ index 7955b65..7acd6be 100644
  			lock_mount_hash();
  			list_add_tail(&q->mnt_list, &res->mnt_list);
  			attach_mnt(q, parent, p->mnt_mp);
-@@ -3295,6 +3521,9 @@ struct mnt_namespace *copy_mnt_ns(unsigned long flags, struct mnt_namespace *ns,
+@@ -3295,6 +3517,9 @@ struct mnt_namespace *copy_mnt_ns(unsigned long flags, struct mnt_namespace *ns,
  	copy_flags = CL_COPY_UNBINDABLE | CL_EXPIRE;
  	if (user_ns != ns->user_ns)
  		copy_flags |= CL_SHARED_TO_SLAVE;
@@ -877,7 +873,7 @@ index 7955b65..7acd6be 100644
  	new = copy_tree(old, old->mnt.mnt_root, copy_flags);
  	if (IS_ERR(new)) {
  		namespace_unlock();
-@@ -3316,6 +3545,7 @@ struct mnt_namespace *copy_mnt_ns(unsigned long flags, struct mnt_namespace *ns,
+@@ -3316,6 +3541,7 @@ struct mnt_namespace *copy_mnt_ns(unsigned long flags, struct mnt_namespace *ns,
  	 */
  	p = old;
  	q = new;
@@ -885,7 +881,7 @@ index 7955b65..7acd6be 100644
  	while (p) {
  		q->mnt_ns = new_ns;
  		new_ns->mounts++;
-@@ -3336,6 +3566,7 @@ struct mnt_namespace *copy_mnt_ns(unsigned long flags, struct mnt_namespace *ns,
+@@ -3336,6 +3562,7 @@ struct mnt_namespace *copy_mnt_ns(unsigned long flags, struct mnt_namespace *ns,
  		while (p->mnt.mnt_root != q->mnt.mnt_root)
  			p = next_mnt(p, old);
  	}
@@ -893,7 +889,7 @@ index 7955b65..7acd6be 100644
  	namespace_unlock();
  
  	if (rootmnt)
-@@ -3618,6 +3849,7 @@ out_to:
+@@ -3618,6 +3845,7 @@ out_to:
  	path_put(&to_path);
  out_from:
  	path_put(&from_path);
@@ -901,7 +897,7 @@ index 7955b65..7acd6be 100644
  	return ret;
  }
  
-@@ -4074,3 +4306,34 @@ const struct proc_ns_operations mntns_operations = {
+@@ -4074,3 +4302,34 @@ const struct proc_ns_operations mntns_operations = {
  	.install	= mntns_install,
  	.owner		= mntns_owner,
  };
@@ -1041,20 +1037,10 @@ index 7df9ad4..145ba52 100644
  			   inode_mark->wd, inode->i_ino, inode->i_sb->s_dev,
  			   inotify_mark_user_mask(mark));
 diff --git a/fs/open.c b/fs/open.c
-index 5c0043d..837a348 100644
+index 5c0043d..fcaa457 100644
 --- a/fs/open.c
 +++ b/fs/open.c
-@@ -32,6 +32,9 @@
- #include <linux/ima.h>
- #include <linux/dnotify.h>
- #include <linux/compat.h>
-+#ifdef CONFIG_KSU_SUSFS
-+#include <linux/susfs_def.h>
-+#endif
- 
- #include "internal.h"
- 
-@@ -345,6 +348,7 @@ SYSCALL_DEFINE4(fallocate, int, fd, int, mode, loff_t, offset, loff_t, len)
+@@ -345,6 +345,7 @@ SYSCALL_DEFINE4(fallocate, int, fd, int, mode, loff_t, offset, loff_t, len)
   * We do this by temporarily clearing all FS-related capabilities and
   * switching the fsuid/fsgid around to the real ones.
   */
@@ -1062,7 +1048,7 @@ index 5c0043d..837a348 100644
  long do_faccessat(int dfd, const char __user *filename, int mode)
  {
  	const struct cred *old_cred;
-@@ -1086,11 +1090,19 @@ struct file *file_open_root(struct dentry *dentry, struct vfsmount *mnt,
+@@ -1086,11 +1087,19 @@ struct file *file_open_root(struct dentry *dentry, struct vfsmount *mnt,
  }
  EXPORT_SYMBOL(file_open_root);
  
@@ -1082,7 +1068,7 @@ index 5c0043d..837a348 100644
  
  	if (fd)
  		return fd;
-@@ -1100,8 +1112,26 @@ long do_sys_open(int dfd, const char __user *filename, int flags, umode_t mode)
+@@ -1100,8 +1109,26 @@ long do_sys_open(int dfd, const char __user *filename, int flags, umode_t mode)
  		return PTR_ERR(tmp);
  
  	fd = get_unused_fd_flags(flags);
@@ -1366,7 +1352,7 @@ index 81882a1..3d47086 100644
  	if (seq_has_overflowed(m))
  		goto out;
 diff --git a/fs/proc/task_mmu.c b/fs/proc/task_mmu.c
-index 15ee40d..e709d6a 100644
+index 15ee40d..eee999a 100644
 --- a/fs/proc/task_mmu.c
 +++ b/fs/proc/task_mmu.c
 @@ -22,6 +22,9 @@
@@ -1537,10 +1523,10 @@ index 15ee40d..e709d6a 100644
  
  	if (!mm || !mmget_not_zero(mm))
  		goto out;
-@@ -1681,6 +1784,15 @@ static ssize_t pagemap_read(struct file *file, char __user *buf,
- 		if (ret)
+@@ -1682,6 +1785,15 @@ static ssize_t pagemap_read(struct file *file, char __user *buf,
  			goto out_free;
  		ret = walk_page_range(mm, start_vaddr, end, &pagemap_ops, &pm);
+ 		up_read(&mm->mmap_sem);
 +#ifdef CONFIG_KSU_SUSFS_SUS_MAP
 +		vma = find_vma(mm, start_vaddr);
 +		if (vma && vma->vm_file) {
@@ -1550,9 +1536,9 @@ index 15ee40d..e709d6a 100644
 +			}
 +		}
 +#endif
- 		up_read(&mm->mmap_sem);
  		start_vaddr = end;
  
+ 		len = min(count, PM_ENTRY_BYTES * pm.pos);
 diff --git a/fs/proc_namespace.c b/fs/proc_namespace.c
 index 5b8d065..803734d 100644
 --- a/fs/proc_namespace.c
