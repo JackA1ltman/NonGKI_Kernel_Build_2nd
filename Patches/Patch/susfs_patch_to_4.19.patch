@@ -358,7 +358,7 @@ index 94f388e..c103641 100644
  	do_delayed_call(&done);
  	return res;
 diff --git a/fs/namespace.c b/fs/namespace.c
-index 5e94ec9..8b85531 100644
+index 5e94ec9..95ce1c5 100644
 --- a/fs/namespace.c
 +++ b/fs/namespace.c
 @@ -26,10 +26,24 @@
@@ -445,7 +445,7 @@ index 5e94ec9..8b85531 100644
  	ida_free(&mnt_group_ida, mnt->mnt_group_id);
  	mnt->mnt_group_id = 0;
  }
-@@ -174,6 +225,118 @@ static void drop_mountpoint(struct fs_pin *p)
+@@ -174,6 +225,116 @@ static void drop_mountpoint(struct fs_pin *p)
  	mntput(&m->mnt);
  }
  
@@ -477,7 +477,6 @@ index 5e94ec9..8b85531 100644
 +		mnt->mnt_count = 1;
 +		mnt->mnt_writers = 0;
 +#endif
-+		mnt->mnt.data = NULL;
 +
 +		INIT_HLIST_NODE(&mnt->mnt_hash);
 +		INIT_LIST_HEAD(&mnt->mnt_child);
@@ -533,7 +532,6 @@ index 5e94ec9..8b85531 100644
 +		mnt->mnt_count = 1;
 +		mnt->mnt_writers = 0;
 +#endif
-+		mnt->mnt.data = NULL;
 +
 +		INIT_HLIST_NODE(&mnt->mnt_hash);
 +		INIT_LIST_HEAD(&mnt->mnt_child);
@@ -564,7 +562,7 @@ index 5e94ec9..8b85531 100644
  static struct mount *alloc_vfsmnt(const char *name)
  {
  	struct mount *mnt = kmem_cache_zalloc(mnt_cache, GFP_KERNEL);
-@@ -953,7 +1116,20 @@ vfs_kern_mount(struct file_system_type *type, int flags, const char *name, void
+@@ -953,7 +1114,20 @@ vfs_kern_mount(struct file_system_type *type, int flags, const char *name, void
  	if (!type)
  		return ERR_PTR(-ENODEV);
  
@@ -572,7 +570,7 @@ index 5e94ec9..8b85531 100644
 +	// - We will just stop checking for ksu process if /sdcard/Android is accessible,
 +	//   for the sake of performance
 +	if (!READ_ONCE(susfs_is_sdcard_android_data_decrypted) && susfs_is_current_ksu_domain()) {
-+		mnt = susfs_alloc_non_unshare_ksu_vfsmnt(name);
++		mnt = susfs_alloc_non_unshare_ksu_vfsmnt(name ?:"none");
 +		goto bypass_orig_flow;
 +	}
 +#endif
@@ -585,7 +583,7 @@ index 5e94ec9..8b85531 100644
  	if (!mnt)
  		return ERR_PTR(-ENOMEM);
  
-@@ -1008,7 +1184,43 @@ static struct mount *clone_mnt(struct mount *old, struct dentry *root,
+@@ -1008,7 +1182,43 @@ static struct mount *clone_mnt(struct mount *old, struct dentry *root,
  	struct mount *mnt;
  	int err;
  
@@ -629,7 +627,7 @@ index 5e94ec9..8b85531 100644
  	if (!mnt)
  		return ERR_PTR(-ENOMEM);
  
-@@ -1033,6 +1245,13 @@ static struct mount *clone_mnt(struct mount *old, struct dentry *root,
+@@ -1033,6 +1243,13 @@ static struct mount *clone_mnt(struct mount *old, struct dentry *root,
  
  	mnt->mnt.mnt_flags = old->mnt.mnt_flags;
  	mnt->mnt.mnt_flags &= ~(MNT_WRITE_HOLD|MNT_MARKED|MNT_INTERNAL);
@@ -643,7 +641,7 @@ index 5e94ec9..8b85531 100644
  	/* Don't allow unprivileged users to change mount flags */
  	if (flag & CL_UNPRIVILEGED) {
  		mnt->mnt.mnt_flags |= MNT_LOCK_ATIME;
-@@ -2945,6 +3164,9 @@ struct mnt_namespace *copy_mnt_ns(unsigned long flags, struct mnt_namespace *ns,
+@@ -2945,6 +3162,9 @@ struct mnt_namespace *copy_mnt_ns(unsigned long flags, struct mnt_namespace *ns,
  	copy_flags = CL_COPY_UNBINDABLE | CL_EXPIRE;
  	if (user_ns != ns->user_ns)
  		copy_flags |= CL_SHARED_TO_SLAVE | CL_UNPRIVILEGED;
@@ -653,7 +651,7 @@ index 5e94ec9..8b85531 100644
  	new = copy_tree(old, old->mnt.mnt_root, copy_flags);
  	if (IS_ERR(new)) {
  		namespace_unlock();
-@@ -3527,3 +3749,35 @@ const struct proc_ns_operations mntns_operations = {
+@@ -3527,3 +3747,35 @@ const struct proc_ns_operations mntns_operations = {
  	.install	= mntns_install,
  	.owner		= mntns_owner,
  };
@@ -690,7 +688,7 @@ index 5e94ec9..8b85531 100644
 +}
 +#endif // #ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
 diff --git a/fs/notify/fdinfo.c b/fs/notify/fdinfo.c
-index 74aeabb..9101da9 100644
+index 74aeabb..48d98a5 100644
 --- a/fs/notify/fdinfo.c
 +++ b/fs/notify/fdinfo.c
 @@ -13,6 +13,9 @@
@@ -775,8 +773,8 @@ index 74aeabb..9101da9 100644
 +				goto out_path_put;
 +			}
 +			seq_printf(m, "inotify wd:%x ino:%lx sdev:%x mask:%x ignored_mask:0 ",
-+			   inode_mark->wd, path.dentry->d_inode->i_ino, path.dentry->d_inode->i_sb->s_dev,
-+			   inotify_mark_user_mask(mark));
++					inode_mark->wd, path.dentry->d_inode->i_ino, path.dentry->d_inode->i_sb->s_dev,
++					inotify_mark_user_mask(mark));
 +			show_mark_fhandle(m, path.dentry->d_inode);
 +			seq_putc(m, '\n');
 +			path_put(&path);
@@ -845,7 +843,7 @@ index 1557315..841b75d 100644
  			put_unused_fd(fd);
  			fd = PTR_ERR(f);
 diff --git a/fs/proc/base.c b/fs/proc/base.c
-index 78692a8..d2faf6d 100644
+index 78692a8..48205ef 100644
 --- a/fs/proc/base.c
 +++ b/fs/proc/base.c
 @@ -95,6 +95,9 @@
@@ -868,7 +866,7 @@ index 78692a8..d2faf6d 100644
  
  	if (!mm)
  		return 0;
-@@ -837,6 +843,22 @@ static ssize_t mem_rw(struct file *file, char __user *buf,
+@@ -837,6 +843,20 @@ static ssize_t mem_rw(struct file *file, char __user *buf,
  
  	while (count > 0) {
  		size_t this_len = min_t(size_t, count, PAGE_SIZE);
@@ -882,16 +880,14 @@ index 78692a8..d2faf6d 100644
 +				} else {
 +					copied = -EIO;
 +				}
-+				*ppos = addr;
-+				mmput(mm);
-+				goto free;
++				break;
 +			}
 +		}
 +#endif
  
  		if (write && copy_from_user(page, buf, this_len)) {
  			copied = -EFAULT;
-@@ -1881,6 +1903,10 @@ out:
+@@ -1881,6 +1901,10 @@ out:
  	return ERR_PTR(error);
  }
  
@@ -902,7 +898,7 @@ index 78692a8..d2faf6d 100644
  static int do_proc_readlink(struct path *path, char __user *buffer, int buflen)
  {
  	char *tmp = (char *)__get_free_page(GFP_KERNEL);
-@@ -1890,6 +1916,18 @@ static int do_proc_readlink(struct path *path, char __user *buffer, int buflen)
+@@ -1890,6 +1914,17 @@ static int do_proc_readlink(struct path *path, char __user *buffer, int buflen)
  	if (!tmp)
  		return -ENOMEM;
  
@@ -912,8 +908,7 @@ index 78692a8..d2faf6d 100644
 +			len = strlen(tmp);
 +			if (copy_to_user(buffer, tmp, len))
 +				len = -EFAULT;
-+			kfree(tmp);
-+			return len;
++			goto out;
 +		}
 +	}
 +#endif
@@ -921,7 +916,7 @@ index 78692a8..d2faf6d 100644
  	pathname = d_path(path, tmp, PAGE_SIZE);
  	len = PTR_ERR(pathname);
  	if (IS_ERR(pathname))
-@@ -2419,6 +2457,9 @@ proc_map_files_readdir(struct file *file, struct dir_context *ctx)
+@@ -2419,6 +2454,9 @@ proc_map_files_readdir(struct file *file, struct dir_context *ctx)
  	struct map_files_info info;
  	struct map_files_info *p;
  	int ret;
@@ -931,7 +926,7 @@ index 78692a8..d2faf6d 100644
  
  	ret = -ENOENT;
  	task = get_proc_task(file_inode(file));
-@@ -2476,6 +2517,11 @@ proc_map_files_readdir(struct file *file, struct dir_context *ctx)
+@@ -2476,6 +2514,11 @@ proc_map_files_readdir(struct file *file, struct dir_context *ctx)
  				vma = vma->vm_next) {
  			if (!vma->vm_file)
  				continue;
@@ -1076,7 +1071,7 @@ index 81882a1..20f1d9c 100644
  	show_fd_locks(m, file, files);
  	if (seq_has_overflowed(m))
 diff --git a/fs/proc/task_mmu.c b/fs/proc/task_mmu.c
-index 9e17d92..093207e 100644
+index 9e17d92..dd5e369 100644
 --- a/fs/proc/task_mmu.c
 +++ b/fs/proc/task_mmu.c
 @@ -21,6 +21,9 @@
@@ -1171,7 +1166,7 @@ index 9e17d92..093207e 100644
  	if (file) {
  		seq_pad(m, ' ');
  		seq_file_path(m, file, "\n");
-@@ -846,6 +902,35 @@ static int show_smap(struct seq_file *m, void *v)
+@@ -846,6 +902,25 @@ static int show_smap(struct seq_file *m, void *v)
  
  	memset(&mss, 0, sizeof(mss));
  
@@ -1179,47 +1174,35 @@ index 9e17d92..093207e 100644
 +	if (vma->vm_file) {
 +		struct inode *inode = file_inode(vma->vm_file);
 +		if (SUSFS_IS_INODE_SUS_MAP(inode)) {
-+			smap_gather_stats(vma, &mss);
-+
 +			show_map_vma(m, vma);
-+			if (vma_get_anon_name(vma)) {
-+				seq_puts(m, "Name:           ");
-+				seq_print_vma_name(m, vma);
-+			}
-+
 +			SEQ_PUT_DEC("Size:           ", vma->vm_end - vma->vm_start);
 +			SEQ_PUT_DEC(" kB\nKernelPageSize: ", vma_kernel_pagesize(vma));
 +			SEQ_PUT_DEC(" kB\nMMUPageSize:    ", vma_mmu_pagesize(vma));
 +			seq_puts(m, " kB\n");
-+
 +			__show_smap(m, &mss);
-+
-+			seq_printf(m, "THPeligible:    %d\n", transparent_hugepage_enabled(vma));
-+
 +			if (arch_pkeys_enabled())
-+				seq_printf(m, "ProtectionKey:  %8u\n", vma_pkey(vma));
-+
++					seq_printf(m, "ProtectionKey:  %8u\n", vma_pkey(vma));
++			seq_puts(m, "VmFlags: mr mw me");
++			seq_putc(m, '\n');
 +			goto bypass_orig_flow;
 +		}
 +	}
-+#endif
++#endif // #ifdef CONFIG_KSU_SUSFS_SUS_MAP
 +
  	smap_gather_stats(vma, &mss);
  
  	show_map_vma(m, vma);
-@@ -866,6 +951,11 @@ static int show_smap(struct seq_file *m, void *v)
- 
- 	if (arch_pkeys_enabled())
+@@ -868,6 +943,9 @@ static int show_smap(struct seq_file *m, void *v)
  		seq_printf(m, "ProtectionKey:  %8u\n", vma_pkey(vma));
-+
+ 	show_smap_vma_flags(m, vma);
+ 
 +#ifdef CONFIG_KSU_SUSFS_SUS_MAP
 +bypass_orig_flow:
 +#endif
-+
- 	show_smap_vma_flags(m, vma);
- 
  	m_cache_vma(m, vma);
-@@ -901,7 +991,19 @@ static int show_smaps_rollup(struct seq_file *m, void *v)
+ 
+ 	return 0;
+@@ -901,7 +979,19 @@ static int show_smaps_rollup(struct seq_file *m, void *v)
  	hold_task_mempolicy(priv);
  
  	for (vma = priv->mm->mmap; vma; vma = vma->vm_next) {
@@ -1239,7 +1222,7 @@ index 9e17d92..093207e 100644
  		last_vma_end = vma->vm_end;
  	}
  
-@@ -1554,6 +1656,9 @@ static ssize_t pagemap_read(struct file *file, char __user *buf,
+@@ -1554,6 +1644,9 @@ static ssize_t pagemap_read(struct file *file, char __user *buf,
  	unsigned long start_vaddr;
  	unsigned long end_vaddr;
  	int ret = 0, copied = 0;
@@ -1249,10 +1232,10 @@ index 9e17d92..093207e 100644
  
  	if (!mm || !mmget_not_zero(mm))
  		goto out;
-@@ -1614,6 +1719,15 @@ static ssize_t pagemap_read(struct file *file, char __user *buf,
+@@ -1613,6 +1706,15 @@ static ssize_t pagemap_read(struct file *file, char __user *buf,
+ 		if (ret)
  			goto out_free;
  		ret = walk_page_range(start_vaddr, end, &pagemap_walk);
- 		up_read(&mm->mmap_sem);
 +#ifdef CONFIG_KSU_SUSFS_SUS_MAP
 +		vma = find_vma(mm, start_vaddr);
 +		if (vma && vma->vm_file) {
@@ -1262,9 +1245,9 @@ index 9e17d92..093207e 100644
 +			}
 +		}
 +#endif
+ 		up_read(&mm->mmap_sem);
  		start_vaddr = end;
  
- 		len = min(count, PM_ENTRY_BYTES * pm.pos);
 diff --git a/fs/proc_namespace.c b/fs/proc_namespace.c
 index bd07f0f..2af1b3a 100644
 --- a/fs/proc_namespace.c
@@ -3640,7 +3623,7 @@ index 6ac5d1b..4ccb49f 100644
  	if (copy_to_user(name, &tmp, sizeof(tmp)))
  		return -EFAULT;
 diff --git a/security/selinux/avc.c b/security/selinux/avc.c
-index 74ab889..5e69432 100644
+index 74ab889..760a6ad 100644
 --- a/security/selinux/avc.c
 +++ b/security/selinux/avc.c
 @@ -164,6 +164,11 @@ static void avc_dump_av(struct audit_buffer *ab, u16 tclass, u32 av)
@@ -3655,34 +3638,37 @@ index 74ab889..5e69432 100644
  
  /**
   * avc_dump_query - Display a SID pair and a class in human-readable form.
-@@ -177,8 +182,20 @@ static void avc_dump_query(struct audit_buffer *ab, struct selinux_state *state,
- 	int rc;
- 	char *scontext;
+@@ -179,6 +184,7 @@ static void avc_dump_query(struct audit_buffer *ab, struct selinux_state *state,
  	u32 scontext_len;
-+#ifdef CONFIG_KSU_SUSFS
-+	struct selinux_audit_data sad;
-+#endif
  
  	rc = security_sid_to_context(state, ssid, &scontext, &scontext_len);
-+#ifdef CONFIG_KSU_SUSFS
-+	if (unlikely(sad.tsid == susfs_ksu_sid && READ_ONCE(susfs_is_avc_log_spoofing_enabled))) {
-+		if (rc)
-+			audit_log_format(ab, " tsid=%d", susfs_priv_app_sid);
-+		else
-+			audit_log_format(ab, " tcontext=%s", "u:r:priv_app:s0:c512,c768");
-+		goto bypass_orig_flow;
-+	}
-+#endif
++
  	if (rc)
  		audit_log_format(ab, "ssid=%d", ssid);
  	else {
-@@ -186,6 +203,9 @@ static void avc_dump_query(struct audit_buffer *ab, struct selinux_state *state,
+@@ -186,6 +192,15 @@ static void avc_dump_query(struct audit_buffer *ab, struct selinux_state *state,
+ 		kfree(scontext);
+ 	}
+ 
++#ifdef CONFIG_KSU_SUSFS
++if (unlikely(tsid == susfs_ksu_sid && READ_ONCE(susfs_is_avc_log_spoofing_enabled))) {
++	if (rc)
++		audit_log_format(ab, " tsid=%d", susfs_priv_app_sid);
++	else
++		audit_log_format(ab, " tcontext=%s", "u:r:priv_app:s0:c512,c768");
++	goto bypass_orig_flow;
++}
++#endif
+ 	rc = security_sid_to_context(state, tsid, &scontext, &scontext_len);
+ 	if (rc)
+ 		audit_log_format(ab, " tsid=%d", tsid);
+@@ -194,6 +209,9 @@ static void avc_dump_query(struct audit_buffer *ab, struct selinux_state *state,
  		kfree(scontext);
  	}
  
 +#ifdef CONFIG_KSU_SUSFS
 +bypass_orig_flow:
 +#endif
- 	rc = security_sid_to_context(state, tsid, &scontext, &scontext_len);
- 	if (rc)
- 		audit_log_format(ab, " tsid=%d", tsid);
+ 	BUG_ON(!tclass || tclass >= ARRAY_SIZE(secclass_map));
+ 	audit_log_format(ab, " tclass=%s", secclass_map[tclass-1].name);
+ }

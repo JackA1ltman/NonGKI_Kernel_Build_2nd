@@ -12,7 +12,7 @@ index 1c949ac..b3282ad 100644
  obj-y +=	buffer.o block_dev.o direct-io.o mpage.o
  else
 diff --git a/fs/namei.c b/fs/namei.c
-index fd6caf2..39cacbd 100644
+index fd6caf2..217906b 100644
 --- a/fs/namei.c
 +++ b/fs/namei.c
 @@ -39,6 +39,10 @@
@@ -213,15 +213,7 @@ index fd6caf2..39cacbd 100644
  	return dentry;
  }
  
-@@ -1764,6 +1855,7 @@ static struct dentry *lookup_slow(const struct qstr *name,
- 	inode_lock_shared(inode);
- 	res = __lookup_slow(name, dir, flags);
- 	inode_unlock_shared(inode);
-+
- 	return res;
- }
- 
-@@ -1882,6 +1974,11 @@ static int walk_component(struct nameidata *nd, int flags)
+@@ -1882,6 +1973,11 @@ static int walk_component(struct nameidata *nd, int flags)
  	if (unlikely(err <= 0)) {
  		if (err < 0)
  			return err;
@@ -233,7 +225,7 @@ index fd6caf2..39cacbd 100644
  		path.dentry = lookup_slow(&nd->last, nd->path.dentry,
  					  nd->flags);
  		if (IS_ERR(path.dentry))
-@@ -2143,6 +2240,9 @@ static inline u64 hash_name(const void *salt, const char *name)
+@@ -2143,6 +2239,9 @@ static inline u64 hash_name(const void *salt, const char *name)
  static int link_path_walk(const char *name, struct nameidata *nd)
  {
  	int err;
@@ -243,7 +235,7 @@ index fd6caf2..39cacbd 100644
  
  	if (IS_ERR(name))
  		return PTR_ERR(name);
-@@ -2160,6 +2260,15 @@ static int link_path_walk(const char *name, struct nameidata *nd)
+@@ -2160,6 +2259,15 @@ static int link_path_walk(const char *name, struct nameidata *nd)
  		if (err)
  			return err;
  
@@ -259,7 +251,7 @@ index fd6caf2..39cacbd 100644
  		hash_len = hash_name(nd->path.dentry, name);
  
  		type = LAST_NORM;
-@@ -2343,6 +2452,9 @@ static inline int lookup_last(struct nameidata *nd)
+@@ -2343,6 +2451,9 @@ static inline int lookup_last(struct nameidata *nd)
  {
  	if (nd->last_type == LAST_NORM && nd->last.name[nd->last.len])
  		nd->flags |= LOOKUP_FOLLOW | LOOKUP_DIRECTORY;
@@ -269,7 +261,7 @@ index fd6caf2..39cacbd 100644
  
  	nd->flags &= ~LOOKUP_PARENT;
  	return walk_component(nd, 0);
-@@ -3282,15 +3394,39 @@ static int lookup_open(struct nameidata *nd, struct path *path,
+@@ -3282,15 +3393,39 @@ static int lookup_open(struct nameidata *nd, struct path *path,
  	int error, create_error = 0;
  	umode_t mode = op->mode;
  	DECLARE_WAIT_QUEUE_HEAD_ONSTACK(wq);
@@ -309,7 +301,7 @@ index fd6caf2..39cacbd 100644
  			if (IS_ERR(dentry))
  				return PTR_ERR(dentry);
  		}
-@@ -3414,6 +3550,10 @@ static int do_last(struct nameidata *nd,
+@@ -3414,6 +3549,10 @@ static int do_last(struct nameidata *nd,
  	struct path path;
  	int error;
  
@@ -320,7 +312,7 @@ index fd6caf2..39cacbd 100644
  	nd->flags &= ~LOOKUP_PARENT;
  	nd->flags |= op->intent;
  
-@@ -3702,6 +3842,10 @@ static struct file *path_openat(struct nameidata *nd,
+@@ -3702,6 +3841,10 @@ static struct file *path_openat(struct nameidata *nd,
  	return ERR_PTR(error);
  }
  
@@ -331,15 +323,7 @@ index fd6caf2..39cacbd 100644
  struct file *do_filp_open(int dfd, struct filename *pathname,
  		const struct open_flags *op)
  {
-@@ -3715,6 +3859,7 @@ struct file *do_filp_open(int dfd, struct filename *pathname,
- 		filp = path_openat(&nd, op, flags);
- 	if (unlikely(filp == ERR_PTR(-ESTALE)))
- 		filp = path_openat(&nd, op, flags | LOOKUP_REVAL);
-+
- 	restore_nameidata();
- 	return filp;
- }
-@@ -4895,7 +5040,18 @@ int vfs_readlink(struct dentry *dentry, char __user *buffer, int buflen)
+@@ -4895,7 +5038,18 @@ int vfs_readlink(struct dentry *dentry, char __user *buffer, int buflen)
  
  	if (unlikely(!(inode->i_opflags & IOP_DEFAULT_READLINK))) {
  		if (unlikely(inode->i_op->readlink))
@@ -358,7 +342,7 @@ index fd6caf2..39cacbd 100644
  
  		if (!d_is_symlink(dentry))
  			return -EINVAL;
-@@ -4911,6 +5067,15 @@ int vfs_readlink(struct dentry *dentry, char __user *buffer, int buflen)
+@@ -4911,6 +5065,15 @@ int vfs_readlink(struct dentry *dentry, char __user *buffer, int buflen)
  		if (IS_ERR(link))
  			return PTR_ERR(link);
  	}
@@ -375,7 +359,7 @@ index fd6caf2..39cacbd 100644
  	do_delayed_call(&done);
  	return res;
 diff --git a/fs/namespace.c b/fs/namespace.c
-index 7955b65..8e94472 100644
+index 7955b65..73b5803 100644
 --- a/fs/namespace.c
 +++ b/fs/namespace.c
 @@ -30,10 +30,24 @@
@@ -462,7 +446,7 @@ index 7955b65..8e94472 100644
  	ida_free(&mnt_group_ida, mnt->mnt_group_id);
  	mnt->mnt_group_id = 0;
  }
-@@ -172,6 +223,118 @@ int mnt_get_count(struct mount *mnt)
+@@ -172,6 +223,116 @@ int mnt_get_count(struct mount *mnt)
  #endif
  }
  
@@ -494,7 +478,6 @@ index 7955b65..8e94472 100644
 +		mnt->mnt_count = 1;
 +		mnt->mnt_writers = 0;
 +#endif
-+		mnt->mnt.data = NULL;
 +
 +		INIT_HLIST_NODE(&mnt->mnt_hash);
 +		INIT_LIST_HEAD(&mnt->mnt_child);
@@ -550,7 +533,6 @@ index 7955b65..8e94472 100644
 +		mnt->mnt_count = 1;
 +		mnt->mnt_writers = 0;
 +#endif
-+		mnt->mnt.data = NULL;
 +
 +		INIT_HLIST_NODE(&mnt->mnt_hash);
 +		INIT_LIST_HEAD(&mnt->mnt_child);
@@ -581,7 +563,7 @@ index 7955b65..8e94472 100644
  static struct mount *alloc_vfsmnt(const char *name)
  {
  	struct mount *mnt = kmem_cache_zalloc(mnt_cache, GFP_KERNEL);
-@@ -941,7 +1104,19 @@ struct vfsmount *vfs_create_mount(struct fs_context *fc)
+@@ -941,7 +1102,19 @@ struct vfsmount *vfs_create_mount(struct fs_context *fc)
  		return ERR_PTR(-EINVAL);
  	sb = fc->root->d_sb;
  
@@ -601,7 +583,7 @@ index 7955b65..8e94472 100644
  	if (!mnt)
  		return ERR_PTR(-ENOMEM);
  
-@@ -1034,7 +1209,43 @@ static struct mount *clone_mnt(struct mount *old, struct dentry *root,
+@@ -1034,7 +1207,43 @@ static struct mount *clone_mnt(struct mount *old, struct dentry *root,
  	struct mount *mnt;
  	int err;
  
@@ -645,7 +627,7 @@ index 7955b65..8e94472 100644
  	if (!mnt)
  		return ERR_PTR(-ENOMEM);
  
-@@ -1060,6 +1271,12 @@ static struct mount *clone_mnt(struct mount *old, struct dentry *root,
+@@ -1060,6 +1269,12 @@ static struct mount *clone_mnt(struct mount *old, struct dentry *root,
  	mnt->mnt.mnt_flags = old->mnt.mnt_flags;
  	mnt->mnt.mnt_flags &= ~(MNT_WRITE_HOLD|MNT_MARKED|MNT_INTERNAL);
  
@@ -658,7 +640,7 @@ index 7955b65..8e94472 100644
  	atomic_inc(&sb->s_active);
  	mnt->mnt.mnt_sb = sb;
  	mnt->mnt.mnt_root = dget(root);
-@@ -3295,6 +3512,9 @@ struct mnt_namespace *copy_mnt_ns(unsigned long flags, struct mnt_namespace *ns,
+@@ -3295,6 +3510,9 @@ struct mnt_namespace *copy_mnt_ns(unsigned long flags, struct mnt_namespace *ns,
  	copy_flags = CL_COPY_UNBINDABLE | CL_EXPIRE;
  	if (user_ns != ns->user_ns)
  		copy_flags |= CL_SHARED_TO_SLAVE;
@@ -668,7 +650,7 @@ index 7955b65..8e94472 100644
  	new = copy_tree(old, old->mnt.mnt_root, copy_flags);
  	if (IS_ERR(new)) {
  		namespace_unlock();
-@@ -4074,3 +4294,34 @@ const struct proc_ns_operations mntns_operations = {
+@@ -4074,3 +4292,34 @@ const struct proc_ns_operations mntns_operations = {
  	.install	= mntns_install,
  	.owner		= mntns_owner,
  };
@@ -859,7 +841,7 @@ index 5c0043d..647dbde 100644
  			put_unused_fd(fd);
  			fd = PTR_ERR(f);
 diff --git a/fs/proc/base.c b/fs/proc/base.c
-index a7a2428..c06b7db 100644
+index a7a2428..e92c640 100644
 --- a/fs/proc/base.c
 +++ b/fs/proc/base.c
 @@ -96,6 +96,9 @@
@@ -882,7 +864,7 @@ index a7a2428..c06b7db 100644
  
  	if (!mm)
  		return 0;
-@@ -906,6 +912,22 @@ static ssize_t mem_rw(struct file *file, char __user *buf,
+@@ -906,6 +912,20 @@ static ssize_t mem_rw(struct file *file, char __user *buf,
  
  	while (count > 0) {
  		size_t this_len = min_t(size_t, count, PAGE_SIZE);
@@ -896,16 +878,14 @@ index a7a2428..c06b7db 100644
 +				} else {
 +					copied = -EIO;
 +				}
-+				*ppos = addr;
-+				mmput(mm);
-+				goto free;
++				break;
 +			}
 +		}
 +#endif
  
  		if (write && copy_from_user(page, buf, this_len)) {
  			copied = -EFAULT;
-@@ -1786,6 +1808,10 @@ out:
+@@ -1786,6 +1806,10 @@ out:
  	return ERR_PTR(error);
  }
  
@@ -916,7 +896,7 @@ index a7a2428..c06b7db 100644
  static int do_proc_readlink(struct path *path, char __user *buffer, int buflen)
  {
  	char *tmp = (char *)__get_free_page(GFP_KERNEL);
-@@ -1795,6 +1821,18 @@ static int do_proc_readlink(struct path *path, char __user *buffer, int buflen)
+@@ -1795,6 +1819,17 @@ static int do_proc_readlink(struct path *path, char __user *buffer, int buflen)
  	if (!tmp)
  		return -ENOMEM;
  
@@ -926,8 +906,7 @@ index a7a2428..c06b7db 100644
 +			len = strlen(tmp);
 +			if (copy_to_user(buffer, tmp, len))
 +				len = -EFAULT;
-+			kfree(tmp);
-+			return len;
++			goto out;
 +		}
 +	}
 +#endif
@@ -935,7 +914,7 @@ index a7a2428..c06b7db 100644
  	pathname = d_path(path, tmp, PAGE_SIZE);
  	len = PTR_ERR(pathname);
  	if (IS_ERR(pathname))
-@@ -2323,6 +2361,9 @@ proc_map_files_readdir(struct file *file, struct dir_context *ctx)
+@@ -2323,6 +2358,9 @@ proc_map_files_readdir(struct file *file, struct dir_context *ctx)
  	GENRADIX(struct map_files_info) fa;
  	struct map_files_info *p;
  	int ret;
@@ -945,7 +924,7 @@ index a7a2428..c06b7db 100644
  
  	genradix_init(&fa);
  
-@@ -2364,6 +2405,11 @@ proc_map_files_readdir(struct file *file, struct dir_context *ctx)
+@@ -2364,6 +2402,11 @@ proc_map_files_readdir(struct file *file, struct dir_context *ctx)
  	for (vma = mm->mmap, pos = 2; vma; vma = vma->vm_next) {
  		if (!vma->vm_file)
  			continue;
@@ -1091,7 +1070,7 @@ index 81882a1..4b63e53 100644
  	if (seq_has_overflowed(m))
  		goto out;
 diff --git a/fs/proc/task_mmu.c b/fs/proc/task_mmu.c
-index 15ee40d..e709d6a 100644
+index 15ee40d..c398fc5 100644
 --- a/fs/proc/task_mmu.c
 +++ b/fs/proc/task_mmu.c
 @@ -22,6 +22,9 @@
@@ -1186,7 +1165,7 @@ index 15ee40d..e709d6a 100644
  	if (file) {
  		seq_pad(m, ' ');
  		seq_file_path(m, file, "\n");
-@@ -894,6 +950,35 @@ static void show_smap_vma(struct seq_file *m, void *v)
+@@ -894,6 +950,25 @@ static void show_smap_vma(struct seq_file *m, void *v)
  
  	memset(&mss, 0, sizeof(mss));
  
@@ -1194,45 +1173,35 @@ index 15ee40d..e709d6a 100644
 +	if (vma->vm_file) {
 +		struct inode *inode = file_inode(vma->vm_file);
 +		if (SUSFS_IS_INODE_SUS_MAP(inode)) {
-+			smap_gather_stats(vma, &mss);
-+
 +			show_map_vma(m, vma);
-+			if (vma_get_anon_name(vma)) {
-+				seq_puts(m, "Name:           ");
-+				seq_print_vma_name(m, vma);
-+			}
-+
 +			SEQ_PUT_DEC("Size:           ", vma->vm_end - vma->vm_start);
 +			SEQ_PUT_DEC(" kB\nKernelPageSize: ", vma_kernel_pagesize(vma));
 +			SEQ_PUT_DEC(" kB\nMMUPageSize:    ", vma_mmu_pagesize(vma));
 +			seq_puts(m, " kB\n");
-+
 +			__show_smap(m, &mss, false);
-+
-+			seq_printf(m, "THPeligible:    %d\n", transparent_hugepage_enabled(vma));
-+
 +			if (arch_pkeys_enabled())
-+				seq_printf(m, "ProtectionKey:  %8u\n", vma_pkey(vma));
-+
++					seq_printf(m, "ProtectionKey:  %8u\n", vma_pkey(vma));
++			seq_puts(m, "VmFlags: mr mw me");
++			seq_putc(m, '\n');
 +			goto bypass_orig_flow;
 +		}
 +	}
-+#endif
++#endif // #ifdef CONFIG_KSU_SUSFS_SUS_MAP
 +
  	smap_gather_stats(vma, &mss);
  
  	show_map_vma(m, vma);
-@@ -915,6 +1000,9 @@ static void show_smap_vma(struct seq_file *m, void *v)
- 
+@@ -916,6 +991,9 @@ static void show_smap_vma(struct seq_file *m, void *v)
  	if (arch_pkeys_enabled())
  		seq_printf(m, "ProtectionKey:  %8u\n", vma_pkey(vma));
+ 	show_smap_vma_flags(m, vma);
 +#ifdef CONFIG_KSU_SUSFS_SUS_MAP
 +bypass_orig_flow:
 +#endif
- 	show_smap_vma_flags(m, vma);
  }
  
-@@ -960,7 +1048,19 @@ static int show_smaps_rollup(struct seq_file *m, void *v)
+ static int show_smap(struct seq_file *m, void *v)
+@@ -960,7 +1038,19 @@ static int show_smaps_rollup(struct seq_file *m, void *v)
  	hold_task_mempolicy(priv);
  
  	for (vma = priv->mm->mmap; vma; vma = vma->vm_next) {
@@ -1252,7 +1221,7 @@ index 15ee40d..e709d6a 100644
  		last_vma_end = vma->vm_end;
  	}
  
-@@ -1626,6 +1726,9 @@ static ssize_t pagemap_read(struct file *file, char __user *buf,
+@@ -1626,6 +1716,9 @@ static ssize_t pagemap_read(struct file *file, char __user *buf,
  	unsigned long start_vaddr;
  	unsigned long end_vaddr;
  	int ret = 0, copied = 0;
@@ -1262,7 +1231,7 @@ index 15ee40d..e709d6a 100644
  
  	if (!mm || !mmget_not_zero(mm))
  		goto out;
-@@ -1681,6 +1784,15 @@ static ssize_t pagemap_read(struct file *file, char __user *buf,
+@@ -1681,6 +1774,15 @@ static ssize_t pagemap_read(struct file *file, char __user *buf,
  		if (ret)
  			goto out_free;
  		ret = walk_page_range(mm, start_vaddr, end, &pagemap_ops, &pm);
