@@ -340,7 +340,7 @@ index e8537d4..0ef30a7 100644
  	do_delayed_call(&done);
  	return res;
 diff --git a/fs/namespace.c b/fs/namespace.c
-index 5b253ad..8b8dc13 100644
+index 5b253ad..cfd3064 100644
 --- a/fs/namespace.c
 +++ b/fs/namespace.c
 @@ -25,9 +25,23 @@
@@ -585,15 +585,7 @@ index 5b253ad..8b8dc13 100644
  	if (!mnt)
  		return ERR_PTR(-ENOMEM);
  
-@@ -1009,6 +1199,7 @@ vfs_kern_mount(struct file_system_type *type, int flags, const char *name, void
- 	mnt->mnt.mnt_sb = root->d_sb;
- 	mnt->mnt_mountpoint = mnt->mnt.mnt_root;
- 	mnt->mnt_parent = mnt;
-+
- 	lock_mount_hash();
- 	list_add_tail(&mnt->mnt_instance, &root->d_sb->s_mounts);
- 	unlock_mount_hash();
-@@ -1038,7 +1229,43 @@ static struct mount *clone_mnt(struct mount *old, struct dentry *root,
+@@ -1038,7 +1228,43 @@ static struct mount *clone_mnt(struct mount *old, struct dentry *root,
  	struct mount *mnt;
  	int err;
  
@@ -637,7 +629,7 @@ index 5b253ad..8b8dc13 100644
  	if (!mnt)
  		return ERR_PTR(-ENOMEM);
  
-@@ -1063,6 +1290,14 @@ static struct mount *clone_mnt(struct mount *old, struct dentry *root,
+@@ -1063,6 +1289,14 @@ static struct mount *clone_mnt(struct mount *old, struct dentry *root,
  
  	mnt->mnt.mnt_flags = old->mnt.mnt_flags;
  	mnt->mnt.mnt_flags &= ~(MNT_WRITE_HOLD|MNT_MARKED|MNT_INTERNAL);
@@ -652,7 +644,7 @@ index 5b253ad..8b8dc13 100644
  	/* Don't allow unprivileged users to change mount flags */
  	if (flag & CL_UNPRIVILEGED) {
  		mnt->mnt.mnt_flags |= MNT_LOCK_ATIME;
-@@ -1090,6 +1325,7 @@ static struct mount *clone_mnt(struct mount *old, struct dentry *root,
+@@ -1090,6 +1324,7 @@ static struct mount *clone_mnt(struct mount *old, struct dentry *root,
  	mnt->mnt.mnt_root = dget(root);
  	mnt->mnt_mountpoint = mnt->mnt.mnt_root;
  	mnt->mnt_parent = mnt;
@@ -660,7 +652,7 @@ index 5b253ad..8b8dc13 100644
  	lock_mount_hash();
  	list_add_tail(&mnt->mnt_instance, &sb->s_mounts);
  	unlock_mount_hash();
-@@ -1686,7 +1922,7 @@ out_unlock:
+@@ -1686,7 +1921,7 @@ out_unlock:
  	namespace_unlock();
  }
  
@@ -669,7 +661,7 @@ index 5b253ad..8b8dc13 100644
   * Is the caller allowed to modify his namespace?
   */
  static inline bool may_mount(void)
-@@ -1871,6 +2107,7 @@ struct mount *copy_tree(struct mount *mnt, struct dentry *dentry,
+@@ -1871,6 +2106,7 @@ struct mount *copy_tree(struct mount *mnt, struct dentry *dentry,
  			q = clone_mnt(p, p->mnt.mnt_root, flag);
  			if (IS_ERR(q))
  				goto out;
@@ -677,7 +669,7 @@ index 5b253ad..8b8dc13 100644
  			lock_mount_hash();
  			list_add_tail(&q->mnt_list, &res->mnt_list);
  			attach_mnt(q, parent, p->mnt_mp);
-@@ -2295,7 +2532,7 @@ static int do_loopback(struct path *path, const char *old_name,
+@@ -2295,7 +2531,7 @@ static int do_loopback(struct path *path, const char *old_name,
  
  	err = -EINVAL;
  	if (mnt_ns_loop(old_path.dentry))
@@ -686,7 +678,7 @@ index 5b253ad..8b8dc13 100644
  
  	mp = lock_mount(path);
  	err = PTR_ERR(mp);
-@@ -3020,6 +3257,9 @@ struct mnt_namespace *copy_mnt_ns(unsigned long flags, struct mnt_namespace *ns,
+@@ -3020,6 +3256,9 @@ struct mnt_namespace *copy_mnt_ns(unsigned long flags, struct mnt_namespace *ns,
  	copy_flags = CL_COPY_UNBINDABLE | CL_EXPIRE;
  	if (user_ns != ns->user_ns)
  		copy_flags |= CL_SHARED_TO_SLAVE | CL_UNPRIVILEGED;
@@ -696,23 +688,7 @@ index 5b253ad..8b8dc13 100644
  	new = copy_tree(old, old->mnt.mnt_root, copy_flags);
  	if (IS_ERR(new)) {
  		namespace_unlock();
-@@ -3036,6 +3276,7 @@ struct mnt_namespace *copy_mnt_ns(unsigned long flags, struct mnt_namespace *ns,
- 	 */
- 	p = old;
- 	q = new;
-+
- 	while (p) {
- 		q->mnt_ns = new_ns;
- 		new_ns->mounts++;
-@@ -3056,6 +3297,7 @@ struct mnt_namespace *copy_mnt_ns(unsigned long flags, struct mnt_namespace *ns,
- 		while (p->mnt.mnt_root != q->mnt.mnt_root)
- 			p = next_mnt(p, old);
- 	}
-+
- 	namespace_unlock();
- 
- 	if (rootmnt)
-@@ -3596,3 +3838,35 @@ const struct proc_ns_operations mntns_operations = {
+@@ -3596,3 +3835,35 @@ const struct proc_ns_operations mntns_operations = {
  	.install	= mntns_install,
  	.owner		= mntns_owner,
  };
@@ -904,18 +880,6 @@ index f2b82c4..cb5bf97 100644
  		if (IS_ERR(f)) {
  			put_unused_fd(fd);
  			fd = PTR_ERR(f);
-diff --git a/fs/overlayfs/readdir.c b/fs/overlayfs/readdir.c
-index 4fcbfd0..34d3f29 100644
---- a/fs/overlayfs/readdir.c
-+++ b/fs/overlayfs/readdir.c
-@@ -500,6 +500,7 @@ static int ovl_dir_open(struct inode *inode, struct file *file)
- 		return -ENOMEM;
- 
- 	type = ovl_path_real(file->f_path.dentry, &realpath);
-+
- 	realfile = ovl_path_open(&realpath, file->f_flags);
- 	if (IS_ERR(realfile)) {
- 		kfree(od);
 diff --git a/fs/proc/base.c b/fs/proc/base.c
 index 3f4c8f1..e683aee 100644
 --- a/fs/proc/base.c
@@ -1153,7 +1117,7 @@ index 4274f83..1963ff3 100644
  	if (seq_has_overflowed(m))
  		goto out;
 diff --git a/fs/proc/task_mmu.c b/fs/proc/task_mmu.c
-index e19a9b1..89a9136 100644
+index e19a9b1..864924a 100644
 --- a/fs/proc/task_mmu.c
 +++ b/fs/proc/task_mmu.c
 @@ -17,6 +17,9 @@
@@ -1279,18 +1243,17 @@ index e19a9b1..89a9136 100644
  		seq_printf(m,
  			   "Size:           %8lu kB\n"
  			   "KernelPageSize: %8lu kB\n"
-@@ -912,7 +978,9 @@ static int show_smap(struct seq_file *m, void *v, int is_pid)
- 			   (vma->vm_end - vma->vm_start) >> 10,
+@@ -913,6 +979,9 @@ static int show_smap(struct seq_file *m, void *v, int is_pid)
  			   vma_kernel_pagesize(vma) >> 10,
  			   vma_mmu_pagesize(vma) >> 10);
--
+ 
 +#ifdef CONFIG_KSU_SUSFS_SUS_MAP
 +bypass_orig_flow:
 +#endif
  	if (!rollup_mode || last_vma)
  		seq_printf(m,
  			   "Rss:            %8lu kB\n"
-@@ -948,10 +1016,22 @@ static int show_smap(struct seq_file *m, void *v, int is_pid)
+@@ -948,10 +1017,23 @@ static int show_smap(struct seq_file *m, void *v, int is_pid)
  
  
  	if (!rollup_mode) {
@@ -1307,14 +1270,14 @@ index e19a9b1..89a9136 100644
  		arch_show_smap(m, vma);
  		show_smap_vma_flags(m, vma);
  	}
--
+ 
 +#ifdef CONFIG_KSU_SUSFS_SUS_MAP
 +bypass_orig_flow2:
 +#endif
  	m_cache_vma(m, vma);
  	return ret;
  }
-@@ -1556,6 +1636,9 @@ static ssize_t pagemap_read(struct file *file, char __user *buf,
+@@ -1556,6 +1638,9 @@ static ssize_t pagemap_read(struct file *file, char __user *buf,
  	unsigned long start_vaddr;
  	unsigned long end_vaddr;
  	int ret = 0, copied = 0;
@@ -1324,7 +1287,7 @@ index e19a9b1..89a9136 100644
  
  	if (!mm || !atomic_inc_not_zero(&mm->mm_users))
  		goto out;
-@@ -1613,6 +1696,16 @@ static ssize_t pagemap_read(struct file *file, char __user *buf,
+@@ -1613,6 +1698,16 @@ static ssize_t pagemap_read(struct file *file, char __user *buf,
  			end = end_vaddr;
  		down_read(&mm->mmap_sem);
  		ret = walk_page_range(start_vaddr, end, &pagemap_walk);
@@ -1575,17 +1538,10 @@ index 1059f2a..20048f2 100644
  	if (error >= 0)
  		error = buf.error;
 diff --git a/fs/stat.c b/fs/stat.c
-index 82b61b6..326c034 100644
+index 82b61b6..60b3c3c 100644
 --- a/fs/stat.c
 +++ b/fs/stat.c
-@@ -14,10 +14,17 @@
- #include <linux/security.h>
- #include <linux/syscalls.h>
- #include <linux/pagemap.h>
-+#if defined(CONFIG_KSU_SUSFS_SUS_KSTAT)
-+#include <linux/susfs_def.h>
-+#endif
- 
+@@ -18,6 +18,10 @@
  #include <asm/uaccess.h>
  #include <asm/unistd.h>
  
@@ -1596,7 +1552,7 @@ index 82b61b6..326c034 100644
  /**
   * generic_fillattr - Fill in the basic attributes from the inode struct
   * @inode: Inode to use as the source
-@@ -42,6 +49,9 @@ void generic_fillattr(struct inode *inode, struct kstat *stat)
+@@ -42,6 +46,9 @@ void generic_fillattr(struct inode *inode, struct kstat *stat)
  	stat->ctime = inode->i_ctime;
  	stat->blksize = i_blocksize(inode);
  	stat->blocks = inode->i_blocks;
@@ -1606,7 +1562,7 @@ index 82b61b6..326c034 100644
  
  	if (IS_NOATIME(inode))
  		stat->result_mask &= ~STATX_ATIME;
-@@ -73,8 +83,18 @@ int vfs_getattr_nosec(const struct path *path, struct kstat *stat,
+@@ -73,8 +80,18 @@ int vfs_getattr_nosec(const struct path *path, struct kstat *stat,
  	request_mask &= STATX_ALL;
  	query_flags &= KSTAT_QUERY_FLAGS;
  	if (inode->i_op->getattr)
@@ -1692,7 +1648,7 @@ index 083dc0a..f437695 100644
  		buf->f_flags = calculate_f_flags(path->mnt);
 diff --git a/fs/susfs.c b/fs/susfs.c
 new file mode 100644
-index 0000000..7c0dbb0
+index 0000000..8a67f3e
 --- /dev/null
 +++ b/fs/susfs.c
 @@ -0,0 +1,1447 @@
@@ -2398,7 +2354,7 @@ index 0000000..7c0dbb0
 +	write_seqlock(&susfs_fake_cmdline_or_bootconfig_seqlock);
 +	strncpy(fake_cmdline_or_bootconfig,
 +			info->fake_cmdline_or_bootconfig,
-+			SUSFS_FAKE_CMDLINE_OR_BOOTCONFIG_SIZE-1);
++			SUSFS_FAKE_CMDLINE_OR_BOOTCONFIG_SIZE - 1);
 +	susfs_is_fake_cmdline_or_bootconfig_set = true;
 +	write_sequnlock(&susfs_fake_cmdline_or_bootconfig_seqlock);
 +
@@ -3145,7 +3101,7 @@ index 0000000..7c0dbb0
 +
 diff --git a/include/linux/susfs.h b/include/linux/susfs.h
 new file mode 100644
-index 0000000..e87319c
+index 0000000..2b1f59c
 --- /dev/null
 +++ b/include/linux/susfs.h
 @@ -0,0 +1,242 @@
@@ -3207,7 +3163,7 @@ index 0000000..e87319c
 +	bool                                    enabled;
 +	int                                     err;
 +};
-+#endif
++#endif // #ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
 +
 +/* sus_kstat */
 +#ifdef CONFIG_KSU_SUSFS_SUS_KSTAT
@@ -3393,7 +3349,7 @@ index 0000000..e87319c
 +#endif
 diff --git a/include/linux/susfs_def.h b/include/linux/susfs_def.h
 new file mode 100644
-index 0000000..78d0962
+index 0000000..9e89204
 --- /dev/null
 +++ b/include/linux/susfs_def.h
 @@ -0,0 +1,143 @@
@@ -3520,25 +3476,25 @@ index 0000000..78d0962
 +static inline bool susfs_is_current_proc_umounted_app(void) {
 +	return (test_ti_thread_flag(&current->thread_info, TIF_PROC_UMOUNTED) &&
 +#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 12, 0)
-+	__kuid_val(current_uid()) >= 10000);
++			__kuid_val(current_uid()) >= 10000);
 +#else
-+	current_uid().val >= 10000);
++			current_uid().val >= 10000);
 +#endif
 +}
 +
 +#define SUSFS_IS_INODE_SUS_MAP(inode) \
-+inode && inode->i_mapping && \
-+unlikely(test_bit(AS_FLAGS_SUS_MAP, &inode->i_mapping->flags)) && \
-+susfs_is_current_proc_umounted_app()
++		inode && inode->i_mapping && \
++		unlikely(test_bit(AS_FLAGS_SUS_MAP, &inode->i_mapping->flags)) && \
++		susfs_is_current_proc_umounted_app()
 +
 +#define SUSFS_IS_INODE_OPEN_REDIRECT_WITHOUT_UID_CHECK(inode) \
-+inode && inode->i_mapping && \
-+unlikely(test_bit(AS_FLAGS_OPEN_REDIRECT, &inode->i_mapping->flags))
++		inode && inode->i_mapping && \
++		unlikely(test_bit(AS_FLAGS_OPEN_REDIRECT, &inode->i_mapping->flags))
 +
 +#define SUSFS_IS_INODE_OPEN_REDIRECT(inode) \
-+inode && inode->i_mapping && \
-+unlikely(test_bit(AS_FLAGS_OPEN_REDIRECT, &inode->i_mapping->flags)) && \
-+susfs_is_current_proc_umounted_app()
++		inode && inode->i_mapping && \
++		unlikely(test_bit(AS_FLAGS_OPEN_REDIRECT, &inode->i_mapping->flags)) && \
++		susfs_is_current_proc_umounted_app()
 +#endif // #ifndef KSU_SUSFS_DEF_H
 diff --git a/kernel/kallsyms.c b/kernel/kallsyms.c
 index a0c3365..f57a902 100644
