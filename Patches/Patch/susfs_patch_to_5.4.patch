@@ -1070,7 +1070,7 @@ index 81882a1..4b63e53 100644
  	if (seq_has_overflowed(m))
  		goto out;
 diff --git a/fs/proc/task_mmu.c b/fs/proc/task_mmu.c
-index 15ee40d..c398fc5 100644
+index 15ee40d..6bd0eb5 100644
 --- a/fs/proc/task_mmu.c
 +++ b/fs/proc/task_mmu.c
 @@ -22,6 +22,9 @@
@@ -1183,7 +1183,7 @@ index 15ee40d..c398fc5 100644
 +					seq_printf(m, "ProtectionKey:  %8u\n", vma_pkey(vma));
 +			seq_puts(m, "VmFlags: mr mw me");
 +			seq_putc(m, '\n');
-+			goto bypass_orig_flow;
++			return;
 +		}
 +	}
 +#endif // #ifdef CONFIG_KSU_SUSFS_SUS_MAP
@@ -1191,17 +1191,7 @@ index 15ee40d..c398fc5 100644
  	smap_gather_stats(vma, &mss);
  
  	show_map_vma(m, vma);
-@@ -916,6 +991,9 @@ static void show_smap_vma(struct seq_file *m, void *v)
- 	if (arch_pkeys_enabled())
- 		seq_printf(m, "ProtectionKey:  %8u\n", vma_pkey(vma));
- 	show_smap_vma_flags(m, vma);
-+#ifdef CONFIG_KSU_SUSFS_SUS_MAP
-+bypass_orig_flow:
-+#endif
- }
- 
- static int show_smap(struct seq_file *m, void *v)
-@@ -960,7 +1038,19 @@ static int show_smaps_rollup(struct seq_file *m, void *v)
+@@ -960,7 +1035,19 @@ static int show_smaps_rollup(struct seq_file *m, void *v)
  	hold_task_mempolicy(priv);
  
  	for (vma = priv->mm->mmap; vma; vma = vma->vm_next) {
@@ -1221,7 +1211,7 @@ index 15ee40d..c398fc5 100644
  		last_vma_end = vma->vm_end;
  	}
  
-@@ -1626,6 +1716,9 @@ static ssize_t pagemap_read(struct file *file, char __user *buf,
+@@ -1626,6 +1713,9 @@ static ssize_t pagemap_read(struct file *file, char __user *buf,
  	unsigned long start_vaddr;
  	unsigned long end_vaddr;
  	int ret = 0, copied = 0;
@@ -1231,7 +1221,7 @@ index 15ee40d..c398fc5 100644
  
  	if (!mm || !mmget_not_zero(mm))
  		goto out;
-@@ -1681,6 +1774,15 @@ static ssize_t pagemap_read(struct file *file, char __user *buf,
+@@ -1681,6 +1771,15 @@ static ssize_t pagemap_read(struct file *file, char __user *buf,
  		if (ret)
  			goto out_free;
  		ret = walk_page_range(mm, start_vaddr, end, &pagemap_ops, &pm);
