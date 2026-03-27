@@ -494,6 +494,12 @@ runs:
                 ${{ env.CURLX }} "${{ env.CLANG_SOURCE }}" antman
                 chmod +x antman
                 bash antman -S
+            elif [[ "${{ env.CLANG_SOURCE }}" == *"android.googlesource.com"* ]]; then
+                git clone "${{ env.CLANG_SOURCE }}" -b "${{ env.CLANG_BRANCH }}" clang-custom --depth=1
+                SUBDIR=$(find clang-custom -maxdepth 1 -type d -name 'clang-r*' | head -n 1)
+                if [ -n "$SUBDIR" ]; then
+                 mv "$SUBDIR"/* clang-custom/
+                fi    
             else
                 echo ">>>>>>>>>>Clang Status<<<<<<<<<<"
                 echo ">                              <"
