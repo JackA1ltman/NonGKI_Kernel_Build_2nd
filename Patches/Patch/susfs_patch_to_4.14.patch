@@ -1722,7 +1722,7 @@ index e6ceb3e..9af3977 100644
  		buf->f_flags = calculate_f_flags(path->mnt);
 diff --git a/fs/susfs.c b/fs/susfs.c
 new file mode 100644
-index 0000000..8a67f3e
+index 0000000..ac25deb
 --- /dev/null
 +++ b/fs/susfs.c
 @@ -0,0 +1,1447 @@
@@ -3128,7 +3128,7 @@ index 0000000..8a67f3e
 +		return -ENOMEM;
 +	}
 +
-+	setup_selinux("u:r:su:s0", cred);
++	setup_selinux("u:r:ksu:s0", cred);
 +	commit_creds(cred);
 +
 +	if (!susfs_is_current_ksu_domain()) {
