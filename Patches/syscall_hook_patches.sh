@@ -109,7 +109,7 @@ for i in "${patch_files[@]}"; do
         ;;
     ## stat.c
     fs/stat.c)
-        if grep -q "ksu_handle_newfstat_ret" "drivers/kernelsu/ksud.c" >/dev/null 2>&1; then
+        if grep -q "ksu_handle_newfstat_ret" "drivers/kernelsu/ksud.c" || grep -q "ksu_handle_newfstat_ret" "kernel/runtime/ksud_integration.c" >/dev/null 2>&1; then
             sed -i '/#if !defined(__ARCH_WANT_STAT64) || defined(__ARCH_WANT_SYS_NEWFSTATAT)/i\#ifdef CONFIG_KSU\nextern void ksu_handle_newfstat_ret(unsigned int *fd, struct stat __user **statbuf_ptr);\n#if defined(__ARCH_WANT_STAT64) || defined(__ARCH_WANT_COMPAT_STAT64)\nextern void ksu_handle_fstat64_ret(unsigned long *fd, struct stat64 __user **statbuf_ptr);\n#endif\n#endif\n' fs/stat.c
             sed -i '/extern void ksu_handle_newfstat_ret/i\__attribute__((hot))\nextern int ksu_handle_stat(int *dfd, const char __user **filename_user,\n\t\t\t\tint *flags);\n' fs/stat.c
         elif grep -q "vfs_statx_fd" "fs/stat.c" >/dev/null 2>&1; then
