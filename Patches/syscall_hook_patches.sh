@@ -76,7 +76,7 @@ for i in "${patch_files[@]}"; do
         ;;
     ## read_write.c
     fs/read_write.c)
-        if grep -q "ksu_handle_sys_read" "drivers/kernelsu/ksud.c" >/dev/null 2>&1; then
+        if grep -rq --include="*.c" --include="*.h" "ksu_handle_sys_read" "drivers/kernelsu/" >/dev/null 2>&1; then
             if ! grep -q "bool ksu_vfs_read_hook" "drivers/kernelsu/ksud.c" >/dev/null 2>&1; then
                 sed -i '/SYSCALL_DEFINE3(read, unsigned int, fd, char __user \*, buf, size_t, count)/i\#ifdef CONFIG_KSU\nextern bool ksu_init_rc_hook __read_mostly;\nextern __attribute__((cold)) int ksu_handle_sys_read(unsigned int fd,\n\t\t\t\tchar __user **buf_ptr, size_t *count_ptr);\n#endif\n' fs/read_write.c
 
@@ -109,7 +109,7 @@ for i in "${patch_files[@]}"; do
         ;;
     ## stat.c
     fs/stat.c)
-        if grep -q "ksu_handle_newfstat_ret" "drivers/kernelsu/ksud.c" || grep -q "ksu_handle_newfstat_ret" "drivers/kernelsu/runtime/ksud_integration.c" >/dev/null 2>&1; then
+        if grep -rq --include="*.c" --include="*.h" "ksu_handle_newfstat_ret" "drivers/kernelsu/" >/dev/null 2>&1; then
             sed -i '/#if !defined(__ARCH_WANT_STAT64) || defined(__ARCH_WANT_SYS_NEWFSTATAT)/i\#ifdef CONFIG_KSU\nextern void ksu_handle_newfstat_ret(unsigned int *fd, struct stat __user **statbuf_ptr);\n#if defined(__ARCH_WANT_STAT64) || defined(__ARCH_WANT_COMPAT_STAT64)\nextern void ksu_handle_fstat64_ret(unsigned long *fd, struct stat64 __user **statbuf_ptr);\n#endif\n#endif\n' fs/stat.c
             sed -i '/extern void ksu_handle_newfstat_ret/i\__attribute__((hot))\nextern int ksu_handle_stat(int *dfd, const char __user **filename_user,\n\t\t\t\tint *flags);\n' fs/stat.c
         elif grep -q "vfs_statx_fd" "fs/stat.c" >/dev/null 2>&1; then
@@ -120,7 +120,7 @@ for i in "${patch_files[@]}"; do
 
         sed -i '/error = vfs_fstatat(dfd, filename, \&stat, flag);/i\#ifdef CONFIG_KSU\n\tksu_handle_stat(\&dfd, \&filename, \&flag);\n#endif\n' fs/stat.c
 
-        if grep -q "ksu_handle_newfstat_ret" "drivers/kernelsu/ksud.c" >/dev/null 2>&1; then
+        if grep -rq --include="*.c" --include="*.h" "ksu_handle_newfstat_ret" "drivers/kernelsu/" >/dev/null 2>&1; then
             sed -i '/error = cp_new_stat(\&stat, statbuf);/a\#ifdef CONFIG_KSU\n\tksu_handle_newfstat_ret(\&fd, \&statbuf);\n#endif\n' fs/stat.c
             sed -i '0,/error = cp_new_stat64(\&stat, statbuf);/b; 0,/error = cp_new_stat64(\&stat, statbuf);/b; /error = cp_new_stat64(\&stat, statbuf);/a\#ifdef CONFIG_KSU\n\tksu_handle_fstat64_ret(\&fd, \&statbuf);\n#endif\n' fs/stat.c
         fi
@@ -160,7 +160,7 @@ for i in "${patch_files[@]}"; do
     # drivers changes
     ## input/input.c
     drivers/input/input.c)
-        if grep -q "ksu_handle_input_handle_event" "drivers/kernelsu/ksud.c" >/dev/null 2>&1; then
+        if grep -rq --include="*.c" --include="*.h" "ksu_handle_input_handle_event" "drivers/kernelsu/" >/dev/null 2>&1; then
             sed -i '/^void input_event(struct input_dev \*dev,/i \#ifdef CONFIG_KSU\nextern bool ksu_input_hook __read_mostly;\nextern __attribute__((cold)) int ksu_handle_input_handle_event(\n\t\t\tunsigned int *type, unsigned int *code, int *value);\n#endif' drivers/input/input.c
             sed -i '0,/if (is_event_supported(type, dev->evbit, EV_MAX)) {/{s/if (is_event_supported(type, dev->evbit, EV_MAX)) {/\n#ifdef CONFIG_KSU\n\tif (unlikely(ksu_input_hook))\n\t\tksu_handle_input_handle_event(\&type, \&code, \&value);\n#endif\n\tif (is_event_supported(type, dev->evbit, EV_MAX)) {/}' drivers/input/input.c
 
@@ -178,7 +178,7 @@ for i in "${patch_files[@]}"; do
         ;;
     ## tty/pty.c
     drivers/tty/pty.c)
-        if grep -q "ksu_handle_devpts" "kernel/sucompat.c" >/dev/null 2>&1; then
+        if grep -rq --include="*.c" --include="*.h" "ksu_handle_devpts" "drivers/kernelsu/" >/dev/null 2>&1; then
             echo "[+] Checked ksu_handle_devpts existed in KernelSU!"
 
             sed -i '/^static struct tty_struct \*pts_unix98_lookup(struct tty_driver \*driver,/i\#ifdef CONFIG_KSU\nextern int ksu_handle_devpts(struct inode*);\n#endif\n' drivers/tty/pty.c
@@ -201,7 +201,7 @@ for i in "${patch_files[@]}"; do
     ## security.c
     security/security.c)
         if [ "$FIRST_VERSION" -lt 4 ] && [ "$SECOND_VERSION" -lt 19 ]; then
-            if grep -q "sys_read" "drivers/kernelsu/arch.h" >/dev/null 2>&1; then
+            if grep -rq --include="*.c" --include="*.h" "sys_read" "drivers/kernelsu/" >/dev/null 2>&1; then
                 echo "[+] Checked sys_read existed in KernelSU!"
 
                 sed -i '/int security_binder_set_context_mgr(struct task_struct/i \#ifdef CONFIG_KSU\n\extern int ksu_bprm_check(struct linux_binprm *bprm);\n\extern int ksu_handle_rename(struct dentry *old_dentry, struct dentry *new_dentry);\n\extern int ksu_handle_setuid(struct cred *new, const struct cred *old);\n\#endif' security/security.c
@@ -271,7 +271,7 @@ for i in "${patch_files[@]}"; do
         ;;
     ## kernel/sys.c
     kernel/sys.c)
-        if grep -q "ksu_handle_setresuid" "drivers/kernelsu/setuid_hook.c" >/dev/null 2>&1; then
+        if grep -rq --include="*.c" --include="*.h" "ksu_handle_setresuid" "drivers/kernelsu/" >/dev/null 2>&1; then
 
             if grep -q "__sys_setresuid" "kernel/sys.c" >/dev/null 2>&1; then
                 sed -i '/long __sys_setresuid(uid_t ruid, uid_t euid, uid_t suid)/i\#ifdef CONFIG_KSU\nextern int ksu_handle_setresuid(uid_t ruid, uid_t euid, uid_t suid);\n#endif\n' kernel/sys.c

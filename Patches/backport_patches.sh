@@ -79,7 +79,7 @@ for i in "${patch_files[@]}"; do
     # mm/ changes
     ## mm/maccess.c
     mm/maccess.c)
-        if grep -q "strncpy_from_user_nofault" "drivers/kernelsu/sucompat.c" >/dev/null 2>&1; then
+        if grep -rq --include="*.c" --include="*.h" "strncpy_from_user_nofault" "drivers/kernelsu/" >/dev/null 2>&1; then
             sed -i 's/strncpy_from_unsafe_user/strncpy_from_user_nofault/g' mm/maccess.c
 
             if grep -q "strncpy_from_user_nofault" "mm/maccess.c"; then
@@ -98,7 +98,7 @@ for i in "${patch_files[@]}"; do
     # kernel/ changes
     # trace/trace_kprobe.c
     kernel/trace/trace_kprobe.c)
-        if grep -q "strncpy_from_user_nofault" "drivers/kernelsu/sucompat.c" >/dev/null 2>&1; then
+        if grep -rq --include="*.c" --include="*.h" "strncpy_from_user_nofault" "drivers/kernelsu/" >/dev/null 2>&1; then
             sed -i 's/strncpy_from_unsafe_user/strncpy_from_user_nofault/g' kernel/trace/trace_kprobe.c
 
             if grep -q "strncpy_from_user_nofault" "kernel/trace/trace_kprobe.c"; then
@@ -117,7 +117,7 @@ for i in "${patch_files[@]}"; do
     # include/ changes
     ## include/linux/uaccess.h
     include/linux/uaccess.h)
-        if grep -q "strncpy_from_user_nofault" "drivers/kernelsu/sucompat.c" >/dev/null 2>&1; then
+        if grep -rq --include="*.c" --include="*.h" "strncpy_from_user_nofault" "drivers/kernelsu/" >/dev/null 2>&1; then
             sed -i 's/^extern long strncpy_from_unsafe_user/long strncpy_from_user_nofault/' include/linux/uaccess.h
 
             if grep -q "strncpy_from_user_nofault" "include/linux/uaccess.h"; then
