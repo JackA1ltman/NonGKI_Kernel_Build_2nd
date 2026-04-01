@@ -77,7 +77,7 @@ for i in "${patch_files[@]}"; do
     ## read_write.c
     fs/read_write.c)
         if grep -rq --include="*.c" --include="*.h" "ksu_handle_sys_read" "drivers/kernelsu/" >/dev/null 2>&1; then
-            if ! grep -q "bool ksu_vfs_read_hook" "drivers/kernelsu/ksud.c" >/dev/null 2>&1; then
+            if grep -rq --include="*.c" --include="*.h" "ksu_init_rc_hook" "drivers/kernelsu/" >/dev/null 2>&1; then
                 sed -i '/SYSCALL_DEFINE3(read, unsigned int, fd, char __user \*, buf, size_t, count)/i\#ifdef CONFIG_KSU\nextern bool ksu_init_rc_hook __read_mostly;\nextern __attribute__((cold)) int ksu_handle_sys_read(unsigned int fd,\n\t\t\t\tchar __user **buf_ptr, size_t *count_ptr);\n#endif\n' fs/read_write.c
 
                 if [ "$FIRST_VERSION" -lt 5 ] && [ "$SECOND_VERSION" -lt 19 ]; then
