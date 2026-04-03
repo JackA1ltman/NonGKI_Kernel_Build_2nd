@@ -64,7 +64,7 @@ runs:
             echo "================="
             IFS=',' read -ra MERGE_CONFIG_FILES <<< "${{ env.MERGE_CONFIG_FILES }}"
             for FILES in "${MERGE_CONFIG_FILES[@]}"; do
-                ./scripts/kconfig/merge_config.sh -O out/ -m out/.config arch/"${{ env.KERNEL_ARCH }}"/configs/$FILES
+                cat arch/"${{ env.KERNEL_ARCH }}"/configs/$FILES out/.config
             done
             if [[ "$BUILD_CLANG" == "true" ]]; then
                 echo "==============================="
