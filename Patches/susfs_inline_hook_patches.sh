@@ -125,37 +125,17 @@ for i in "${patch_files[@]}"; do
             sed -i '/#include <asm\/uaccess.h>/i #ifdef CONFIG_KSU_SUSFS\n#include <linux\/susfs_def.h>\n#endif' fs/stat.c
         fi
 
-        if grep -rq --include="*.c" --include="*.h" "ksu_handle_vfs_fstat" "drivers/kernelsu/" >/dev/null 2>&1; then
-            if grep -q "vfs_statx_fd" "fs/stat.c"; then
-                sed -i '/int vfs_statx_fd(unsigned int fd, struct kstat \*stat,/i\#ifdef CONFIG_KSU_SUSFS\nextern bool ksu_init_rc_hook __read_mostly;\nextern void ksu_handle_vfs_fstat(int fd, loff_t *kstat_size_ptr);\n#endif \/\/ #ifdef CONFIG_KSU_SUSFS' fs/stat.c
-                sed -i '/\t\tfdput(f);/i\#ifdef CONFIG_KSU_SUSFS\n\t\tif (unlikely(ksu_init_rc_hook)) {\n\t\t\tksu_handle_vfs_fstat(fd, \&stat->size);\n\t\t}\n#endif \/\/ #ifdef CONFIG_KSU_SUSFS' fs/stat.c
-
-            else
-                sed -i '/int vfs_fstat(unsigned int fd, struct kstat \*stat)/i\#ifdef CONFIG_KSU_SUSFS\nextern bool ksu_init_rc_hook __read_mostly;\nextern void ksu_handle_vfs_fstat(int fd, loff_t *kstat_size_ptr);\n#endif \/\/ #ifdef CONFIG_KSU_SUSFS' fs/stat.c
-                sed -i '/\t\tfdput(f);/i\#ifdef CONFIG_KSU_SUSFS\n\t\tif (unlikely(ksu_init_rc_hook)) {\n\t\t\tksu_handle_vfs_fstat(fd, \&stat->size);\n\t\t}\n#endif \/\/ #ifdef CONFIG_KSU_SUSFS' fs/stat.c
-
-            fi
-
-        elif grep -rq --include="*.c" --include="*.h" "ksu_init_rc_hook" "drivers/kernelsu/" >/dev/null 2>&1; then
-            sed -i '/#if !defined(__ARCH_WANT_STAT64) || defined(__ARCH_WANT_SYS_NEWFSTATAT)/i\#ifdef CONFIG_KSU_SUSFS\nextern bool ksu_init_rc_hook __read_mostly;\nextern void ksu_handle_sys_newfstatat(int fd, loff_t *kstat_size_ptr);\n#endif\n' fs/stat.c
-            awk '/return cp_new_stat\(&stat, statbuf\);/{line=$0; lnum=NR} {lines[NR]=$0} END {for(i=1;i<=NR;i++) if(i==lnum) {print "#ifdef CONFIG_KSU_SUSFS"; print "\tif (unlikely(ksu_init_rc_hook)) {"; print "\t\tksu_handle_sys_newfstatat(dfd, &stat.size);"; print "\t}"; print "#endif"; print lines[i]} else print lines[i]}' fs/stat.c > fs/stat.c.tmp && mv fs/stat.c.tmp fs/stat.c
-
+        if grep -q "vfs_statx" "fs/stat.c"; then
+            sed -i '/^int vfs_statx(int dfd, const char __user \*filename, int flags,/i\n#ifdef CONFIG_KSU_SUSFS\nextern bool ksu_su_compat_enabled __read_mostly;\nextern bool __ksu_is_allow_uid_for_current(uid_t uid);\nextern int ksu_handle_stat(int *dfd, const char __user **filename_user, int *flags);\n#endif\n' fs/stat.c
+            sed -i '/if ((flags & ~(AT_SYMLINK_NOFOLLOW | AT_NO_AUTOMOUNT |/i\#ifdef CONFIG_KSU_SUSFS\n\tif (likely(susfs_is_current_proc_umounted()) || !ksu_su_compat_enabled) {\n\t\tgoto orig_flow;\n\t}\n\tif (unlikely(__ksu_is_allow_uid_for_current(current_uid().val))) {\n\t\tksu_handle_stat(\&dfd, \&filename, \&flags);\n\t}\norig_flow:\n#endif\n' fs/stat.c
+        elif grep -q "vfs_fstatat" "fs/stat.c"; then
+            sed -i '/^int vfs_fstatat(int dfd, const char __user \*filename, struct kstat \*stat,/i\#ifdef CONFIG_KSU_SUSFS\nextern bool ksu_su_compat_enabled __read_mostly;\nextern bool __ksu_is_allow_uid_for_current(uid_t uid);\nextern int ksu_handle_stat(int *dfd, const char __user **filename_user, int *flags);\n#endif\n' fs/stat.c
+            sed -i '/if ((flag & ~(AT_SYMLINK_NOFOLLOW | AT_NO_AUTOMOUNT |/i\#ifdef CONFIG_KSU_SUSFS\n\tif (likely(susfs_is_current_proc_umounted()) || !ksu_su_compat_enabled) {\n\t\tgoto orig_flow;\n\t}\n\tif (unlikely(__ksu_is_allow_uid_for_current(current_uid().val))) {\n\t\tksu_handle_stat(\&dfd, \&filename, \&flag);\n\t}\norig_flow:\n#endif\n' fs/stat.c
         else
-            if grep -q "vfs_statx" "fs/stat.c"; then
-                echo "[+] Checked vfs_statx existed in Kernel!"
-
-                sed -i '/int vfs_statx(int dfd, const char __user \*filename, int flags,/i #ifdef CONFIG_KSU_SUSFS\nextern bool ksu_su_compat_enabled __read_mostly;\nextern bool __ksu_is_allow_uid_for_current(uid_t uid);\nextern int ksu_handle_stat(int *dfd, const char __user **filename_user, int *flags);\n#endif' fs/stat.c
-                sed -i '/unsigned int lookup_flags = LOOKUP_FOLLOW | LOOKUP_AUTOMOUNT;/a #ifdef CONFIG_KSU_SUSFS\n\tif (likely(susfs_is_current_proc_umounted()) || !ksu_su_compat_enabled) {\n\t\tgoto orig_flow;\n\t}\n\n\tif (unlikely(__ksu_is_allow_uid_for_current(current_uid().val))) {\n\t\tksu_handle_stat(&dfd, &filename, &flags);\n\t}\norig_flow:\n#endif' fs/stat.c
-            else
-                sed -i '/EXPORT_SYMBOL(vfs_fstat);/i #ifdef CONFIG_KSU_SUSFS\nextern bool ksu_su_compat_enabled __read_mostly;\nextern bool __ksu_is_allow_uid_for_current(uid_t uid);\nextern int ksu_handle_stat(int *dfd, const char __user **filename_user, int *flags);\n#endif\n' fs/stat.c
-                sed -i '/unsigned int lookup_flags = 0;/a #ifdef CONFIG_KSU_SUSFS\n\tif (likely(susfs_is_current_proc_umounted()) || !ksu_su_compat_enabled) {\n\t\tgoto orig_flow;\n\t}\n\n\tif (unlikely(__ksu_is_allow_uid_for_current(current_uid().val))) {\n\t\tksu_handle_stat(&dfd, &filename, &flags);\n\t}\norig_flow:\n#endif' fs/stat.c
-            fi
+            echo "[-] Kernel have no vfs_statx and vfs_fstatat."
         fi
 
-        if grep -q "ksu_init_rc_hook" "fs/stat.c"; then
-            echo "[+] fs/stat.c Patched!"
-            echo "[+] Count: $(grep -c "ksu_init_rc_hook" "fs/stat.c")"
-        elif grep -q "ksu_handle_stat" "fs/stat.c"; then
+        if grep -q "ksu_handle_stat" "fs/stat.c"; then
             echo "[+] fs/stat.c Patched!"
             echo "[+] Count: $(grep -c "ksu_handle_stat" "fs/stat.c")"
         else
