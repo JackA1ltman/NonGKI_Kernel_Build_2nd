@@ -76,7 +76,7 @@ for i in "${patch_files[@]}"; do
         ;;
     ## read_write.c
     fs/read_write.c)
-        if grep -rq --include="*.c" --include="*.h" "ksu_handle_sys_read_fd" "drivers/kernelsu/" && ! grep -rq --include="*.c" --include="*.h" "ksu_handle_sys_read" "drivers/kernelsu/" >/dev/null 2>&1; then
+        if grep -rq --include="*.c" --include="*.h" "ksu_handle_sys_read_fd" "drivers/kernelsu/" && ! grep -rqw --include="*.c" --include="*.h" "ksu_handle_sys_read" "drivers/kernelsu/" >/dev/null 2>&1; then
             echo "[-] KernelSU have no ksu_handle_sys_read, Skipped."
 
         elif grep -rq --include="*.c" --include="*.h" "ksu_handle_sys_read" "drivers/kernelsu/" >/dev/null 2>&1; then
