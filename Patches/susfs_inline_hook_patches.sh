@@ -126,7 +126,7 @@ for i in "${patch_files[@]}"; do
         fi
 
         if grep -q "vfs_statx" "fs/stat.c"; then
-            sed -i '/^int vfs_statx(int dfd, const char __user \*filename, int flags,/i\n#ifdef CONFIG_KSU_SUSFS\nextern bool ksu_su_compat_enabled __read_mostly;\nextern bool __ksu_is_allow_uid_for_current(uid_t uid);\nextern int ksu_handle_stat(int *dfd, const char __user **filename_user, int *flags);\n#endif\n' fs/stat.c
+            sed -i '/^int vfs_statx(int dfd, const char __user \*filename, int flags,/i\#ifdef CONFIG_KSU_SUSFS\nextern bool ksu_su_compat_enabled __read_mostly;\nextern bool __ksu_is_allow_uid_for_current(uid_t uid);\nextern int ksu_handle_stat(int *dfd, const char __user **filename_user, int *flags);\n#endif\n' fs/stat.c
             sed -i '/if ((flags & ~(AT_SYMLINK_NOFOLLOW | AT_NO_AUTOMOUNT |/i\#ifdef CONFIG_KSU_SUSFS\n\tif (likely(susfs_is_current_proc_umounted()) || !ksu_su_compat_enabled) {\n\t\tgoto orig_flow;\n\t}\n\tif (unlikely(__ksu_is_allow_uid_for_current(current_uid().val))) {\n\t\tksu_handle_stat(\&dfd, \&filename, \&flags);\n\t}\norig_flow:\n#endif\n' fs/stat.c
         elif grep -q "vfs_fstatat" "fs/stat.c"; then
             sed -i '/^int vfs_fstatat(int dfd, const char __user \*filename, struct kstat \*stat,/i\#ifdef CONFIG_KSU_SUSFS\nextern bool ksu_su_compat_enabled __read_mostly;\nextern bool __ksu_is_allow_uid_for_current(uid_t uid);\nextern int ksu_handle_stat(int *dfd, const char __user **filename_user, int *flags);\n#endif\n' fs/stat.c
