@@ -78,6 +78,18 @@ runs:
             echo "Doesn't found DTB! Your device maybe needn't the file."
           fi
 
+          if [ "${{ env.PACK_KMODULES }}" == "true" ]; then
+            echo "Packing kernel modules (.ko)..."
+            mkdir -p tmp/modules/vendor/lib/modules
+            find $GITHUB_WORKSPACE/device_kernel/out/ -name "*.ko" -exec cp -fp {} tmp/modules/vendor/lib/modules/ \;
+            if [ "$(ls -A tmp/modules/vendor/lib/modules/ 2>/dev/null)" ]; then
+              echo "Found and copied kernel modules."
+            else
+              echo "No kernel modules found, skipping."
+              rm -rf tmp/modules
+            fi
+          fi
+
           cp -rp ./Anykernel3/* tmp
           cd tmp
           7za a -mx9 tmp.zip *
