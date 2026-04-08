@@ -261,8 +261,18 @@ for i in "${patch_files[@]}"; do
         if grep -rq --include="*.c" --include="*.h" "ksu_handle_sys_reboot" "drivers/kernelsu/" >/dev/null 2>&1; then
             echo "[+] Checked ksu_handle_sys_reboot existed in KernelSU!"
 
-            sed -i '/SYSCALL_DEFINE4(reboot, int, magic1, int, magic2, unsigned int, cmd,/i\#ifdef CONFIG_KSU\nextern int ksu_handle_sys_reboot(int magic1, int magic2, unsigned int cmd, void __user **arg);\n#endif\n' kernel/reboot.c
-            sed -i '/if (!ns_capable(pid_ns->user_ns, CAP_SYS_BOOT))/i\#ifdef CONFIG_KSU\n\tksu_handle_sys_reboot(magic1, magic2, cmd, \&arg);\n#endif\n' kernel/reboot.c
+            sed -i '/SYSCALL_DEFINE4(reboot, int, magic1, int, magic2, unsigned int, cmd,/i\
+#ifdef CONFIG_KSU\
+extern int ksu_handle_sys_reboot(int magic1, int magic2, unsigned int cmd, void __user **arg);\
+#endif\
+' kernel/reboot.c
+            sed -i '/if (!ns_capable(pid_ns->user_ns, CAP_SYS_BOOT))/i\
+#ifdef CONFIG_KSU\
+\tif (system_state == SYSTEM_RUNNING) {\
+\t\tksu_handle_sys_reboot(magic1, magic2, cmd, \&arg);\
+\t}\
+#endif\
+' kernel/reboot.c
 
             if grep -q "ksu_handle_sys_reboot" "kernel/reboot.c"; then
                 echo "[+] kernel/reboot.c Patched!"
