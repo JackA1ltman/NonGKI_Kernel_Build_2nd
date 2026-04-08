@@ -114,7 +114,8 @@ runs:
                 KERNELSU_NAME="KernelSU"
                 KERNELSU_ORIGIN_BRANCH="main"
                 if [[ "${{ env.SUSFS_ENABLE }}" == "true" ]]; then
-                    KERNELSU_BRANCH="susfs-rksu-master"
+                    echo "${{ env.KERNELSU_AUTO_FORK }} doesn't support SuSFS! "
+                    false
                 else
                     KERNELSU_BRANCH="main"
                 fi
