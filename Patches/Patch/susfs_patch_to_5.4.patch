@@ -3663,7 +3663,7 @@ index fa3f48a..6f7f523 100644
  	if (copy_to_user(name, &tmp, sizeof(tmp)))
  		return -EFAULT;
 diff --git a/security/selinux/avc.c b/security/selinux/avc.c
-index 7e1e6bc..b153ec3 100644
+index 7e1e6bc..0a7bd36 100644
 --- a/security/selinux/avc.c
 +++ b/security/selinux/avc.c
 @@ -693,6 +693,11 @@ static void avc_audit_pre_callback(struct audit_buffer *ab, void *a)
@@ -3678,10 +3678,11 @@ index 7e1e6bc..b153ec3 100644
  
  /**
   * avc_audit_post_callback - SELinux specific information
-@@ -719,6 +724,15 @@ static void avc_audit_post_callback(struct audit_buffer *ab, void *a)
+@@ -719,6 +724,17 @@ static void avc_audit_post_callback(struct audit_buffer *ab, void *a)
  
  	rc = security_sid_to_context(sad->state, sad->tsid, &scontext,
  				     &scontext_len);
++
 +#ifdef CONFIG_KSU_SUSFS
 +	if (unlikely(sad->tsid == susfs_ksu_sid && READ_ONCE(susfs_is_avc_log_spoofing_enabled))) {
 +		if (rc)
@@ -3691,10 +3692,11 @@ index 7e1e6bc..b153ec3 100644
 +		goto bypass_orig_flow;
 +	}
 +#endif
++
  	if (rc)
  		audit_log_format(ab, " tsid=%d", sad->tsid);
  	else {
-@@ -726,6 +740,9 @@ static void avc_audit_post_callback(struct audit_buffer *ab, void *a)
+@@ -726,6 +742,9 @@ static void avc_audit_post_callback(struct audit_buffer *ab, void *a)
  		kfree(scontext);
  	}
  

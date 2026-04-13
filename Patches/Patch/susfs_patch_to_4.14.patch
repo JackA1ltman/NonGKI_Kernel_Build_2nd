@@ -3691,7 +3691,7 @@ index 30801ea..5a76d42 100644
  	if (copy_to_user(name, &tmp, sizeof(tmp)))
  		return -EFAULT;
 diff --git a/security/selinux/avc.c b/security/selinux/avc.c
-index 1b8f957..bd2c1ce 100644
+index 1b8f957..075e9a0 100644
 --- a/security/selinux/avc.c
 +++ b/security/selinux/avc.c
 @@ -164,6 +164,11 @@ static void avc_dump_av(struct audit_buffer *ab, u16 tclass, u32 av)
@@ -3706,12 +3706,23 @@ index 1b8f957..bd2c1ce 100644
  
  /**
   * avc_dump_query - Display a SID pair and a class in human-readable form.
-@@ -187,6 +192,16 @@ static void avc_dump_query(struct audit_buffer *ab, struct selinux_state *state,
+@@ -177,6 +182,9 @@ static void avc_dump_query(struct audit_buffer *ab, struct selinux_state *state,
+ 	int rc;
+ 	char *scontext;
+ 	u32 scontext_len;
++#ifdef CONFIG_KSU_SUSFS
++	struct selinux_audit_data sad;
++#endif
+ 
+ 	rc = security_sid_to_context(state, ssid, &scontext, &scontext_len);
+ 	if (rc)
+@@ -187,6 +195,17 @@ static void avc_dump_query(struct audit_buffer *ab, struct selinux_state *state,
  	}
  
  	rc = security_sid_to_context(state, tsid, &scontext, &scontext_len);
++
 +#ifdef CONFIG_KSU_SUSFS
-+	if (unlikely(tsid == susfs_ksu_sid && READ_ONCE(susfs_is_avc_log_spoofing_enabled))) {
++	if (unlikely(sad.tsid == susfs_ksu_sid && READ_ONCE(susfs_is_avc_log_spoofing_enabled))) {
 +		if (rc)
 +			audit_log_format(ab, " tsid=%d", susfs_priv_app_sid);
 +		else
@@ -3723,7 +3734,7 @@ index 1b8f957..bd2c1ce 100644
  	if (rc)
  		audit_log_format(ab, " tsid=%d", tsid);
  	else {
-@@ -194,6 +209,9 @@ static void avc_dump_query(struct audit_buffer *ab, struct selinux_state *state,
+@@ -194,6 +213,9 @@ static void avc_dump_query(struct audit_buffer *ab, struct selinux_state *state,
  		kfree(scontext);
  	}
  
