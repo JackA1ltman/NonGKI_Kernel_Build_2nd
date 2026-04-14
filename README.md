@@ -71,6 +71,7 @@ It also aims to provide an easier compilation process using **GitHub Actions**, 
 ### Copyright
 - [KernelSU](https://github.com/tiann/KernelSU) - @tiann
   - [rsuntk](https://github.com/rsuntk/KernelSU) - @rsuntk
+    - [rsuntk-SuSFS](https://github.com/cyberc3dr/KernelSU) - @cyberc3dr
   - [xxksu](https://github.com/backslashxx/KernelSU) - @backslashxx
   - [SukiSU-Ultra](https://github.com/SukiSU-Ultra/SukiSU-Ultra) - @ShirkNeko
     - [ReSukiSU](https://github.com/ReSukiSU/ReSukiSU) - @ReSukiSU Development
