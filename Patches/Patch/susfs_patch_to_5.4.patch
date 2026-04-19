@@ -3683,7 +3683,7 @@ index fa3f48a..2c4d478 100644
  	if (copy_to_user(name, &tmp, sizeof(tmp)))
  		return -EFAULT;
 diff --git a/security/selinux/avc.c b/security/selinux/avc.c
-index 7e1e6bc..7c3f81a 100644
+index 7e1e6bc..229ce2a 100644
 --- a/security/selinux/avc.c
 +++ b/security/selinux/avc.c
 @@ -693,6 +693,11 @@ static void avc_audit_pre_callback(struct audit_buffer *ab, void *a)
@@ -3693,7 +3693,7 @@ index 7e1e6bc..7c3f81a 100644
 +#ifdef CONFIG_KSU_SUSFS
 +extern u32 susfs_ksu_sid;
 +extern u32 susfs_priv_app_sid;
-+bool susfs_is_avc_log_spoofing_enabled = false;
++extern struct static_key_true susfs_avc_log_spoofing_key_true;
 +#endif
  
  /**
