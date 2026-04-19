@@ -1637,10 +1637,10 @@ index 083dc0a..f437695 100644
  		buf->f_flags = calculate_f_flags(path->mnt);
 diff --git a/fs/susfs.c b/fs/susfs.c
 new file mode 100644
-index 0000000..5aece27
+index 0000000..147a2f4
 --- /dev/null
 +++ b/fs/susfs.c
-@@ -0,0 +1,1482 @@
+@@ -0,0 +1,1485 @@
 +#include <linux/version.h>
 +#include <linux/cred.h>
 +#include <linux/fs.h>
@@ -1667,6 +1667,9 @@ index 0000000..5aece27
 +#include <linux/susfs.h>
 +#include "fuse/fuse_i.h"
 +#include "mount.h"
++
++DEFINE_STATIC_KEY_FALSE(ksu_init_rc_hook_key_false);
++DEFINE_STATIC_KEY_FALSE(ksu_input_hook_key_false);
 +
 +extern bool susfs_is_current_ksu_domain(void);
 +
