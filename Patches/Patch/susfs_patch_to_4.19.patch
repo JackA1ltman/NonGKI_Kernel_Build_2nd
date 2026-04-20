@@ -1854,7 +1854,7 @@ index 2978659..19b6914 100644
  		buf->f_flags = calculate_f_flags(path->mnt);
 diff --git a/fs/susfs.c b/fs/susfs.c
 new file mode 100644
-index 0000000..e4fc68a
+index 0000000..23200cc
 --- /dev/null
 +++ b/fs/susfs.c
 @@ -0,0 +1,1489 @@
@@ -1939,6 +1939,7 @@ index 0000000..e4fc68a
 +			info.err = -ENOENT;
 +			goto out_path_put_path;
 +		}
++		set_bit(AS_FLAGS_SUS_PATH, &fi->inode.i_state);
 +		set_bit(AS_FLAGS_SUS_PATH, &inode->i_state);
 +		SUSFS_LOGI("flagged AS_FLAGS_SUS_PATH on pathname: '%s', fi->nodeid: %llu, fi->inode.i_ino: %lu, fi->inode.i_state: 0x%lx\n",
 +					info.target_pathname, fi->nodeid, fi->inode.i_ino, fi->inode.i_state);
@@ -2017,6 +2018,7 @@ index 0000000..e4fc68a
 +					path_put(&path);
 +					continue;
 +				}
++				set_bit(AS_FLAGS_SUS_PATH, &fi->inode.i_state);
 +				set_bit(AS_FLAGS_SUS_PATH, &inode->i_state);
 +				SUSFS_LOGI("re-flag AS_FLAGS_SUS_PATH on path '%s', fi->inode.i_ino: '%lu', fi->inode.i_state: 0x%lx\n",
 +						cursor->target_pathname, fi->inode.i_ino, fi->inode.i_state);
@@ -2038,7 +2040,6 @@ index 0000000..e4fc68a
 +/* - Please note that path inside /sdcard will be still visible to MediaProvider module,
 + *   since the uid of path like /sdcard/TWRP will be the uid of your MediaProvider module.
 + */
-+
 +#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 6, 0)
 +bool susfs_is_inode_sus_path(struct mnt_idmap* idmap, struct inode *inode)
 +#else
@@ -2559,7 +2560,7 @@ index 0000000..e4fc68a
 +void susfs_set_cmdline_or_bootconfig(void __user **user_info) {
 +	struct st_susfs_spoof_cmdline_or_bootconfig *info = (struct st_susfs_spoof_cmdline_or_bootconfig *)kzalloc(sizeof(struct st_susfs_spoof_cmdline_or_bootconfig), GFP_KERNEL);
 +	int err = 0;
-+	
++
 +	if (!info) {
 +		err = -ENOMEM;
 +		if (copy_to_user(&((struct st_susfs_spoof_cmdline_or_bootconfig __user*)*user_info)->err, &err, sizeof(err)))
@@ -2591,7 +2592,6 @@ index 0000000..e4fc68a
 +			info->fake_cmdline_or_bootconfig,
 +			SUSFS_FAKE_CMDLINE_OR_BOOTCONFIG_SIZE - 1);
 +	write_sequnlock(&susfs_fake_cmdline_or_bootconfig_seqlock);
-+
 +
 +	if (!static_key_enabled(&susfs_set_fake_cmdline_or_bootconfig_key_true)) {
 +		static_branch_enable(&susfs_set_fake_cmdline_or_bootconfig_key_true);
