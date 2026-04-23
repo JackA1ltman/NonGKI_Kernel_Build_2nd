@@ -974,7 +974,7 @@ index 3f4c8f1..6e571f9 100644
  				continue;
  
 diff --git a/fs/proc/cmdline.c b/fs/proc/cmdline.c
-index 57d2d15..b97967b 100644
+index 57d2d15..aa620c1 100644
 --- a/fs/proc/cmdline.c
 +++ b/fs/proc/cmdline.c
 @@ -6,6 +6,11 @@
@@ -996,9 +996,9 @@ index 57d2d15..b97967b 100644
 +#ifdef CONFIG_KSU_SUSFS_SPOOF_CMDLINE_OR_BOOTCONFIG
 +	if (static_branch_likely(&susfs_set_fake_cmdline_or_bootconfig_key_true)) {
 +		susfs_spoof_cmdline_or_bootconfig(m);
-+        seq_putc(m, '\n');
-+        return 0;
-+    }
++		seq_printf(m, "%s\n");
++		return 0;
++	}
 +#endif
  #ifdef CONFIG_INITRAMFS_IGNORE_SKIP_FLAG
  	seq_printf(m, "%s\n", proc_command_line);
