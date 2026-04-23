@@ -365,7 +365,7 @@ index 94f388e..90be672 100644
  	do_delayed_call(&done);
  	return res;
 diff --git a/fs/namespace.c b/fs/namespace.c
-index 5e94ec9..9037851 100644
+index 5e94ec9..44d8616 100644
 --- a/fs/namespace.c
 +++ b/fs/namespace.c
 @@ -26,10 +26,24 @@
@@ -381,7 +381,7 @@ index 5e94ec9..9037851 100644
  
 +#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
 +extern bool susfs_is_current_ksu_domain(void);
-+extern struct static_key_false susfs_set_sdcard_android_data_decrypted_key_false;
++extern struct static_key_true susfs_is_sdcard_android_data_not_decrypted;
 +
 +#define CL_COPY_MNT_NS BIT(25) /* used by copy_mnt_ns() */
 +
@@ -576,7 +576,7 @@ index 5e94ec9..9037851 100644
 +#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
 +	// - We will just stop checking for ksu process if /sdcard/Android is accessible,
 +	//   for the sake of performance
-+	if (static_branch_unlikely(&susfs_set_sdcard_android_data_decrypted_key_false)) {
++	if (static_branch_unlikely(&susfs_is_sdcard_android_data_not_decrypted)) {
 +		if (susfs_is_current_ksu_domain()) {
 +			mnt = susfs_alloc_non_unshare_ksu_vfsmnt(name ?:"none");
 +			goto bypass_orig_flow;
@@ -601,7 +601,7 @@ index 5e94ec9..9037851 100644
 +
 +	// - We will just stop checking for ksu process if /sdcard/Android is accessible,
 +	//   for the sake of performance
-+	if (static_branch_unlikely(&susfs_set_sdcard_android_data_decrypted_key_false)) {
++	if (static_branch_unlikely(&susfs_is_sdcard_android_data_not_decrypted)) {
 +	// - If /sdcard/Android is still not accessible, we keep checking for mounts
 +	//   mounted by ksu process
 +		if (susfs_is_current_ksu_domain()) {
@@ -945,7 +945,7 @@ index 78692a8..48205ef 100644
  				continue;
  
 diff --git a/fs/proc/cmdline.c b/fs/proc/cmdline.c
-index fa762c5..6210e69 100644
+index fa762c5..411869b 100644
 --- a/fs/proc/cmdline.c
 +++ b/fs/proc/cmdline.c
 @@ -4,8 +4,20 @@
@@ -953,14 +953,14 @@ index fa762c5..6210e69 100644
  #include <linux/seq_file.h>
  
 +#ifdef CONFIG_KSU_SUSFS_SPOOF_CMDLINE_OR_BOOTCONFIG
-+extern struct static_key_true susfs_set_fake_cmdline_or_bootconfig_key_true;
++extern struct static_key_false susfs_is_fake_cmdline_or_bootconfig_buffer_set
 +extern void susfs_spoof_cmdline_or_bootconfig(struct seq_file *m);
 +#endif
 +
  static int cmdline_proc_show(struct seq_file *m, void *v)
  {
 +#ifdef CONFIG_KSU_SUSFS_SPOOF_CMDLINE_OR_BOOTCONFIG
-+	if (static_branch_likely(&susfs_set_fake_cmdline_or_bootconfig_key_true)) {
++	if (static_branch_likely(&susfs_is_fake_cmdline_or_bootconfig_buffer_set)) {
 +		susfs_spoof_cmdline_or_bootconfig(m);
 +		seq_putc(m, '\n');
 +		return 0;
@@ -1854,10 +1854,10 @@ index 2978659..19b6914 100644
  		buf->f_flags = calculate_f_flags(path->mnt);
 diff --git a/fs/susfs.c b/fs/susfs.c
 new file mode 100644
-index 0000000..23200cc
+index 0000000..f85e556
 --- /dev/null
 +++ b/fs/susfs.c
-@@ -0,0 +1,1489 @@
+@@ -0,0 +1,1479 @@
 +#include <linux/version.h>
 +#include <linux/cred.h>
 +#include <linux/fs.h>
@@ -1885,16 +1885,13 @@ index 0000000..23200cc
 +#include "fuse/fuse_i.h"
 +#include "mount.h"
 +
-+DEFINE_STATIC_KEY_FALSE(ksu_init_rc_hook_key_false);
-+DEFINE_STATIC_KEY_FALSE(ksu_input_hook_key_false);
-+
 +extern bool susfs_is_current_ksu_domain(void);
 +extern void setup_selinux(const char *domain, struct cred *cred);
 +
 +#ifdef CONFIG_KSU_SUSFS_ENABLE_LOG
-+DEFINE_STATIC_KEY_TRUE(susfs_log_key);
-+#define SUSFS_LOGI(fmt, ...) if (static_branch_likely(&susfs_log_key)) pr_info("susfs:[%u][%d][%s] " fmt, current_uid().val, current->pid, __func__, ##__VA_ARGS__)
-+#define SUSFS_LOGE(fmt, ...) if (static_branch_likely(&susfs_log_key)) pr_err("susfs:[%u][%d][%s]" fmt, current_uid().val, current->pid, __func__, ##__VA_ARGS__)
++DEFINE_STATIC_KEY_TRUE(susfs_is_log_enabled);
++#define SUSFS_LOGI(fmt, ...) if (static_branch_likely(&susfs_is_log_enabled)) pr_info("susfs:[%u][%d][%s] " fmt, current_uid().val, current->pid, __func__, ##__VA_ARGS__)
++#define SUSFS_LOGE(fmt, ...) if (static_branch_likely(&susfs_is_log_enabled)) pr_err("susfs:[%u][%d][%s]" fmt, current_uid().val, current->pid, __func__, ##__VA_ARGS__)
 +#else
 +#define SUSFS_LOGI(fmt, ...) 
 +#define SUSFS_LOGE(fmt, ...) 
@@ -2470,7 +2467,7 @@ index 0000000..23200cc
 +/* spoof_uname */
 +#ifdef CONFIG_KSU_SUSFS_SPOOF_UNAME
 +static struct st_susfs_uname my_uname = {0};
-+DEFINE_STATIC_KEY_TRUE(susfs_set_uname_key_true);
++DEFINE_STATIC_KEY_FALSE(susfs_is_uname_spoof_buffer_set);
 +static DEFINE_SEQLOCK(susfs_uname_seqlock);
 +
 +void susfs_set_uname(void __user **user_info) {
@@ -2499,8 +2496,8 @@ index 0000000..23200cc
 +	}
 +	write_sequnlock(&susfs_uname_seqlock);
 +
-+	if (!static_key_enabled(&susfs_set_uname_key_true))
-+		static_branch_enable(&susfs_set_uname_key_true);
++	if (!static_key_enabled(&susfs_is_uname_spoof_buffer_set))
++		static_branch_enable(&susfs_is_uname_spoof_buffer_set);
 +
 +	SUSFS_LOGI("set spoofed release: '%s', version: '%s'\n",
 +				my_uname.release, my_uname.version);
@@ -2535,10 +2532,10 @@ index 0000000..23200cc
 +	}
 +
 +	if (info.enabled) {
-+		static_branch_enable(&susfs_log_key);
++		static_branch_enable(&susfs_is_log_enabled);
 +		pr_info("susfs: enable logging to kernel");
 +	} else {
-+		static_branch_disable(&susfs_log_key);
++		static_branch_disable(&susfs_is_log_enabled);
 +		pr_info("susfs: disable logging to kernel");
 +	}
 +
@@ -2554,7 +2551,7 @@ index 0000000..23200cc
 +/* spoof_cmdline_or_bootconfig */
 +#ifdef CONFIG_KSU_SUSFS_SPOOF_CMDLINE_OR_BOOTCONFIG
 +static char *fake_cmdline_or_bootconfig = NULL;
-+DEFINE_STATIC_KEY_TRUE(susfs_set_fake_cmdline_or_bootconfig_key_true);
++DEFINE_STATIC_KEY_FALSE(susfs_is_fake_cmdline_or_bootconfig_buffer_set);
 +static DEFINE_SEQLOCK(susfs_fake_cmdline_or_bootconfig_seqlock);
 +
 +void susfs_set_cmdline_or_bootconfig(void __user **user_info) {
@@ -2593,10 +2590,9 @@ index 0000000..23200cc
 +			SUSFS_FAKE_CMDLINE_OR_BOOTCONFIG_SIZE - 1);
 +	write_sequnlock(&susfs_fake_cmdline_or_bootconfig_seqlock);
 +
-+	if (!static_key_enabled(&susfs_set_fake_cmdline_or_bootconfig_key_true)) {
-+		static_branch_enable(&susfs_set_fake_cmdline_or_bootconfig_key_true);
-+		SUSFS_LOGI("fake_cmdline_or_bootconfig is set\n");
-+	}
++	if (!static_key_enabled(&susfs_is_fake_cmdline_or_bootconfig_buffer_set))
++		static_branch_enable(&susfs_is_fake_cmdline_or_bootconfig_buffer_set);
++	SUSFS_LOGI("fake_cmdline_or_bootconfig is set\n");
 +
 +	info->err = 0;
 +
@@ -2992,7 +2988,7 @@ index 0000000..23200cc
 +#endif // #ifdef CONFIG_KSU_SUSFS_SUS_MAP
 +
 +/* susfs avc log spoofing */
-+DEFINE_STATIC_KEY_TRUE(susfs_avc_log_spoofing_key_true);
++DEFINE_STATIC_KEY_FALSE(susfs_is_avc_log_spoofing_enabled);
 +
 +void susfs_set_avc_log_spoofing(void __user **user_info) {
 +	struct st_susfs_avc_log_spoofing info = {0};
@@ -3003,10 +2999,10 @@ index 0000000..23200cc
 +	}
 +
 +	if (info.enabled) {
-+		static_branch_enable(&susfs_avc_log_spoofing_key_true);
++		static_branch_enable(&susfs_is_avc_log_spoofing_enabled);
 +		SUSFS_LOGI("enabling susfs_avc_log_spoofing\n");
 +	} else {
-+		static_branch_disable(&susfs_avc_log_spoofing_key_true);
++		static_branch_disable(&susfs_is_avc_log_spoofing_enabled);
 +		SUSFS_LOGI("disabling susfs_avc_log_spoofing\n");
 +	}
 +
@@ -3144,7 +3140,7 @@ index 0000000..23200cc
 +/* kthread for checking if /sdcard/Android is accessible via fsnoitfy */
 +/* code is straightly borrowed from KernelSU's pkg_observer.c */
 +#define SDCARD_ANDROID_PATH "/data/media/0/Android"
-+DEFINE_STATIC_KEY_FALSE(susfs_set_sdcard_android_data_decrypted_key_false);
++DEFINE_STATIC_KEY_TRUE(susfs_is_sdcard_android_data_not_decrypted);
 +
 +struct watch_dir {
 +	const char *path;
@@ -3170,8 +3166,8 @@ index 0000000..23200cc
 +	struct fsnotify_group *grp;
 +	struct inode *inode;
 +
-+	if (static_key_enabled(&susfs_set_sdcard_android_data_decrypted_key_false))
-+		static_branch_disable(&susfs_set_sdcard_android_data_decrypted_key_false);
++	if (static_key_enabled(&susfs_is_sdcard_android_data_not_decrypted))
++		static_branch_disable(&susfs_is_sdcard_android_data_not_decrypted);
 +	SUSFS_LOGI("/sdcard is decrypted\n");
 +	SUSFS_LOGI("cleaning up fsnotify sdcard watch\n");
 +
@@ -3328,19 +3324,13 @@ index 0000000..23200cc
 +	if (IS_ERR(kthread_run(susfs_sdcard_monitor_fn, NULL, "susfs_sdcard_monitor"))) {
 +		SUSFS_LOGE("failed to create thread susfs_sdcard_monitor\n");
 +		SUSFS_LOGI("/sdcard is forcibly set decrypted\n");
-+		if (static_key_enabled(&susfs_set_sdcard_android_data_decrypted_key_false))
-+			static_branch_disable(&susfs_set_sdcard_android_data_decrypted_key_false);
++		if (static_key_enabled(&susfs_is_sdcard_android_data_not_decrypted))
++			static_branch_disable(&susfs_is_sdcard_android_data_not_decrypted);
 +	}
 +}
 +
 +/* susfs_init */
 +void susfs_init(void) {
-+	static_branch_enable(&ksu_init_rc_hook_key_false);
-+	static_branch_enable(&ksu_input_hook_key_false);
-+	static_branch_enable(&susfs_set_sdcard_android_data_decrypted_key_false);
-+	static_branch_disable(&susfs_set_uname_key_true);
-+	static_branch_disable(&susfs_avc_log_spoofing_key_true);
-+	static_branch_disable(&susfs_set_fake_cmdline_or_bootconfig_key_true);
 +	SUSFS_LOGI("susfs is initialized! version: " SUSFS_VERSION " \n");
 +}
 +
@@ -3823,7 +3813,7 @@ index b8ec1db..3a83a54 100644
  }
  
 diff --git a/kernel/sys.c b/kernel/sys.c
-index 6ac5d1b..d6ca4f7 100644
+index 6ac5d1b..ef8af78 100644
 --- a/kernel/sys.c
 +++ b/kernel/sys.c
 @@ -1240,12 +1240,20 @@ static int override_release(char __user *release, size_t len)
@@ -3831,7 +3821,7 @@ index 6ac5d1b..d6ca4f7 100644
  }
  
 +#ifdef CONFIG_KSU_SUSFS_SPOOF_UNAME
-+extern struct static_key_true susfs_set_uname_key_true;
++extern struct static_key_false susfs_is_uname_spoof_buffer_set;
 +extern void susfs_spoof_uname(struct new_utsname* tmp);
 +#endif
  SYSCALL_DEFINE1(newuname, struct new_utsname __user *, name)
@@ -3841,14 +3831,14 @@ index 6ac5d1b..d6ca4f7 100644
  	down_read(&uts_sem);
  	memcpy(&tmp, utsname(), sizeof(tmp));
 +#ifdef CONFIG_KSU_SUSFS_SPOOF_UNAME
-+	if (static_branch_likely(&susfs_set_uname_key_true))
++	if (static_branch_likely(&susfs_is_uname_spoof_buffer_set))
 +		susfs_spoof_uname(&tmp);
 +#endif
  	up_read(&uts_sem);
  	if (copy_to_user(name, &tmp, sizeof(tmp)))
  		return -EFAULT;
 diff --git a/security/selinux/avc.c b/security/selinux/avc.c
-index 74ab889..2586f71 100644
+index 74ab889..bacf96d 100644
 --- a/security/selinux/avc.c
 +++ b/security/selinux/avc.c
 @@ -164,6 +164,11 @@ static void avc_dump_av(struct audit_buffer *ab, u16 tclass, u32 av)
@@ -3858,7 +3848,7 @@ index 74ab889..2586f71 100644
 +#ifdef CONFIG_KSU_SUSFS
 +extern u32 susfs_ksu_sid;
 +extern u32 susfs_priv_app_sid;
-+extern struct static_key_true susfs_avc_log_spoofing_key_true;
++extern struct static_key_false susfs_is_avc_log_spoofing_enabled;
 +#endif
  
  /**
@@ -3883,7 +3873,7 @@ index 74ab889..2586f71 100644
 +
 +
 +#ifdef CONFIG_KSU_SUSFS
-+	if (static_branch_likely(&susfs_avc_log_spoofing_key_true)) {
++	if (static_branch_likely(&susfs_is_avc_log_spoofing_enabled)) {
 +		if (unlikely(sad.tsid == susfs_ksu_sid)) {
 +			if (rc)
 +				audit_log_format(ab, " tsid=%d", susfs_priv_app_sid);

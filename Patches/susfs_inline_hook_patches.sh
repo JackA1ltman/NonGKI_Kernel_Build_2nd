@@ -53,11 +53,11 @@ for i in "${patch_files[@]}"; do
         fi
 
         if grep -q "__do_execve_file" "fs/exec.c"; then
-            sed -i '/static int __do_execve_file(int fd, struct filename \*filename,/i #ifdef CONFIG_KSU_SUSFS\nextern bool ksu_su_compat_enabled __read_mostly;\nextern struct static_key_false susfs_set_sdcard_android_data_decrypted_key_false;\nextern bool __ksu_is_allow_uid_for_current(uid_t uid);\nextern int ksu_handle_execveat(int *fd, struct filename **filename_ptr, void *argv,\n\t\t\tvoid *envp, int *flags);\nextern int ksu_handle_execveat_sucompat(int *fd, struct filename **filename_ptr, void *argv,\n\t\t\t\tvoid *envp, int *flags);\n#endif' fs/exec.c
+            sed -i '/static int __do_execve_file(int fd, struct filename \*filename,/i #ifdef CONFIG_KSU_SUSFS\nextern bool ksu_su_compat_enabled __read_mostly;\nextern struct static_key_true susfs_is_sdcard_android_data_not_decrypted;\nextern bool __ksu_is_allow_uid_for_current(uid_t uid);\nextern int ksu_handle_execveat(int *fd, struct filename **filename_ptr, void *argv,\n\t\t\tvoid *envp, int *flags);\nextern int ksu_handle_execveat_sucompat(int *fd, struct filename **filename_ptr, void *argv,\n\t\t\t\tvoid *envp, int *flags);\n#endif' fs/exec.c
         else
-            sed -i '/^static int do_execveat_common(int fd, struct filename \*filename,/i\#ifdef CONFIG_KSU_SUSFS\nextern bool ksu_su_compat_enabled __read_mostly;\nextern struct static_key_false susfs_set_sdcard_android_data_decrypted_key_false;\nextern bool __ksu_is_allow_uid_for_current(uid_t uid);\nextern int ksu_handle_execveat(int *fd, struct filename **filename_ptr, void *argv,\n\t\t\tvoid *envp, int *flags);\nextern int ksu_handle_execveat_sucompat(int *fd, struct filename **filename_ptr,\n\t\t\t\t void *argv, void *envp, int *flags);\n#endif\n' fs/exec.c
+            sed -i '/^static int do_execveat_common(int fd, struct filename \*filename,/i\#ifdef CONFIG_KSU_SUSFS\nextern bool ksu_su_compat_enabled __read_mostly;\nextern struct static_key_true susfs_is_sdcard_android_data_not_decrypted;\nextern bool __ksu_is_allow_uid_for_current(uid_t uid);\nextern int ksu_handle_execveat(int *fd, struct filename **filename_ptr, void *argv,\n\t\t\tvoid *envp, int *flags);\nextern int ksu_handle_execveat_sucompat(int *fd, struct filename **filename_ptr,\n\t\t\t\t void *argv, void *envp, int *flags);\n#endif\n' fs/exec.c
         fi
-        sed -i '/return PTR_ERR(filename);/a\#ifdef CONFIG_KSU_SUSFS\n\tif (likely(susfs_is_current_proc_umounted()) || !ksu_su_compat_enabled)\n\t\tgoto orig_flow;\n\tif (static_branch_unlikely(\&susfs_set_sdcard_android_data_decrypted_key_false))\n\t\tksu_handle_execveat(\&fd, \&filename, \&argv, \&envp, \&flags);\n\telse\n\t\tksu_handle_execveat_sucompat(\&fd, \&filename, \&argv, \&envp, \&flags);\norig_flow:\n#endif' fs/exec.c
+        sed -i '/return PTR_ERR(filename);/a\#ifdef CONFIG_KSU_SUSFS\n\tif (likely(susfs_is_current_proc_umounted()) || !ksu_su_compat_enabled)\n\t\tgoto orig_flow;\n\tif (static_branch_unlikely(\&susfs_is_sdcard_android_data_not_decrypted))\n\t\tksu_handle_execveat(\&fd, \&filename, \&argv, \&envp, \&flags);\n\telse\n\t\tksu_handle_execveat_sucompat(\&fd, \&filename, \&argv, \&envp, \&flags);\norig_flow:\n#endif' fs/exec.c
 
         if grep -q "ksu_handle_execveat_sucompat" "fs/exec.c"; then
             echo "[+] fs/exec.c Patched!"
@@ -89,11 +89,11 @@ for i in "${patch_files[@]}"; do
         ;;
     ## read_write.c
     fs/read_write.c)
-        sed -i '/SYSCALL_DEFINE3(read,/i #ifdef CONFIG_KSU\nextern struct static_key_false ksu_init_rc_hook_key_false;\nextern __attribute__((cold)) int ksu_handle_sys_read(unsigned int fd);\n#endif' fs/read_write.c
+        sed -i '/SYSCALL_DEFINE3(read,/i #ifdef CONFIG_KSU\nextern struct static_key_true ksu_is_init_rc_hook_enabled;\nextern __attribute__((cold)) int ksu_handle_sys_read(unsigned int fd);\n#endif' fs/read_write.c
         if grep -q "ksys_read" "fs/read_write.c" >/dev/null 2>&1; then
-            sed -i '/return ksys_read(fd, buf, count);/i #ifdef CONFIG_KSU\n\tif (static_branch_unlikely(\&ksu_init_rc_hook_key_false))\n\t\tksu_handle_sys_read(fd);\n#endif' fs/read_write.c
+            sed -i '/return ksys_read(fd, buf, count);/i #ifdef CONFIG_KSU\n\tif (static_branch_unlikely(\&ksu_is_init_rc_hook_enabled))\n\t\tksu_handle_sys_read(fd);\n#endif' fs/read_write.c
         else
-            sed -i '0,/if (f\.file) {/{s/if (f\.file) {/\n#ifdef CONFIG_KSU\n\tif (static_branch_unlikely(\&ksu_init_rc_hook_key_false))\n\t\tksu_handle_sys_read(fd);\n#endif\n\tif (f.file) {/}' fs/read_write.c
+            sed -i '0,/if (f\.file) {/{s/if (f\.file) {/\n#ifdef CONFIG_KSU\n\tif (static_branch_unlikely(\&ksu_is_init_rc_hook_enabled))\n\t\tksu_handle_sys_read(fd);\n#endif\n\tif (f.file) {/}' fs/read_write.c
         fi
 
         if grep -q "ksu_init_rc_hook" "fs/read_write.c"; then
@@ -117,10 +117,10 @@ for i in "${patch_files[@]}"; do
         fi
 
         if grep -q "vfs_statx_fd" "fs/stat.c"; then
-            sed -i '/int vfs_statx_fd(unsigned int fd, struct kstat \*stat,/i\#ifdef CONFIG_KSU_SUSFS\nextern struct static_key_false ksu_init_rc_hook_key_false;\nextern void ksu_handle_vfs_fstat(int fd, loff_t *kstat_size_ptr);\n#endif \/\/ #ifdef CONFIG_KSU_SUSFS\n' fs/stat.c
+            sed -i '/int vfs_statx_fd(unsigned int fd, struct kstat \*stat,/i\#ifdef CONFIG_KSU_SUSFS\nextern struct static_key_true ksu_is_init_rc_hook_enabled;\nextern void ksu_handle_vfs_fstat(int fd, loff_t *kstat_size_ptr);\n#endif \/\/ #ifdef CONFIG_KSU_SUSFS\n' fs/stat.c
 
         elif grep -q "vfs_fstat" "fs/stat.c"; then
-            sed -i '/int vfs_fstat(unsigned int fd, struct kstat \*stat)/i\#ifdef CONFIG_KSU_SUSFS\nextern struct static_key_false ksu_init_rc_hook_key_false;\nextern void ksu_handle_vfs_fstat(int fd, loff_t *kstat_size_ptr);\n#endif \/\/ #ifdef CONFIG_KSU_SUSFS\n' fs/stat.c
+            sed -i '/int vfs_fstat(unsigned int fd, struct kstat \*stat)/i\#ifdef CONFIG_KSU_SUSFS\nextern struct static_key_true ksu_is_init_rc_hook_enabled;\nextern void ksu_handle_vfs_fstat(int fd, loff_t *kstat_size_ptr);\n#endif \/\/ #ifdef CONFIG_KSU_SUSFS\n' fs/stat.c
 
         else
             echo "[-] Kernel have no vfs_statx_fd and vfs_fstat."
@@ -138,7 +138,7 @@ for i in "${patch_files[@]}"; do
             echo "[-] Kernel have no vfs_statx and vfs_fstatat."
         fi
 
-        sed -i '/fdput(f);/i\#ifdef CONFIG_KSU_SUSFS\n\t\tif (static_branch_unlikely(\&ksu_init_rc_hook_key_false))\n\t\t\tksu_handle_vfs_fstat(fd, \&stat->size);\n#endif \/\/ #ifdef CONFIG_KSU_SUSFS\n' fs/stat.c
+        sed -i '/fdput(f);/i\#ifdef CONFIG_KSU_SUSFS\n\t\tif (static_branch_unlikely(\&ksu_is_init_rc_hook_enabled))\n\t\t\tksu_handle_vfs_fstat(fd, \&stat->size);\n#endif \/\/ #ifdef CONFIG_KSU_SUSFS\n' fs/stat.c
 
         if grep -q "ksu_handle_stat" "fs/stat.c"; then
             echo "[+] fs/stat.c Patched!"
@@ -190,8 +190,8 @@ for i in "${patch_files[@]}"; do
     # drivers/ changes
     ## input/input.c
     drivers/input/input.c)
-        sed -i '/^static void input_handle_event(struct input_dev \*dev,/i\#ifdef CONFIG_KSU\nextern struct static_key_false ksu_input_hook_key_false;\nextern int ksu_handle_input_handle_event(unsigned int *type, unsigned int *code, int *value);\n#endif\n' drivers/input/input.c
-        sed -i '/if (disposition != INPUT_IGNORE_EVENT && type != EV_SYN)/i\#ifdef CONFIG_KSU_SUSFS\n\tif (static_branch_unlikely(\&ksu_input_hook_key_false))\n\t\tksu_handle_input_handle_event(\&type, \&code, \&value);\n#endif\n' drivers/input/input.c
+        sed -i '/^static void input_handle_event(struct input_dev \*dev,/i\#ifdef CONFIG_KSU\nextern struct static_key_true ksu_is_input_hook_enabled;\nextern int ksu_handle_input_handle_event(unsigned int *type, unsigned int *code, int *value);\n#endif\n' drivers/input/input.c
+        sed -i '/if (disposition != INPUT_IGNORE_EVENT && type != EV_SYN)/i\#ifdef CONFIG_KSU_SUSFS\n\tif (static_branch_unlikely(\&ksu_is_input_hook_enabled))\n\t\tksu_handle_input_handle_event(\&type, \&code, \&value);\n#endif\n' drivers/input/input.c
 
         if grep -q "ksu_handle_input_handle_event" "drivers/input/input.c"; then
             echo "[+] drivers/input/input.c Patched!"
