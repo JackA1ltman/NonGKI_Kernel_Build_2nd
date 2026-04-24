@@ -8,9 +8,9 @@ env:
   # Device env
   DEVICE_NAME : "Redmi_K20_Pro"
   DEVICE_CODENAME : "raphael"
-  CUSTOM_CMDS : "CLANG_TRIPLE=aarch64-linux-gnu-"
-  EXTRA_CMDS : "LD=ld.lld LLVM=1 LLVM_IAS=1"
-  # 修改点1：删除了这里末尾多余的引号 👇
+  CUSTOM_CMDS: "CLANG_TRIPLE=aarch64-linux-gnu-"
+EXTRA_CMDS: "LLVM=1 LLVM_IAS=1 CROSS_COMPILE=aarch64-linux-gnu- LLVM_AR=llvm-ar-15 LLVM_NM=llvm-nm-15"
+
   KERNEL_SOURCE : "https://github.com/Laulan56/android_kernel_xiaomi_sm8150.git" 
   KERNEL_BRANCH : "android14"
   CLANG_SOURCE : "https://github.com/AOSP-10/prebuilts_clang_host_linux-x86_clang-r383902/archive/refs/heads/10.zip"
