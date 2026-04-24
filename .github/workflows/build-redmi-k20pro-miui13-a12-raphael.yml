@@ -12,7 +12,7 @@ env:
   CUSTOM_CMDS : "CLANG_TRIPLE=aarch64-linux-gnu-"
   EXTRA_CMDS : "LD=ld.lld LLVM=1 LLVM_IAS=1"
 
-  KERNEL_SOURCE : https://github.com/Laulan56/android_kernel_xiaomi_sm8150.git"
+  KERNEL_SOURCE : "https://github.com/Laulan56/android_kernel_xiaomi_sm8150.git"
   KERNEL_BRANCH : "android14"
 
   CLANG_SOURCE : "https://github.com/AOSP-10/prebuilts_clang_host_linux-x86_clang-r383902/archive/refs/heads/10.zip"
