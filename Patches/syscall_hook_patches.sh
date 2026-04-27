@@ -18,7 +18,7 @@ patch_files=(
     kernel/sys.c
 )
 
-PATCH_LEVEL="1.9"
+PATCH_LEVEL="2.0"
 KERNEL_VERSION=$(head -n 3 Makefile | grep -E 'VERSION|PATCHLEVEL' | awk '{print $3}' | paste -sd '.')
 FIRST_VERSION=$(echo "$KERNEL_VERSION" | awk -F '.' '{print $1}')
 SECOND_VERSION=$(echo "$KERNEL_VERSION" | awk -F '.' '{print $2}')
@@ -288,7 +288,10 @@ extern int ksu_handle_sys_reboot(int magic1, int magic2, unsigned int cmd, void 
         ;;
     ## kernel/sys.c
     kernel/sys.c)
-        if grep -rq --include="*.c" --include="*.h" "ksu_handle_setresuid" "drivers/kernelsu/" >/dev/null 2>&1; then
+        if grep -rq --include="*.c" --include="*.h" "ksu_handle_setresuid_cred" "drivers/kernelsu/" >/dev/null 2>&1; then
+            echo "[-] KernelSU needn't ksu_handle_setresuid, Skipped."
+
+        elif grep -rq --include="*.c" --include="*.h" "ksu_handle_setresuid" "drivers/kernelsu/" >/dev/null 2>&1; then
 
             if grep -q "__sys_setresuid" "kernel/sys.c" >/dev/null 2>&1; then
                 sed -i '/long __sys_setresuid(uid_t ruid, uid_t euid, uid_t suid)/i\#ifdef CONFIG_KSU\nextern int ksu_handle_setresuid(uid_t ruid, uid_t euid, uid_t suid);\n#endif\n' kernel/sys.c
