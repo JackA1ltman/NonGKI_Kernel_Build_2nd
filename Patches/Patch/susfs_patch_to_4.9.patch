@@ -346,7 +346,7 @@ index e8537d4..f86391b 100644
  	do_delayed_call(&done);
  	return res;
 diff --git a/fs/namespace.c b/fs/namespace.c
-index 5b253ad..5db872f 100644
+index 5b253ad..7bdcfbe 100644
 --- a/fs/namespace.c
 +++ b/fs/namespace.c
 @@ -25,9 +25,20 @@
@@ -390,7 +390,7 @@ index 5b253ad..5db872f 100644
  
 +#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
 +	if (susfs_is_current_ksu_domain()) {
-+		if (!ida_pre_get(&susfs_mnt_group_ida, GFP_KERNEL))
++		if (!ida_pre_get(&mnt_group_ida, GFP_KERNEL))
 +			return -ENOMEM;
 +		res = ida_get_new_above(&mnt_group_ida,
 +					DEFAULT_KSU_MNT_GROUP_ID,
