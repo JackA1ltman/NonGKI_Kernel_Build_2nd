@@ -90,6 +90,13 @@ jobs:
     uses: ./.github/workflows/build-samsung-note10-oneui-a15.yml
     secrets: inherit
 
+  build-samsung-a71-oneui-a16-resukisu:
+    name: "Samsung Galaxy A71 (OneUI A16) (ReSukiSU)"
+    strategy:
+      fail-fast: true
+    uses: ./.github/workflows/build-samsung-a71-oneui-a16-resukisu.yml
+    secrets: inherit
+
   # Smartisan
   build-smartisan-u3pro-lineageos18-a11:
     name: "Smartisan U3 Pro (Lineage OS 18 A11)"
