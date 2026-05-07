@@ -87,7 +87,7 @@ env:
   BUILD_OTHER_CONFIG: "true" # Merge config files.
   MERGE_CONFIG_FILES: "a71.config"
 
-  FREE_MORE_SPACE: "false" # if u want get more space, enabled it.
+  FREE_MORE_SPACE: "true" # if u want get more space, enabled it.
 
 jobs:
   build-kernel:
