@@ -13,7 +13,6 @@ patch_files=(
     fs/read_write.c
     fs/stat.c
     fs/namei.c
-    fs/devpts/inode.c
     drivers/input/input.c
     drivers/tty/pty.c
     security/security.c
@@ -167,21 +166,6 @@ for i in "${patch_files[@]}"; do
             fi
         else
             echo "[-] Kernel needn't throne_tracker, Skipped."
-        fi
-
-        echo "======================================"
-        ;;
-    ## devpts/inode.c
-    fs/devpts/inode.c)
-        sed -i '/#include <linux\/seq_file.h>/a\#ifdef CONFIG_KSU_SUSFS\n#include <linux/susfs_def.h>\n#endif' fs/devpts/inode.c
-        sed -i '/^struct dentry \*devpts_pty_new(struct pts_fs_info \*fsi, int index, void \*priv)/i\#ifdef CONFIG_KSU_SUSFS\nextern int ksu_handle_devpts(struct inode*);\n#endif\n' fs/devpts/inode.c
-        sed -i '/if (dentry->d_sb->s_magic != DEVPTS_SUPER_MAGIC)/i\#ifdef CONFIG_KSU_SUSFS\n\tif (likely(susfs_is_current_proc_umounted())) {\n\t\tgoto orig_flow;\n\t}\n\tksu_handle_devpts(dentry->d_inode);\norig_flow:\n#endif\n' fs/devpts/inode.c
-
-        if grep -q "ksu_handle_devpts" "fs/devpts/inode.c"; then
-            echo "[+] fs/devpts/inode.c Patched!"
-            echo "[+] Count: $(grep -c "ksu_handle_devpts" "fs/devpts/inode.c")"
-        else
-            echo "[-] fs/devpts/inode.c patch failed for unknown reasons, please provide feedback in time."
         fi
 
         echo "======================================"
