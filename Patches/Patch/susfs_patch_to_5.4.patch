@@ -1012,7 +1012,7 @@ index 81882a1..4b63e53 100644
  	if (seq_has_overflowed(m))
  		goto out;
 diff --git a/fs/proc/task_mmu.c b/fs/proc/task_mmu.c
-index 15ee40d..938c68a 100644
+index 15ee40d..3e2a811 100644
 --- a/fs/proc/task_mmu.c
 +++ b/fs/proc/task_mmu.c
 @@ -22,6 +22,9 @@
@@ -1100,7 +1100,7 @@ index 15ee40d..938c68a 100644
 +#ifdef CONFIG_KSU_SUSFS_SUS_MAP
 +	if (vma->vm_file) {
 +		if (SUSFS_IS_INODE_SUS_MAP(file_inode(vma->vm_file)))
-+			return 0;
++			return;
 +	}
 +#endif // #ifdef CONFIG_KSU_SUSFS_SUS_MAP
 +

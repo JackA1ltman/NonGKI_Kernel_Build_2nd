@@ -847,7 +847,7 @@ index f9b82c7..3289914 100644
  			put_unused_fd(fd);
  			fd = PTR_ERR(f);
 diff --git a/fs/proc/base.c b/fs/proc/base.c
-index 0495111..9aafa79 100644
+index 0495111..e86c03f 100644
 --- a/fs/proc/base.c
 +++ b/fs/proc/base.c
 @@ -95,6 +95,9 @@
@@ -889,12 +889,11 @@ index 0495111..9aafa79 100644
  	pathname = d_path(path, tmp, PAGE_SIZE);
  	len = PTR_ERR(pathname);
  	if (IS_ERR(pathname))
-@@ -2370,6 +2388,11 @@ proc_map_files_readdir(struct file *file, struct dir_context *ctx)
+@@ -2370,6 +2388,10 @@ proc_map_files_readdir(struct file *file, struct dir_context *ctx)
  				vma = vma->vm_next) {
  			if (!vma->vm_file)
  				continue;
 +#ifdef CONFIG_KSU_SUSFS_SUS_MAP
-+		inode = file_inode(vma->vm_file);
 +		if (SUSFS_IS_INODE_SUS_MAP(file_inode(vma->vm_file)))
 +			continue;
 +#endif // #ifdef CONFIG_KSU_SUSFS_SUS_MAP
