@@ -11,14 +11,14 @@ patch_files=(
     fs/stat.c
     fs/namei.c
     drivers/input/input.c
-    drivers/tty/pty.c
     security/security.c
     security/selinux/hooks.c
+    security/selinux/ss/services.c
     kernel/reboot.c
     kernel/sys.c
 )
 
-PATCH_LEVEL="2.0"
+PATCH_LEVEL="2.1"
 KERNEL_VERSION=$(head -n 3 Makefile | grep -E 'VERSION|PATCHLEVEL' | awk '{print $3}' | paste -sd '.')
 FIRST_VERSION=$(echo "$KERNEL_VERSION" | awk -F '.' '{print $1}')
 SECOND_VERSION=$(echo "$KERNEL_VERSION" | awk -F '.' '{print $2}')
@@ -179,26 +179,6 @@ for i in "${patch_files[@]}"; do
 
         echo "======================================"
         ;;
-    ## tty/pty.c
-    drivers/tty/pty.c)
-        if grep -rq --include="*.c" --include="*.h" "ksu_handle_devpts" "drivers/kernelsu/" >/dev/null 2>&1; then
-            echo "[+] Checked ksu_handle_devpts existed in KernelSU!"
-
-            sed -i '/^static struct tty_struct \*pts_unix98_lookup(struct tty_driver \*driver,/i\#ifdef CONFIG_KSU\nextern int ksu_handle_devpts(struct inode*);\n#endif\n' drivers/tty/pty.c
-            sed -i '0,/struct tty_struct \*tty;/{s/struct tty_struct \*tty;/&\n#ifdef CONFIG_KSU\n\tksu_handle_devpts((struct inode *)file->f_path.dentry->d_inode);\n#endif/}' drivers/tty/pty.c
-
-            if grep -q "ksu_handle_devpts" "drivers/tty/pty.c"; then
-                echo "[+] drivers/tty/pty.c Patched!"
-                echo "[+] Count: $(grep -c "ksu_handle_devpts" "drivers/tty/pty.c")"
-            else
-                echo "[-] drivers/tty/pty.c patch failed for unknown reasons, please provide feedback in time."
-            fi
-        else
-            echo "[-] KernelSU have no devpts, Skipped."
-        fi
-
-        echo "======================================"
-        ;;
 
     # security/ changes
     ## security.c
@@ -250,6 +230,61 @@ for i in "${patch_files[@]}"; do
             fi
         else
             echo "[-] Kernel needn't selinux fix, Skipped."
+        fi
+
+        if [ "$FIRST_VERSION" -lt 4 ] && [ "$SECOND_VERSION" -lt 19 ]; then
+            sed -i 's/static struct security_operations selinux_ops/struct security_operations selinux_ops/' security/selinux/hooks.c
+
+            if ! grep -q "static struct security_operations selinux_ops" "security/selinux/hooks.c"; then
+                echo "[+] security/selinux/hooks.c Part II Patched!"
+                echo "[+] Count: $(grep -c "static struct security_operations selinux_ops" "security/selinux/hooks.c")"
+            else
+                echo "[-] security/selinux/hooks.c patch failed for unknown reasons, please provide feedback in time."
+            fi
+
+        else
+            echo "[-] Kernel needn't selinux fix Part II, Skipped."
+
+        fi
+
+        if grep -rq --include="*.c" --include="*.h" "ksu_hide_setprocattr" "drivers/kernelsu/" >/dev/null 2>&1; then
+            if [ "$FIRST_VERSION" -lt 4 ] && [ "$SECOND_VERSION" -lt 19 ]; then
+                echo "[-] Kernel could not hook ksu_hide_setprocattr, Skipped."
+
+            elif [ "$FIRST_VERSION" -lt 5 ] && [ "$SECOND_VERSION" -lt 10 ]; then
+                sed -i '/static int selinux_setprocattr(struct task_struct \*p,/i\#ifdef CONFIG_KSU\nextern int ksu_hide_setprocattr(const char *name, void *value, size_t size);\n#endif\n' security/selinux/hooks.c
+            else
+                sed -i '/static int selinux_setprocattr(const char \*name, void \*value, size_t size)/i\#ifdef CONFIG_KSU\nextern int ksu_hide_setprocattr(const char *name, void *value, size_t size);\n#endif\n' security/selinux/hooks.c
+            fi
+
+            sed -i '/char \*str = value;/a\#ifdef CONFIG_KSU\n\tksu_hide_setprocattr(name, value, size);\n#endif\n' security/selinux/hooks.c
+
+            if grep -q "ksu_hide_setprocattr" "security/selinux/hooks.c"; then
+                echo "[+] security/selinux/hooks.c Part III Patched!"
+                echo "[+] Count: $(grep -c "ksu_hide_setprocattr" "security/selinux/hooks.c")"
+            else
+                echo "[-] security/selinux/hooks.c patch failed for unknown reasons, please provide feedback in time."
+            fi
+        else
+            echo "[-] KernelSU needn't ksu_hide_setprocattr, Skipped."
+        fi
+
+        echo "======================================"
+        ;;
+    ## selinux/ss/services.c
+    security/selinux/ss/services.c)
+        if grep -q "selinux_state" "security/selinux/include/security.h" >/dev/null 2>&1; then
+            echo "[-] Kernel needn't selinux_state fix, Skipped."
+
+        elif [ "$FIRST_VERSION" -lt 5 ] && [ "$SECOND_VERSION" -lt 15 ]; then
+            sed -i 's/static DEFINE_RWLOCK(policy_rwlock);/DEFINE_RWLOCK(policy_rwlock);/' security/selinux/ss/services.c
+
+            if ! grep -q "static DEFINE_RWLOCK" "security/selinux/ss/services.c"; then
+                echo "[+] security/selinux/hooks.c Patched!"
+                echo "[+] Count: $(grep -c "static DEFINE_RWLOCK" "security/selinux/ss/services.c")"
+            else
+                echo "[-] security/selinux/hooks.c patch failed for unknown reasons, please provide feedback in time."
+            fi
         fi
 
         echo "======================================"

@@ -14,7 +14,6 @@ patch_files=(
     fs/stat.c
     fs/namei.c
     drivers/input/input.c
-    drivers/tty/pty.c
     security/security.c
     security/selinux/hooks.c
     kernel/reboot.c
@@ -182,26 +181,6 @@ for i in "${patch_files[@]}"; do
             echo "[+] Count: $(grep -c "ksu_handle_input_handle_event" "drivers/input/input.c")"
         else
             echo "[-] drivers/input/input.c patch failed for unknown reasons, please provide feedback in time."
-        fi
-
-        echo "======================================"
-        ;;
-    ## tty/pty.c
-    drivers/tty/pty.c)
-        if grep -rq --include="*.c" --include="*.h" "ksu_handle_devpts" "drivers/kernelsu/" >/dev/null 2>&1; then
-            echo "[+] Checked ksu_handle_devpts existed in KernelSU!"
-
-            sed -i '/^static struct tty_struct \*pts_unix98_lookup(struct tty_driver \*driver,/i\#ifdef CONFIG_KSU\nextern int ksu_handle_devpts(struct inode*);\n#endif\n' drivers/tty/pty.c
-            sed -i '0,/struct tty_struct \*tty;/{s/struct tty_struct \*tty;/&\n#ifdef CONFIG_KSU\n\tksu_handle_devpts((struct inode *)file->f_path.dentry->d_inode);\n#endif/}' drivers/tty/pty.c
-
-            if grep -q "ksu_handle_devpts" "drivers/tty/pty.c"; then
-                echo "[+] drivers/tty/pty.c Patched!"
-                echo "[+] Count: $(grep -c "ksu_handle_devpts" "drivers/tty/pty.c")"
-            else
-                echo "[-] drivers/tty/pty.c patch failed for unknown reasons, please provide feedback in time."
-            fi
-        else
-            echo "[-] KernelSU have no devpts, Skipped."
         fi
 
         echo "======================================"

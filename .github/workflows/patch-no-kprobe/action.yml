@@ -8,44 +8,6 @@ runs:
         run: |
           cd $GITHUB_WORKSPACE/device_kernel
 
-          # Function
-          PACK_FILES(){
-            temp_dir=$(mktemp -d)
-            find . -name "*.rej" -exec cp --parents {} "$temp_dir" \;
-            find . -name "*.rej" | sed 's/\.rej$//' | xargs -I {} test -f {} && find . -name "*.rej" | sed 's/\.rej$//' | xargs -I {} cp --parents {} "$temp_dir"
-            tar -czf "rej_files_kernel_write_read.tar.gz" -C "$temp_dir" .
-            rm -rf "$temp_dir"
-            echo "[+] Packed Successfully."
-
-            find . -type f \( -name "*.rej" -o -name "*.orig" \) -delete
-            echo "[+] Removed all .rej and .orig files."
-            echo "[+] =================================== "
-          }
-          REJ_FOUND(){
-            if [[ "${{ env.BUILD_DEBUGGER }}" == "true" ]]; then
-                echo "[+] Checking kernel write and read patch rej files..."
-                mapfile -t REJ_FILES < <(find . -type f -name "*.rej")
-                if [ ${#REJ_FILES[@]} -eq 0 ]; then
-                    echo "[+] Your kernel have no any rej files, Skipped."
-                else
-                    for CAT_REJ in "${REJ_FILES[@]}"; do
-                        echo "[-] Found .rej file: $CAT_REJ"
-                        cat $CAT_REJ
-                        echo "[+] =================================== "
-                    done
-                fi
-
-                if [[ "${{ env.SKIP_PATCH }}" == "true" ]]; then
-                    echo "[+] SKIP_PATCH enabled, Skipped. "
-                    PACK_FILES
-                elif [[ "${{ env.SKIP_PATCH }}" != "true" ]]; then
-                    echo "[-] Found .rej files, Stopped! "
-                    PACK_FILES
-                    false
-                fi
-            fi
-          }
-
           # Detect SuSFS is used to enable the SuSFS inline hook
           if [[ ${{ env.SUSFS_ENABLE }} == "true" ]]; then
             # Core
@@ -54,68 +16,13 @@ runs:
 
             echo "[+] executed SuSFS inline hook successfully."
 
-            if [[ ${{ env.FIRST_VERSION }} -le 4 ]] && [[ ${{ env.SECOND_VERSION }} -le 9 ]]; then
-                cp /tmp/Patches/backport_patches.sh ./
+            if [[ "${{ env.BASEBAND_GUARD_ENABLE }}" != "true" ]]; then
+                cp /tmp/Patches/backport_selinux_patches.sh ./
 
-                bash backport_patches.sh
-
-                if [[ "${{ env.BASEBAND_GUARD_ENABLE }}" != "true" ]]; then
-                    cp /tmp/Patches/backport_selinux_patches.sh ./
-
-                    bash backport_selinux_patches.sh
-                    echo "[+] Patched SELinux."
-                else
-                    echo "[-] Skipped SELinux Patch."
-                fi
-
-                if grep -q "kernel_read" "fs/read_write.c"; then
-                    echo ">>>>>>>>>>>>>>>Backport Patch<<<<<<<<<<<<<<<<"
-                    echo ">                                           <"
-                    echo "Your kernel is already backported, skipping"
-                    echo ">                                           <"
-                    echo ">>>>>>>>>>>>>>>>>>>>>><<<<<<<<<<<<<<<<<<<<<<<"
-                elif [[ "${{ env.KERNEL_PATCH }}" == "true" ]]; then
-                    if [[ ${{ env.FIRST_VERSION }} -lt 4 ]] && [[ ${{ env.SECOND_VERSION }} -lt 18 ]]; then
-                        echo "[-] Could not support ARMV7A kernel(Kernel Version < 3.18)."
-
-                        false
-                    elif [[ ${{ env.FIRST_VERSION }} == 3 ]] && [[ ${{ env.SECOND_VERSION }} == 18 ]]; then
-                        cp /tmp/Patches/Patch/backport_kernel_read_and_kernel_write_3.18.patch ./
-
-                        patch -p1 < backport_kernel_read_and_kernel_write_3.18.patch || true
-
-                        echo "[+] Patched kernel_write and kernel_read."
-                    elif [[ ${{ env.FIRST_VERSION }} == 4 ]] && [[ ${{ env.SECOND_VERSION }} == 4 ]]; then
-                        cp /tmp/Patches/Patch/backport_kernel_read_and_kernel_write_4.4.patch ./
-
-                        patch -p1 < backport_kernel_read_and_kernel_write_4.4.patch || true
-
-                        echo "[+] Patched kernel_write and kernel_read."
-                    elif [[ ${{ env.FIRST_VERSION }} == 4 ]] && [[ ${{ env.SECOND_VERSION }} == 9 ]]; then
-                        cp /tmp/Patches/Patch/backport_kernel_read_and_kernel_write_4.9.patch ./
-
-                        patch -p1 < backport_kernel_read_and_kernel_write_4.9.patch || true
-
-                        echo "[+] Patched kernel_write and kernel_read."
-                    fi
-                    REJ_FOUND
-                fi
-
-                echo "[+] executed backport patch (contain kernel_read and kernel_write patch) successfully."
+                bash backport_selinux_patches.sh
+                echo "[+] Patched SELinux."
             else
-                cp /tmp/Patches/backport_patches.sh ./
-                bash backport_patches.sh
-
-                echo "executed backport patch successfully."
-
-                if [[ "${{ env.BASEBAND_GUARD_ENABLE }}" != "true" ]]; then
-                    cp /tmp/Patches/backport_selinux_patches.sh ./
-
-                    bash backport_selinux_patches.sh
-                    echo "[+] Patched SELinux."
-                else
-                    echo "[-] Skipped SELinux Patch."
-                fi
+                echo "[-] Skipped SELinux Patch."
             fi
 
           # Check syscall hook
@@ -131,63 +38,13 @@ runs:
 
                 bash backport_patches.sh
 
-                if [[ "${{ env.BASEBAND_GUARD_ENABLE }}" != "true" ]]; then
-                    cp /tmp/Patches/backport_selinux_patches.sh ./
+            if [[ "${{ env.BASEBAND_GUARD_ENABLE }}" != "true" ]]; then
+                cp /tmp/Patches/backport_selinux_patches.sh ./
 
-                    bash backport_selinux_patches.sh
-                    echo "[+] Patched SELinux."
-                else
-                    echo "[-] Skipped SELinux Patch."
-                fi
-
-                if grep -q "kernel_read" "fs/read_write.c"; then
-                    echo ">>>>>>>>>>>>>>>Backport Patch<<<<<<<<<<<<<<<<"
-                    echo ">                                           <"
-                    echo "Your kernel is already backported, skipping"
-                    echo ">                                           <"
-                    echo ">>>>>>>>>>>>>>>>>>>>>><<<<<<<<<<<<<<<<<<<<<<<"
-                elif [[ "${{ env.KERNEL_PATCH }}" == "true" ]]; then
-                    if [[ ${{ env.FIRST_VERSION }} -lt 4 ]] && [[ ${{ env.SECOND_VERSION }} -lt 18 ]]; then
-                        echo "[-] Could not support ARMV7A kernel(Kernel Version < 3.18)."
-
-                        false
-                    elif [[ ${{ env.FIRST_VERSION }} == 3 ]] && [[ ${{ env.SECOND_VERSION }} == 18 ]]; then
-                        cp /tmp/Patches/Patch/backport_kernel_read_and_kernel_write_3.18.patch ./
-
-                        patch -p1 < backport_kernel_read_and_kernel_write_3.18.patch || true
-
-                        echo "[+] Patched kernel_write and kernel_read."
-                    elif [[ ${{ env.FIRST_VERSION }} == 4 ]] && [[ ${{ env.SECOND_VERSION }} == 4 ]]; then
-                        cp /tmp/Patches/Patch/backport_kernel_read_and_kernel_write_4.4.patch ./
-
-                        patch -p1 < backport_kernel_read_and_kernel_write_4.4.patch || true
-
-                        echo "[+] Patched kernel_write and kernel_read."
-                    elif [[ ${{ env.FIRST_VERSION }} == 4 ]] && [[ ${{ env.SECOND_VERSION }} == 9 ]]; then
-                        cp /tmp/Patches/Patch/backport_kernel_read_and_kernel_write_4.9.patch ./
-
-                        patch -p1 < backport_kernel_read_and_kernel_write_4.9.patch || true
-
-                        echo "[+] Patched kernel_write and kernel_read."
-                    fi
-                    REJ_FOUND
-                fi
-
-                echo "[+] executed backport patch (contain kernel_read and kernel_write patch) successfully."
+                bash backport_selinux_patches.sh
+                echo "[+] Patched SELinux."
             else
-                cp /tmp/Patches/backport_patches.sh ./
-                bash backport_patches.sh
-
-                echo "executed backport patch successfully."
-
-                if [[ "${{ env.BASEBAND_GUARD_ENABLE }}" != "true" ]]; then
-                    cp /tmp/Patches/backport_selinux_patches.sh ./
-
-                    bash backport_selinux_patches.sh
-                    echo "[+] Patched SELinux."
-                else
-                    echo "[-] Skipped SELinux Patch."
-                fi
+                echo "[-] Skipped SELinux Patch."
             fi
 
           else
@@ -195,11 +52,3 @@ runs:
             false
 
           fi
-
-      - name: Upload Build Kernel Patch Rejected Files
-        if: env.BUILD_DEBUGGER == 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: patch_kernel_write_read_rejected_files
-          path: |
-            device_kernel/rej_files_kernel_write_read.tar.gz
