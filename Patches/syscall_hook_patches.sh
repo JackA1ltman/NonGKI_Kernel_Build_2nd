@@ -257,7 +257,13 @@ for i in "${patch_files[@]}"; do
                 sed -i '/static int selinux_setprocattr(const char \*name, void \*value, size_t size)/i\#ifdef CONFIG_KSU\nextern int ksu_hide_setprocattr(const char *name, void *value, size_t size);\n#endif\n' security/selinux/hooks.c
             fi
 
-            sed -i '/char \*str = value;/a\#ifdef CONFIG_KSU\n\tksu_hide_setprocattr(name, value, size);\n#endif\n' security/selinux/hooks.c
+            count=$(grep -rEho "char\s*\*?\s*str\s*=\s*value\s*;" "security/selinux/hooks.c" | wc -l)
+
+            if [ "$count" -eq 1 ]; then
+                sed -i '/char \*str = value;/a\#ifdef CONFIG_KSU\n\tksu_hide_setprocattr(name, value, size);\n#endif\n' security/selinux/hooks.c
+            else
+                sed -i '0,/char \*str = value;/b; /char \*str = value;/a\#ifdef CONFIG_KSU\n    ksu_hide_setprocattr(name, value, size);\n#endif\n' security/selinux/hooks.c
+            fi
 
             if grep -q "ksu_hide_setprocattr" "security/selinux/hooks.c"; then
                 echo "[+] security/selinux/hooks.c Part III Patched!"
