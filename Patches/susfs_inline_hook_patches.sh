@@ -272,7 +272,7 @@ for i in "${patch_files[@]}"; do
         fi
 
         echo "======================================"
-        ;;s
+        ;;
 
     # kernel/ changes
     ## reboot.c
