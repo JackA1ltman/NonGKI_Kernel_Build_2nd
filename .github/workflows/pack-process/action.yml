@@ -52,13 +52,9 @@ runs:
           fi
 
           if [[ -f "$IMAGE_DIR/dtb.img" ]]; then
-            cp -fp $IMAGE_DIR/dtb.img tmp
-            echo "Found dtb.img !"
-          else
-            echo "Doesn't found dtb.img! Your device maybe needn't the file."
-          fi
-
-          if [ -f "$IMAGE_DIR/dtb" ]; then
+            cp -fp $IMAGE_DIR/dtb.img tmp/dtb
+            echo "Found dtb.img, converted dtb !"
+          elif [ -f "$IMAGE_DIR/dtb" ]; then
             echo "Found DTB!"
             cp -fp $IMAGE_DIR/dtb tmp
           elif [ "${{ env.GENERATE_DTB }}" == "true" ]; then
@@ -71,11 +67,11 @@ runs:
                 false
             fi
 
-            cat $IMAGE_DIR/$DTB_PATH/${{ env.GENERATE_CHIP }}/*.dtb > $IMAGE_DIR/DTB
-            cp -fp $IMAGE_DIR/DTB tmp
+            cat $IMAGE_DIR/$DTB_PATH/${{ env.GENERATE_CHIP }}/*.dtb > $IMAGE_DIR/dtb
+            cp -fp $IMAGE_DIR/dtb tmp
             echo "Generated ${{ env.GENERATE_CHIP }} DTB."
           else
-            echo "Doesn't found DTB! Your device maybe needn't the file."
+            echo "Doesn't found dtb or dtb.img! Your device maybe needn't the file."
           fi
 
           if [ "${{ env.PACK_KMODULES }}" == "true" ]; then
@@ -108,6 +104,8 @@ runs:
           TIME=$(date +"%Y%m%d%H%M%S")
           FORMAT_MKBOOTING=$(echo `mkboottools/unpack_bootimg.py --boot_img=boot_source_${{ env.DEVICE_NAME }}.img --format mkbootimg`)
 
+          mkdir -p tmp
+
           mkboottools/unpack_bootimg.py --boot_img boot_source_${{ env.DEVICE_NAME }}.img
 
           if [[ -f "$IMAGE_DIR/Image.gz-dtb" ]]; then
@@ -124,14 +122,17 @@ runs:
             echo "Found Image !"
           fi
 
-          if [[ -f "$IMAGE_DIR/dtb.img" ]]; then
-            cp -fp $IMAGE_DIR/dtb.img tmp
-            echo "Found dtb.img !"
+          if [[ -f "$IMAGE_DIR/dtbo.img" ]]; then
+            cp -fp $IMAGE_DIR/dtbo.img tmp
+            echo "Found dtbo.img !"
           else
-            echo "Doesn't found dtb.img! Your device maybe needn't the file."
+            echo "Doesn't found dtbo.img! Your device maybe needn't the file."
           fi
 
-          if [ -f "$IMAGE_DIR/dtb" ]; then
+          if [[ -f "$IMAGE_DIR/dtb.img" ]]; then
+            cp -fp $IMAGE_DIR/dtb.img out/dtb
+            echo "Found dtb.img, converted dtb !"
+          elif [ -f "$IMAGE_DIR/dtb" ]; then
             echo "Found DTB!"
             cp -fp $IMAGE_DIR/dtb out/dtb
           elif [ "${{ env.GENERATE_DTB }}" == "true" ]; then
@@ -144,15 +145,26 @@ runs:
                 false
             fi
 
-            cat $IMAGE_DIR/$DTB_PATH/${{ env.GENERATE_CHIP }}/*.dtb > $IMAGE_DIR/DTB
-            cp -fp $IMAGE_DIR/DTB tmp
+            cat $IMAGE_DIR/$DTB_PATH/${{ env.GENERATE_CHIP }}/*.dtb > $IMAGE_DIR/dtb
+            cp -fp $IMAGE_DIR/dtb out/dtb
             echo "Generated ${{ env.GENERATE_CHIP }} DTB."
           else
             echo "Doesn't found DTB! Your device maybe needn't the file."
           fi
 
-          eval "mkboottools/mkbootimg.py $FORMAT_MKBOOTING -o ${{ env.DEVICE_CODENAME }}-${{ env.ROM_TEXT }}-$TIME-image.img"
+          if [[ -f "tmp/dtbo.img" ]]; then
+            eval "mkboottools/mkbootimg.py $FORMAT_MKBOOTING -o boot.img"
+            cp -fp boot.img tmp/
+            cd tmp
+            7za a -mx9 tmp.zip *
+            cd ..
+            cp -fp tmp/tmp.zip ${{ env.DEVICE_CODENAME }}-${{ env.ROM_TEXT }}-$TIME-image.zip
+            rm -rf tmp
 
-          echo "PACK_NAME=${{ env.DEVICE_CODENAME }}-${{ env.ROM_TEXT }}-$TIME-image.img" >> $GITHUB_ENV
+          else
+            eval "mkboottools/mkbootimg.py $FORMAT_MKBOOTING -o ${{ env.DEVICE_CODENAME }}-${{ env.ROM_TEXT }}-$TIME-image.img"
+            echo "PACK_NAME=${{ env.DEVICE_CODENAME }}-${{ env.ROM_TEXT }}-$TIME-image.img" >> $GITHUB_ENV
+
+          fi
 
           rm -f $GITHUB_WORKSPACE/boot_source_${{ env.DEVICE_NAME }}.img
