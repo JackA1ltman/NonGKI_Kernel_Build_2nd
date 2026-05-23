@@ -160,6 +160,7 @@ runs:
             cd ..
             cp -fp tmp/tmp.zip ${{ env.DEVICE_CODENAME }}-${{ env.ROM_TEXT }}-$TIME-image.zip
             rm -rf tmp
+            echo "PACK_NAME=${{ env.DEVICE_CODENAME }}-${{ env.ROM_TEXT }}-$TIME-image.zip" >> $GITHUB_ENV
 
           else
             eval "mkboottools/mkbootimg.py $FORMAT_MKBOOTING -o ${{ env.DEVICE_CODENAME }}-${{ env.ROM_TEXT }}-$TIME-image.img"
