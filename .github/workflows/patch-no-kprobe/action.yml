@@ -16,15 +16,6 @@ runs:
 
             echo "[+] executed SuSFS inline hook successfully."
 
-            if [[ "${{ env.BASEBAND_GUARD_ENABLE }}" != "true" ]]; then
-                cp /tmp/Patches/backport_selinux_patches.sh ./
-
-                bash backport_selinux_patches.sh
-                echo "[+] Patched SELinux."
-            else
-                echo "[-] Skipped SELinux Patch."
-            fi
-
           # Check syscall hook
           elif [[ ${{ env.HOOK_METHOD }} == "syscall" ]]; then
             # Core
@@ -32,15 +23,6 @@ runs:
             bash syscall_hook_patches.sh ./
 
             echo "[+] executed syscall hook successfully."
-
-            if [[ "${{ env.BASEBAND_GUARD_ENABLE }}" != "true" ]]; then
-                cp /tmp/Patches/backport_selinux_patches.sh ./
-
-                bash backport_selinux_patches.sh
-                echo "[+] Patched SELinux."
-            else
-                echo "[-] Skipped SELinux Patch."
-            fi
 
           else
             echo "[-] please input a vaild option!"

@@ -20,7 +20,10 @@ runs:
             echo "= Found DEFINE_LSM ="
             echo "===================="
 
-            if grep -q "CONFIG_LSM" "./arch/${{ env.KERNEL_ARCH }}/configs/${{ env.DEFCONFIG_NAME }}"; then
+            if ! grep -rq "CONFIG_LSM=" "./arch/${{ env.KERNEL_ARCH }}/configs/${{ env.DEFCONFIG_NAME }}" && grep -q "bpf" "./security/Kconfig"; then
+                echo "[-] Have not found default CONFIG_LSM values, and detected bpf."
+                echo 'CONFIG_LSM="lockdown,yama,loadpin,safesetid,integrity,selinux,smack,tomoyo,apparmor,bpf,baseband_guard"' >> ./arch/${{ env.KERNEL_ARCH }}/configs/${{ env.DEFCONFIG_NAME }}
+            elif ! grep -rq "CONFIG_LSM=" "./arch/${{ env.KERNEL_ARCH }}/configs/${{ env.DEFCONFIG_NAME }}"; then
                 echo "[-] Have not found default CONFIG_LSM values."
                 echo 'CONFIG_LSM="lockdown,yama,loadpin,safesetid,integrity,selinux,smack,tomoyo,apparmor,baseband_guard"' >> ./arch/${{ env.KERNEL_ARCH }}/configs/${{ env.DEFCONFIG_NAME }}
             else
