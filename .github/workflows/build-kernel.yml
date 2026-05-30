@@ -82,6 +82,13 @@ jobs:
     uses: ./.github/workflows/build-redmi-note11pro-5g-aosp-a16.yml
     secrets: inherit
 
+  build-redmi-k30ultra-aosp-a14:
+    name: "Redmi K30 Ultra (Based AOSP A14)"
+    strategy:
+      fail-fast: true
+    uses: ./.github/workflows/build-redmi-k30ultra-aosp-a14.yml
+    secrets: inherit
+
   # Samsung
   build-samsung-note10plus-oneui-a15:
     name: "Samsung Note 10 Plus (OneUI A15)"
