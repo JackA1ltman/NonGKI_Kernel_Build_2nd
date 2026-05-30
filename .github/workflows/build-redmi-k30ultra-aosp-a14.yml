@@ -1,4 +1,4 @@
-name: Build REDMI K30 Ultra (AOSP A14)
+name: Build Redmi K30 Ultra (Based AOSP A14)
 
 on:
   workflow_call:
@@ -89,7 +89,7 @@ env:
 
 jobs:
   build-kernel:
-    name: KernelSU Next For REDMI K30 Ultra
+    name: Redmi K30 Ultra (Based AOSP A14)
     runs-on: ubuntu-latest # u can changed to ubuntu 22.04, and need container set ubuntu-latest
     # container: archlinux/archlinux:latest # if u need use arch linux -> archlinux/archlinux:latest or ubuntu 20.04 -> ubuntu:focal
     env:
