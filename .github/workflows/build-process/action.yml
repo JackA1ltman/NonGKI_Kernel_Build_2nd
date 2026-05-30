@@ -319,7 +319,7 @@ runs:
               if [[ "${{ env.KPM_INLINE }}" == "true" ]]; then
                 ./patch
               else
-                ./kptools-linux -p -k kptools-linux -i Image -o oImage
+                ./kptools-linux -p -k kpimg-linux -i Image -o oImage
               fi
 
               mv oImage Image
