@@ -12,7 +12,7 @@ index 3bbe62a..c9d9eef 100644
  obj-y +=	buffer.o block_dev.o direct-io.o mpage.o
  else
 diff --git a/fs/namei.c b/fs/namei.c
-index 80b743c..5b20f92 100644
+index 80b743c..2abb5d6 100644
 --- a/fs/namei.c
 +++ b/fs/namei.c
 @@ -39,6 +39,9 @@
@@ -231,22 +231,12 @@ index 80b743c..5b20f92 100644
  		path.dentry = lookup_slow(&nd->last, nd->path.dentry,
  					  nd->flags);
  		if (IS_ERR(path.dentry))
-@@ -2182,6 +2283,9 @@ static inline u64 hash_name(const void *salt, const char *name)
- static int link_path_walk(const char *name, struct nameidata *nd)
- {
- 	int err;
-+#ifdef CONFIG_KSU_SUSFS_SUS_PATH
-+	struct dentry *dentry;
-+#endif
- 
- 	while (*name=='/')
- 		name++;
-@@ -2197,6 +2301,15 @@ static int link_path_walk(const char *name, struct nameidata *nd)
+@@ -2197,6 +2298,15 @@ static int link_path_walk(const char *name, struct nameidata *nd)
  		if (err)
  			return err;
  
 +#ifdef CONFIG_KSU_SUSFS_SUS_PATH
-+		dentry = nd->path.dentry;
++		struct dentry *dentry = nd->path.dentry;
 +		if (dentry->d_inode && susfs_is_inode_sus_path(dentry->d_inode)) {
 +			// - No need to dput() here
 +			// - return -ENOENT here since it is walking the sub path of sus path
@@ -257,7 +247,7 @@ index 80b743c..5b20f92 100644
  		hash_len = hash_name(nd->path.dentry, name);
  
  		type = LAST_NORM;
-@@ -2387,6 +2500,9 @@ static inline int lookup_last(struct nameidata *nd)
+@@ -2387,6 +2497,9 @@ static inline int lookup_last(struct nameidata *nd)
  {
  	if (nd->last_type == LAST_NORM && nd->last.name[nd->last.len])
  		nd->flags |= LOOKUP_FOLLOW | LOOKUP_DIRECTORY;
@@ -267,7 +257,7 @@ index 80b743c..5b20f92 100644
  
  	nd->flags &= ~LOOKUP_PARENT;
  	return walk_component(nd, 0);
-@@ -3257,15 +3373,39 @@ static int lookup_open(struct nameidata *nd, struct path *path,
+@@ -3257,15 +3370,39 @@ static int lookup_open(struct nameidata *nd, struct path *path,
  	int error, create_error = 0;
  	umode_t mode = op->mode;
  	DECLARE_WAIT_QUEUE_HEAD_ONSTACK(wq);
@@ -307,7 +297,7 @@ index 80b743c..5b20f92 100644
  			if (IS_ERR(dentry))
  				return PTR_ERR(dentry);
  		}
-@@ -3391,6 +3531,10 @@ static int do_last(struct nameidata *nd,
+@@ -3391,6 +3528,10 @@ static int do_last(struct nameidata *nd,
  	struct path path;
  	int error;
  
@@ -318,7 +308,7 @@ index 80b743c..5b20f92 100644
  	nd->flags &= ~LOOKUP_PARENT;
  	nd->flags |= op->intent;
  
-@@ -4876,6 +5020,10 @@ out:
+@@ -4876,6 +5017,10 @@ out:
  	return len;
  }
  
@@ -329,7 +319,7 @@ index 80b743c..5b20f92 100644
  /*
   * A helper for ->readlink().  This should be used *ONLY* for symlinks that
   * have ->get_link() not calling nd_jump_link().  Using (or not using) it
-@@ -4896,6 +5044,15 @@ static int generic_readlink(struct dentry *dentry, char __user *buffer,
+@@ -4896,6 +5041,15 @@ static int generic_readlink(struct dentry *dentry, char __user *buffer,
  		if (IS_ERR(link))
  			return PTR_ERR(link);
  	}
@@ -345,7 +335,7 @@ index 80b743c..5b20f92 100644
  	res = readlink_copy(buffer, buflen, link);
  	do_delayed_call(&done);
  	return res;
-@@ -4914,10 +5071,24 @@ static int generic_readlink(struct dentry *dentry, char __user *buffer,
+@@ -4914,10 +5068,24 @@ static int generic_readlink(struct dentry *dentry, char __user *buffer,
  int vfs_readlink(struct dentry *dentry, char __user *buffer, int buflen)
  {
  	struct inode *inode = d_inode(dentry);

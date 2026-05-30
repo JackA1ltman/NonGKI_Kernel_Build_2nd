@@ -12,7 +12,7 @@ index 0fc34ca..8f4b814 100644
  obj-y +=	buffer.o block_dev.o direct-io.o mpage.o
  else
 diff --git a/fs/namei.c b/fs/namei.c
-index 94f388e..90be672 100644
+index 94f388e..ad0bc86 100644
 --- a/fs/namei.c
 +++ b/fs/namei.c
 @@ -40,6 +40,9 @@
@@ -231,22 +231,12 @@ index 94f388e..90be672 100644
  		path.dentry = lookup_slow(&nd->last, nd->path.dentry,
  					  nd->flags);
  		if (IS_ERR(path.dentry))
-@@ -2163,6 +2265,9 @@ static inline u64 hash_name(const void *salt, const char *name)
- static int link_path_walk(const char *name, struct nameidata *nd)
- {
- 	int err;
-+#ifdef CONFIG_KSU_SUSFS_SUS_PATH
-+	struct dentry *dentry;
-+#endif
- 
- 	if (IS_ERR(name))
- 		return PTR_ERR(name);
-@@ -2180,6 +2285,15 @@ static int link_path_walk(const char *name, struct nameidata *nd)
+@@ -2180,6 +2282,15 @@ static int link_path_walk(const char *name, struct nameidata *nd)
  		if (err)
  			return err;
  
 +#ifdef CONFIG_KSU_SUSFS_SUS_PATH
-+		dentry = nd->path.dentry;
++		struct dentry *dentry = nd->path.dentry;
 +		if (dentry->d_inode && susfs_is_inode_sus_path(dentry->d_inode)) {
 +			// - No need to dput() here
 +			// - return -ENOENT here since it is walking the sub path of sus path
@@ -257,7 +247,7 @@ index 94f388e..90be672 100644
  		hash_len = hash_name(nd->path.dentry, name);
  
  		type = LAST_NORM;
-@@ -2363,6 +2477,9 @@ static inline int lookup_last(struct nameidata *nd)
+@@ -2363,6 +2474,9 @@ static inline int lookup_last(struct nameidata *nd)
  {
  	if (nd->last_type == LAST_NORM && nd->last.name[nd->last.len])
  		nd->flags |= LOOKUP_FOLLOW | LOOKUP_DIRECTORY;
@@ -267,7 +257,7 @@ index 94f388e..90be672 100644
  
  	nd->flags &= ~LOOKUP_PARENT;
  	return walk_component(nd, 0);
-@@ -3274,15 +3391,39 @@ static int lookup_open(struct nameidata *nd, struct path *path,
+@@ -3274,15 +3388,39 @@ static int lookup_open(struct nameidata *nd, struct path *path,
  	int error, create_error = 0;
  	umode_t mode = op->mode;
  	DECLARE_WAIT_QUEUE_HEAD_ONSTACK(wq);
@@ -307,7 +297,7 @@ index 94f388e..90be672 100644
  			if (IS_ERR(dentry))
  				return PTR_ERR(dentry);
  		}
-@@ -3407,6 +3548,10 @@ static int do_last(struct nameidata *nd,
+@@ -3407,6 +3545,10 @@ static int do_last(struct nameidata *nd,
  	struct path path;
  	int error;
  
@@ -318,7 +308,7 @@ index 94f388e..90be672 100644
  	nd->flags &= ~LOOKUP_PARENT;
  	nd->flags |= op->intent;
  
-@@ -3696,6 +3841,10 @@ static struct file *path_openat(struct nameidata *nd,
+@@ -3696,6 +3838,10 @@ static struct file *path_openat(struct nameidata *nd,
  	return ERR_PTR(error);
  }
  
@@ -329,7 +319,7 @@ index 94f388e..90be672 100644
  struct file *do_filp_open(int dfd, struct filename *pathname,
  		const struct open_flags *op)
  {
-@@ -4908,7 +5057,18 @@ int vfs_readlink(struct dentry *dentry, char __user *buffer, int buflen)
+@@ -4908,7 +5054,18 @@ int vfs_readlink(struct dentry *dentry, char __user *buffer, int buflen)
  
  	if (unlikely(!(inode->i_opflags & IOP_DEFAULT_READLINK))) {
  		if (unlikely(inode->i_op->readlink))
@@ -348,7 +338,7 @@ index 94f388e..90be672 100644
  
  		if (!d_is_symlink(dentry))
  			return -EINVAL;
-@@ -4924,6 +5084,15 @@ int vfs_readlink(struct dentry *dentry, char __user *buffer, int buflen)
+@@ -4924,6 +5081,15 @@ int vfs_readlink(struct dentry *dentry, char __user *buffer, int buflen)
  		if (IS_ERR(link))
  			return PTR_ERR(link);
  	}
