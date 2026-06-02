@@ -3375,7 +3375,7 @@ index 0000000..45c0f53
 +#endif
 diff --git a/include/linux/susfs_def.h b/include/linux/susfs_def.h
 new file mode 100644
-index 0000000..698b1ab
+index 0000000..e91c5db
 --- /dev/null
 +++ b/include/linux/susfs_def.h
 @@ -0,0 +1,171 @@
@@ -3428,8 +3428,8 @@ index 0000000..698b1ab
 +#define TRY_UMOUNT_DETACH 1 /* used by susfs_try_umount() */
 +
 +#define VFSMOUNT_MNT_FLAGS_KSU_UNSHARED_MNT 0x80000000 /* used for mounts that are unshared by ksu process */
-+#define DEFAULT_KSU_MNT_ID 500000 /* used for mounts created or single cloned by ksu process */
-+#define DEFAULT_KSU_MNT_GROUP_ID 5000 /* used by mount->mnt_group_id */
++#define DEFAULT_KSU_MNT_ID 2000000000 /* used for mounts created or single cloned by ksu process */
++#define DEFAULT_KSU_MNT_GROUP_ID 200000 /* used by mount->mnt_group_id */
 +
 +#ifndef FUSE_SUPER_MAGIC
 +#define FUSE_SUPER_MAGIC 0x65735546
