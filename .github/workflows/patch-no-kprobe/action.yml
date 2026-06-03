@@ -29,3 +29,62 @@ runs:
             false
 
           fi
+
+          # Check for static state in partial functions
+          KERNEL_VERSION=$(head -n 3 Makefile | grep -E 'VERSION|PATCHLEVEL' | awk '{print $3}' | paste -sd '.')
+          FIRST_VERSION=$(echo "$KERNEL_VERSION" | awk -F '.' '{print $1}')
+          SECOND_VERSION=$(echo "$KERNEL_VERSION" | awk -F '.' '{print $2}')
+
+          if ! grep -rq "check_symbol_export" "drivers/kernelsu/tools/static_export_check.mk" >/dev/null 2>&1; then
+            echo "[-] Your KernelSU needn't this check progress, Skipped."
+
+          elif [[ "${{ env.KPM_ENABLE }}" == "true" ]]; then
+            echo "[+] Detected KPM, Skipped."
+
+          elif grep -q "CONFIG_KALLSYMS=y" "./arch/arm64/configs/${{ env.DEFCONFIG_NAME }}" && grep -q "CONFIG_KALLSYMS_ALL=y" "./arch/arm64/configs/${{ env.DEFCONFIG_NAME }}" >/dev/null 2>&1; then
+            echo "[+] Detected KALLSYMS enabled, Skipped."
+
+          else
+            sed -i 's/^static ssize_t (\*write_op\[\])(struct file \*, char \*, size_t) = {/ssize_t (*write_op[])(struct file *, char *, size_t) = {/' security/selinux/selinuxfs.c
+            sed -i 's/^static const struct file_operations sel_handle_status_ops = {/const struct file_operations sel_handle_status_ops = {/' security/selinux/selinuxfs.c
+
+            echo "[+] Removed write_op and sel_handle_status_ops static state."
+
+            if [ "$FIRST_VERSION" -lt 5 ] && [ "$SECOND_VERSION" -lt 15 ]; then
+                if grep -q "sel_mutex" "security/selinux/selinuxfs.c" >/dev/null 2>&1; then
+                    sed -i 's/^static DEFINE_MUTEX(sel_mutex)/DEFINE_MUTEX(sel_mutex)/' security/selinux/selinuxfs.c
+                    echo "[+] Removed sel_mutex static state."
+
+                else
+                    echo "[-] Your Kernel haven't sel_mutex, Skipped."
+                fi
+
+                if grep -q "selinux_status_page" "security/selinux/ss/status.c" >/dev/null 2>&1; then
+                    sed -i 's/^static struct page \*selinux_status_page/struct page *selinux_status_page/' security/selinux/ss/status.c
+                    echo "[+] Removed selinux_status_page static state."
+
+                else
+                    echo "[-] Your Kernel haven't selinux_status_page, Skipped."
+                fi
+
+                if grep -q "selinux_status_lock" "security/selinux/ss/status.c" >/dev/null 2>&1; then
+                    sed -i 's/^static DEFINE_MUTEX(selinux_status_lock)/DEFINE_MUTEX(selinux_status_lock)/' security/selinux/ss/status.c
+                    echo "[+] Removed selinux_status_lock static state."
+
+                else
+                    echo "[-] Your Kernel haven't selinux_status_lock, Skipped."
+                fi
+            fi
+
+            if [ "$FIRST_VERSION" -lt 4 ] && [ "$SECOND_VERSION" -lt 19 ]; then
+                if grep -q "selinux_status_page" "security/selinux/hooks.c" >/dev/null 2>&1; then
+                    sed -i 's/^static struct security_operations selinux_ops/struct security_operations selinux_ops/' security/selinux/hooks.c
+                    echo "[+] Removed selinux_ops static state."
+
+                else
+                    echo "[-] Your Kernel haven't selinux_ops, Skipped."
+                fi
+            fi
+
+            echo "[+] Checked successfully."
+          fi
