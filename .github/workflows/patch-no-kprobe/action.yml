@@ -38,7 +38,7 @@ runs:
           if ! grep -rq "check_symbol_export" "drivers/kernelsu/tools/static_export_check.mk" >/dev/null 2>&1; then
             echo "[-] Your KernelSU needn't this check progress, Skipped."
 
-          if [[ "${{ env.KPM_ENABLE }}" == "true" ]]; then
+          elif [[ "${{ env.KPM_ENABLE }}" == "true" ]]; then
             echo "[+] Detected KPM, Skipped."
 
           elif grep -q "CONFIG_KALLSYMS=y" "./arch/arm64/configs/${{ env.DEFCONFIG_NAME }}" && grep -q "CONFIG_KALLSYMS_ALL=y" "./arch/arm64/configs/${{ env.DEFCONFIG_NAME }}" >/dev/null 2>&1; then
