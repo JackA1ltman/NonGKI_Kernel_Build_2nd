@@ -128,6 +128,10 @@ jobs:
 
           # sed -i 's|\$(obj)/config_data.gz: [^ ]* FORCE|\$(obj)/config_data.gz: $(KCONFIG_CONFIG) FORCE|' kernel/Makefile
 
+          # Removed Inline uname spoof from cyberc3dr
+          curl "https://github.com/cyberc3dr/android_kernel_oneplus_sm8250/commit/664c8e87b4a647da24160b3b4514807f9517655e.patch" -o removed_spoof.patch
+          patch -p1 < removed_spoof.patch || true
+
       - name: 🧰 Patch Kernel of Re:Kernel
         uses: ./.github/workflows/patch-rekernel
 
