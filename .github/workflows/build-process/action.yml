@@ -15,11 +15,11 @@ runs:
 
           # Hook dtbo generate code to kernel
           cd $GITHUB_WORKSPACE/device_kernel
-          sed -i '/targets := Image Image.bz2 Image.gz Image.lz4 Image.lzma Image.lzo/s/$/ dtbo.img/' ./arch/arm64/boot/Makefile
-          sed -i '/# Add RTIC DTB to the DTB list if RTIC MPGen is enabled/i \DTBO_OBJS := $(shell find $(obj)/dts/ -name \\*.dtbo)\n' arch/arm64/boot/Makefile
-          sed -i '/$(obj)\/Image\.gz-dtb: $(obj)\/Image\.gz $(DTB_OBJS) FORCE/a \#DTBO\n$(obj)\/dtbo.img: $(DTBO_OBJS) FORCE\n\t$(call if_changed,mkdtimg)' ./arch/arm64/boot/Makefile
-          sed -i '/KBUILD_DTBS\t:= dtbs/a \#DTBO\nKBUILD_DTBO_IMG := dtbo.img' ./arch/arm64/Makefile
-          sed -i '/PHONY += vdso_install/i \ifeq ($(CONFIG_BUILD_ARM64_DT_OVERLAY),y)\n$(KBUILD_DTBO_IMG): dtbs\n\t$(Q)$(MAKE) $(build)=$(boot) $(boot)/$@\n\nall: $(KBUILD_DTBO_IMG)\nendif' arch/arm64/Makefile
+          sed -i '/targets := Image Image.bz2 Image.gz Image.lz4 Image.lzma Image.lzo/s/$/ dtbo.img/' ./arch/"${{ env.KERNEL_ARCH }}"/boot/Makefile
+          sed -i '/# Add RTIC DTB to the DTB list if RTIC MPGen is enabled/i \DTBO_OBJS := $(shell find $(obj)/dts/ -name \\*.dtbo)\n' arch/"${{ env.KERNEL_ARCH }}"/boot/Makefile
+          sed -i '/$(obj)\/Image\.gz-dtb: $(obj)\/Image\.gz $(DTB_OBJS) FORCE/a \#DTBO\n$(obj)\/dtbo.img: $(DTBO_OBJS) FORCE\n\t$(call if_changed,mkdtimg)' ./arch/"${{ env.KERNEL_ARCH }}"/boot/Makefile
+          sed -i '/KBUILD_DTBS\t:= dtbs/a \#DTBO\nKBUILD_DTBO_IMG := dtbo.img' ./arch/"${{ env.KERNEL_ARCH }}"/Makefile
+          sed -i '/PHONY += vdso_install/i \ifeq ($(CONFIG_BUILD_ARM64_DT_OVERLAY),y)\n$(KBUILD_DTBO_IMG): dtbs\n\t$(Q)$(MAKE) $(build)=$(boot) $(boot)/$@\n\nall: $(KBUILD_DTBO_IMG)\nendif' arch/"${{ env.KERNEL_ARCH }}"/Makefile
           sed -i '/dtc-tmp = $(subst $(comma),_,$(dot-target)\.dts\.tmp)/a \#DTBO\n# mkdtimg\n#----------------------------------------------------------------------------\nquiet_cmd_mkdtimg = DTBOIMG $@\ncmd_mkdtimg = python3 $(srctree)\/scripts\/dtc\/mkdtboimg.py create $@ --page_size=4096 $(filter-out FORCE,$^)' ./scripts/Makefile.lib
 
       - name: Setup ccache
@@ -66,6 +66,24 @@ runs:
             for FILES in "${MERGE_CONFIG_FILES[@]}"; do
                 ./scripts/kconfig/merge_config.sh -O out/ -m out/.config arch/"${{ env.KERNEL_ARCH }}"/configs/$FILES
             done
+            if [[ "$BUILD_CLANG" == "true" ]]; then
+                echo "==============================="
+                echo "=Execuate olddefconfig (Clang)="
+                echo "==============================="
+                make CC="ccache clang" O=out ARCH="${{ env.KERNEL_ARCH }}" ${{ env.CUSTOM_CMDS }} ${{ env.EXTRA_CMDS }} olddefconfig
+            else
+                echo "======================="
+                echo "=Execuate olddefconfig="
+                echo "======================="
+                make O=out ARCH="${{ env.KERNEL_ARCH }}" olddefconfig
+            fi
+          fi
+
+          if [[ "${{ env.BUILD_OTHER_CONFIG }}"  == "true" ]]; then
+            echo "================="
+            echo "=  Droidspaces  ="
+            echo "================="
+            ./scripts/kconfig/merge_config.sh -O out/ -m out/.config arch/"${{ env.KERNEL_ARCH }}"/configs/droidspaces.config
             if [[ "$BUILD_CLANG" == "true" ]]; then
                 echo "==============================="
                 echo "=Execuate olddefconfig (Clang)="
@@ -202,10 +220,10 @@ runs:
           ${{ env.CURLX }} https://android.googlesource.com/platform/system/libufdt/+archive/master/utils.tar.gz mkdtboimg.tar.gz
           tar zxvf mkdtboimg.tar.gz
           cd ../
-          if [ -d "$GITHUB_WORKSPACE/device_kernel/out/arch/arm64/boot/dts/vendor" ]; then
-            python dtbo_tool/src/mkdtboimg.py create $GITHUB_WORKSPACE/device_kernel/out/arch/arm64/boot/dtbo.img $GITHUB_WORKSPACE/device_kernel/out/arch/arm64/boot/dts/vendor/${{ env.GENERATE_CHIP }}/*.dtbo
+          if [ -d "$GITHUB_WORKSPACE/device_kernel/out/arch/"${{ env.KERNEL_ARCH }}"/boot/dts/vendor" ]; then
+            python dtbo_tool/src/mkdtboimg.py create $GITHUB_WORKSPACE/device_kernel/out/arch/"${{ env.KERNEL_ARCH }}"/boot/dtbo.img $GITHUB_WORKSPACE/device_kernel/out/arch/"${{ env.KERNEL_ARCH }}"/boot/dts/vendor/${{ env.GENERATE_CHIP }}/*.dtbo
           else
-            python dtbo_tool/src/mkdtboimg.py create $GITHUB_WORKSPACE/device_kernel/out/arch/arm64/boot/dtbo.img $GITHUB_WORKSPACE/device_kernel/out/arch/arm64/boot/dts/${{ env.GENERATE_CHIP }}/*.dtbo
+            python dtbo_tool/src/mkdtboimg.py create $GITHUB_WORKSPACE/device_kernel/out/arch/"${{ env.KERNEL_ARCH }}"/boot/dtbo.img $GITHUB_WORKSPACE/device_kernel/out/arch/"${{ env.KERNEL_ARCH }}"/boot/dts/${{ env.GENERATE_CHIP }}/*.dtbo
           fi
 
       - name: Analyze compile error
@@ -225,7 +243,7 @@ runs:
         shell: bash
         run: |
           cd $GITHUB_WORKSPACE/device_kernel/
-          IMAGE_DIR="$GITHUB_WORKSPACE/device_kernel/out/arch/arm64/boot"
+          IMAGE_DIR="$GITHUB_WORKSPACE/device_kernel/out/arch/"${{ env.KERNEL_ARCH }}"/boot"
 
           if [[ -f "$IMAGE_DIR/Image.gz-dtb" ]]; then
               MODE="gz-dtb"
@@ -241,12 +259,6 @@ runs:
           case "$MODE" in
             gz-dtb)
               if [ -f "include/linux/set_memory.h" ]; then
-                  if [[ -d "arch/arm64/configs" ]]; then
-                    IMAGE_DIR="$GITHUB_WORKSPACE/device_kernel/out/arch/arm64/boot"
-                  else
-                    IMAGE_DIR="$GITHUB_WORKSPACE/device_kernel/out/arch/arm/boot"
-                  fi
-
                   if ls $IMAGE_DIR/dts/${{ env.GENERATE_CHIP }}/*.dtb 1> /dev/null 2>&1; then
                       DTB_PATH="dts"
                   elif ls $IMAGE_DIR/dts/vendor/${{ env.GENERATE_CHIP }}/*.dtb 1> /dev/null 2>&1; then

@@ -41,7 +41,7 @@ runs:
           elif [[ "${{ env.KPM_ENABLE }}" == "true" ]]; then
             echo "[+] Detected KPM, Skipped."
 
-          elif grep -q "CONFIG_KALLSYMS=y" "./arch/arm64/configs/${{ env.DEFCONFIG_NAME }}" && grep -q "CONFIG_KALLSYMS_ALL=y" "./arch/arm64/configs/${{ env.DEFCONFIG_NAME }}" >/dev/null 2>&1; then
+          elif grep -q "CONFIG_KALLSYMS=y" "./arch/"${{ env.KERNEL_ARCH }}"/configs/${{ env.DEFCONFIG_NAME }}" && grep -q "CONFIG_KALLSYMS_ALL=y" "./arch/"${{ env.KERNEL_ARCH }}"/configs/${{ env.DEFCONFIG_NAME }}" >/dev/null 2>&1; then
             echo "[+] Detected KALLSYMS enabled, Skipped."
 
           else
