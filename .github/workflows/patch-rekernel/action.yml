@@ -15,4 +15,4 @@ runs:
           cp /tmp/Patches/Rekernel/rekernel_extra.patch ./
           patch -p1 < rekernel_extra.patch || true
 
-          echo "Patched Re:Kernel for your kernel successfully."
+          echo "[+] Patched Re:Kernel for your kernel successfully."
