@@ -224,7 +224,7 @@ runs:
           GET_KPM_TOOLS(){
 
             echo "[+] Detected set_memory."
-            echo "CONFIG_KPM=y" >> ./arch"${{ env.KERNEL_ARCH }}"/configs/${{ env.DEFCONFIG_NAME }}
+            echo "CONFIG_KPM=y" >> ./arch/"${{ env.KERNEL_ARCH }}"/configs/${{ env.DEFCONFIG_NAME }}
             ${{ env.CURLX }} "${{ env.KPM_PATCH_SOURCE }}" patch
 
             if [ -f "patch" ]; then
