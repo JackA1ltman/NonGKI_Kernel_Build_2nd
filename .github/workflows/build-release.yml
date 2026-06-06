@@ -47,7 +47,7 @@ jobs:
 
         | Device Name | Codename | Kernel | System | Android | Method | KernelSU | SuSFS | Re:Kernel | KPM | BBG | Hook |
         |----------|----------|----------|----------|----------|----------|----------|----------|----------|----------|----------|----------|
-        | OnePlus 8 | instantnoodle | 4.19 | Oxygen OS 13.1 | 13 | AnyKernel3 | ReSukiSU | ✅ | ❌ | ❌ | ✅ | Inline |
+        | OnePlus 8 | instantnoodle | 4.19 | Oxygen OS 13.1 | 13 | AnyKernel3 | ReSukiSU | ❌ | ❌ | ❌ | ✅ | Inline |
         | Xiaomi Mix2s | polaris | 4.9 | Evolution X 10.X | 15 | AnyKernel3 | ReSukiSU | ✅ | ✅ | ✅ | ✅ | Inline |
         | Redmi K20 Pro | raphael | 4.14 | Based AOSP | 15 | AnyKernel3 | ReSukiSU | ✅ | ❌ | ❌ | ❌ | Inline |
         | Samsung Note 10 Plus | d2s | 4.14 | OneUI 7 | 15 | AnyKernel3 | ReSukiSU | ✅ | ❌ | ❌ | ❌ | Inline |
