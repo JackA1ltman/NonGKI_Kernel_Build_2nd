@@ -27,7 +27,7 @@ index 000000000000..1f47548df031
 --- /dev/null
 +++ b/drivers/net/rekernel/Makefile
 @@ -0,0 +1 @@
-+obj-$(CONFIG_REK) += rekernel.o
++obj-$(CONFIG_REKERNEL) += rekernel.o
 diff --git a/drivers/net/rekernel/rekernel.c b/drivers/net/rekernel/rekernel.c
 new file mode 100644
 index 000000000000..142bafb162cd
