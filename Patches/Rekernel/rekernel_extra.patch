@@ -289,14 +289,14 @@ index 000000000000..142bafb162cd
 +MODULE_DESCRIPTION("Make tombstone users get a better experience.");
 diff --git a/drivers/net/rekernel/rekernel.h b/drivers/net/rekernel/rekernel.h
 new file mode 100644
-index 000000000000..50c68190b9c3
+index 000000000000..e3b936d3a734
 --- /dev/null
 +++ b/drivers/net/rekernel/rekernel.h
 @@ -0,0 +1,13 @@
 +#ifndef __RE_KERNEL_H
 +#define __RE_KERNEL_H
 +
-+#include <uapi/linux/android/rekernel.h>
++#include <net/rekernel.h>
 +
 +#define NETLINK_REKERNEL_MAX	26
 +#define NETLINK_REKERNEL_MIN	22
@@ -306,11 +306,11 @@ index 000000000000..50c68190b9c3
 +extern struct net init_net;
 +
 +#endif /* __RE_KERNEL_H */
-diff --git a/include/uapi/linux/android/rekernel.h b/include/uapi/linux/android/rekernel.h
+diff --git a/include/net/rekernel.h b/include/net/rekernel.h
 new file mode 100644
 index 000000000000..942d4cb152ab
 --- /dev/null
-+++ b/include/uapi/linux/android/rekernel.h
++++ b/include/net/rekernel.h
 @@ -0,0 +1,34 @@
 +#ifndef __UAPI_LINUX_RE_KERNEL_H
 +#define __UAPI_LINUX_RE_KERNEL_H
