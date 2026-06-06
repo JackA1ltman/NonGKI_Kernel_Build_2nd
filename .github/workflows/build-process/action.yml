@@ -79,7 +79,7 @@ runs:
             fi
           fi
 
-          if [[ "${{ env.BUILD_OTHER_CONFIG }}"  == "true" ]]; then
+          if [[ "${{ env.DROIDSPACES_ENABLE }}"  == "true" ]]; then
             echo "================="
             echo "=  Droidspaces  ="
             echo "================="
