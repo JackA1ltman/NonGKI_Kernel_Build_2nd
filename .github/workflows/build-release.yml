@@ -48,20 +48,20 @@ jobs:
         | Device Name | Codename | Kernel | System | Android | Method | KernelSU | SuSFS | Re:Kernel | KPM | BBG | Hook |
         |----------|----------|----------|----------|----------|----------|----------|----------|----------|----------|----------|----------|
         | OnePlus 8 | instantnoodle | 4.19 | Oxygen OS 13.1 | 13 | AnyKernel3 | ReSukiSU | ❌ | ❌ | ❌ | ✅ | Inline |
-        | Xiaomi Mix2s | polaris | 4.9 | Evolution X 10.X | 15 | AnyKernel3 | ReSukiSU | ✅ | ✅ | ✅ | ✅ | Inline |
+        | Xiaomi Mix2s | polaris | 4.9 | Evolution X 10.X | 15 | AnyKernel3 | ReSukiSU | ✅ | ✅ | ❌ | ✅ | Inline |
         | Redmi K20 Pro | raphael | 4.14 | Based AOSP | 15 | AnyKernel3 | ReSukiSU | ✅ | ❌ | ❌ | ❌ | Inline |
         | Samsung Note 10 Plus | d2s | 4.14 | OneUI 7 | 15 | AnyKernel3 | ReSukiSU | ✅ | ❌ | ❌ | ❌ | Inline |
-        | Xiaomi 11 | venus | 5.4 | Evolution X 11.X | 16 | AnyKernel3 | ReSukiSU | ✅ | ✅ | ✅ | ❌ | Inline |
+        | Xiaomi 11 | venus | 5.4 | Evolution X 11.X | 16 | AnyKernel3 | ReSukiSU | ✅ | ✅ | ❌ | ❌ | Inline |
         | Smartisan U3 Pro | osborn | 4.4 | Lineage OS 18 | 11 | AnyKernel3 | xxksu | ❌ | ❌ | ❌ | ❌ | Syscall |
-        | Redmi 8 | olive | 4.19 | Based AOSP | 15 | AnyKernel3 | ReSukiSU | ✅ | ✅ | ✅ | ✅ | Inline |
+        | Redmi 8 | olive | 4.19 | Based AOSP | 15 | AnyKernel3 | ReSukiSU | ✅ | ✅ | ❌ | ✅ | Inline |
         | Redmi Note 7 | lavender | 4.19 | Based AOSP | 15 | AnyKernel3 | ReSukiSU | ✅ | ❌ | ❌ | ❌ | Inline |
         | Samsung Note 10 | d1 | 4.14 | OneUI 7 | 15 | AnyKernel3 | ReSukiSU | ✅ | ❌ | ❌ | ❌ | Inline |
         | Redmi Note 11 Pro 5G | veux | 5.4 | Based AOSP | 16 | AnyKernel3 | ReSukiSU | ✅ | ❌ | ❌ | ❌ | Inline |
-        | OnePlus 8 | instantnoodle | 4.19 | Color OS 15 | 15 | AnyKernel3 | ReSukiSU | ✅ | ❌ | ✅ | ✅ | Inline |
+        | OnePlus 8 | instantnoodle | 4.19 | Color OS 15 | 15 | AnyKernel3 | ReSukiSU | ✅ | ❌ | ❌ | ✅ | Inline |
         | Xiaomi Mix2s | polaris | 4.19 | Based AOSP | 16 | AnyKernel3 | ReSukiSU | ✅ | ❌ | ❌ | ❌ | Inline |
         | Nothing Phone (1) | spacewar | 5.4 | Lineage OS 23.0 | 16 | AnyKernel3 | ReSukiSU | ✅ | ❌ | ❌ | ❌ | Inline |
-        | Samsung A71 | a71 | 4.14 | Based AOSP | 16 | AnyKernel3 | ReSukiSU | ✅ | ✅ | ✅ | ✅ | Inline |
-        | Samsung A71 | a71 | 4.14 | OneUI 8 | 16 | AnyKernel3 | ReSukiSU | ✅ | ✅ | ✅ | ✅ | Inline |
+        | Samsung A71 | a71 | 4.14 | Based AOSP | 16 | AnyKernel3 | ReSukiSU | ✅ | ✅ | ❌ | ✅ | Inline |
+        | Samsung A71 | a71 | 4.14 | OneUI 8 | 16 | AnyKernel3 | ReSukiSU | ✅ | ✅ | ❌ | ✅ | Inline |
         | Xiaomi Mi Pad 4 | 4.19 | clover | Lineage OS 22 | 15 | AnyKernel3 | ReSukiSU | ✅ | ❌ | ❌ | ❌ | Inline |
         | Redmi K30 Ultra | 4.14 | cezanne | Based AOSP | 14 | AnyKernel3 | Next | ✅ | ✅ | ✅ | ✅ | Inline |
 
