@@ -10,6 +10,10 @@ runs:
           cd $GITHUB_WORKSPACE/device_kernel/
           cp /tmp/Patches/Droidspaces/droidspaces.config ./arch/"${{ env.KERNEL_ARCH }}"/configs/
 
+          if [[ "${{ env.SUSFS_ENABLE }}" == "true" ]]; then
+            echo "[-] Detected that SuSFS has been enabled, which may cause Droidspaces to work abnormally."
+          fi
+
           if ! grep -q "kernfs_create_link" "kernel/cgroup.c" || ! grep -q "kernfs_create_link" "kernel/cgroup/cgroup.c"; then
             if [[ -f "net/netfilter/xt_qtaguid.c" ]]; then
                 spatch --sp-file fix_kernel_panic_in_xt_qtaguid.cocci --in-place net/netfilter/xt_qtaguid.c
