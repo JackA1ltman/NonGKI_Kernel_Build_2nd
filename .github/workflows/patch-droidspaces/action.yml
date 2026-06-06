@@ -35,7 +35,7 @@ runs:
             fi
             echo "[+] Patched Droidspaces for your kernel successfully."
 
-         else
+          else
             echo "[-] Detected kernel patched, Skipped."
 
-         fi
+          fi
