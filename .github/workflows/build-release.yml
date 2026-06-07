@@ -60,7 +60,8 @@ jobs:
         | OnePlus 8 | instantnoodle | 4.19 | Color OS 15 | 15 | AnyKernel3 | ReSukiSU | ✅ | ❌ | ❌ | ✅ | Inline |
         | Xiaomi Mix2s | polaris | 4.19 | Based AOSP | 16 | AnyKernel3 | ReSukiSU | ✅ | ❌ | ❌ | ❌ | Inline |
         | Nothing Phone (1) | spacewar | 5.4 | Lineage OS 23.0 | 16 | AnyKernel3 | ReSukiSU | ✅ | ❌ | ❌ | ❌ | Inline |
-        | Samsung A71 | a71 | 4.14 | Based AOSP & OneUI | 16 | AnyKernel3 | ReSukiSU | ✅ | ✅ | ✅ | ✅ | Inline |
+        | Samsung A71 | a71 | 4.14 | Based AOSP & OneUI | 16 | AnyKernel3 | ReSukiSU | ✅ | ✅ | ❌ | ✅ | Inline |
+        | Samsung A71 | a71 | 4.14 | Based AOSP & OneUI | 16 | AnyKernel3 | Next | ✅ | ✅ | ❌ | ✅ | Inline |
         | Xiaomi Mi Pad 4 | 4.19 | clover | Lineage OS 22 | 15 | AnyKernel3 | ReSukiSU | ✅ | ❌ | ❌ | ❌ | Inline |
         | Redmi K30 Ultra | 4.14 | cezanne | Based AOSP | 14 | AnyKernel3 | Next | ✅ | ✅ | ✅ | ✅ | Inline |
 
