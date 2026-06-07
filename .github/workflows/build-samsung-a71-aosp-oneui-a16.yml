@@ -9,7 +9,7 @@ jobs:
     name: ${{ matrix.ksu.name }} for Galaxy A71
     runs-on: ubuntu-latest
     strategy:
-      fail-fast: false # Đặt false để nếu 1 bản build lỗi, bản kia vẫn tiếp tục chạy
+      fail-fast: false
       matrix:
         ksu:
           - name: "ReSukiSU"
@@ -52,7 +52,6 @@ jobs:
       KERNELSU_BRANCH : ""
 
       KERNELSU_AUTO_GET : "true"
-      # Gọi giá trị fork từ matrix
       KERNELSU_AUTO_FORK : "${{ matrix.ksu.fork }}"
 
       SUSFS_ENABLE : true
@@ -105,7 +104,7 @@ jobs:
       BUILD_OTHER_CONFIG: "true"
       MERGE_CONFIG_FILES: "a71.config"
 
-      FREE_MORE_SPACE: "false"
+      FREE_MORE_SPACE: "true"
 
     steps:
       - name: ⏰ Checkout repository
@@ -127,10 +126,7 @@ jobs:
         run: |
           cd $GITHUB_WORKSPACE/device_kernel
           sed -i 's/CONFIG_LOCALVERSION="-Paradigm"/CONFIG_LOCALVERSION="-HaoticKernel"/g' arch/arm64/configs/sdmmagpie_defconfig
-
-          # Gọi tên suffix từ matrix
           echo "[+] Kernel name has been updated to -HaoticKernel-${{ matrix.ksu.suffix }}"
-
           sed -i -e '/CONFIG_DEBUG_KERNEL/d' -e '/CONFIG_KALLSYMS/d' -e '/CONFIG_KALLSYMS_ALL/d' arch/arm64/configs/sdmmagpie_defconfig
           cat <<EOF >> arch/arm64/configs/sdmmagpie_defconfig
           CONFIG_DEBUG_KERNEL=y
