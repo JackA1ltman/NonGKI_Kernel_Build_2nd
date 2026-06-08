@@ -118,7 +118,7 @@ jobs:
         run: |
           # Only ${{ env.DEVICE_NAME }} use it.
           cd $GITHUB_WORKSPACE/device_kernel
-	  # Nothing
+          # Nothing
 
 
       - name: 🧰 Patch Kernel of Re:Kernel
