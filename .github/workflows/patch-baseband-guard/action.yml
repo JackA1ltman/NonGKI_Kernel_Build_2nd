@@ -33,4 +33,4 @@ runs:
 
           fi
 
-          echo "Patched Baseband Guard for your kernel successfully."
+          echo "[+] Patched Baseband Guard for your kernel successfully."
