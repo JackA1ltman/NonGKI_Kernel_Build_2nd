@@ -63,7 +63,7 @@ jobs:
         | Samsung A71 | a71 | 4.14 | Based AOSP & OneUI | 16 | AnyKernel3 | ReSukiSU | ✅ | ✅ | ❌ | ✅ | Inline |
         | Samsung A71 | a71 | 4.14 | Based AOSP & OneUI | 16 | AnyKernel3 | Next | ✅ | ✅ | ❌ | ✅ | Inline |
         | Xiaomi Mi Pad 4 | 4.19 | clover | Lineage OS 22 | 15 | AnyKernel3 | ReSukiSU | ✅ | ❌ | ❌ | ❌ | Inline |
-        | Redmi K30 Ultra | 4.14 | cezanne | Based AOSP | 14 | AnyKernel3 | Next | ✅ | ✅ | ✅ | ✅ | Inline |
+        | Redmi K30 Ultra | 4.14 | cezanne | Based AOSP | 14 | AnyKernel3 | Next | ❌ | ✅ | ✅ | ✅ | Inline |
 
         - Specific device information: [Supported List](Supported_list.md).
         - The KernelSU version is for reference only. It is normal for the KernelSU version embedded in SUSFS to be lower.

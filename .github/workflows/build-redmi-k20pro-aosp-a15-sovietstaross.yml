@@ -118,9 +118,8 @@ jobs:
         run: |
           # Only ${{ env.DEVICE_NAME }} use it.
           cd $GITHUB_WORKSPACE/device_kernel
+          # Nothing
 
-          # Remove SuSFS from dcache
-          sed -i '/#ifdef CONFIG_KSU_SUSFS/,/#endif/d' fs/dcache.c
 
       - name: 🧰 Patch Kernel of Re:Kernel
         uses: ./.github/workflows/patch-rekernel

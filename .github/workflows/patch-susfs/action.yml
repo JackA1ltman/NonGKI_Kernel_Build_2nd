@@ -12,10 +12,10 @@ runs:
           # Core
           if [[ "${{ env.SUSFS_FIXED }}" == true ]]; then
             if [ -z "${{ env.PATCHES_SOURCE }}" ] || [ -z "${{ env.PATCHES_BRANCH }}" ]; then
-              echo "Please input a vaild source and branch!"
+              echo "[-] Please input a vaild source and branch!"
               false
             elif [[ "${{ env.PATCHES_SOURCE }}" == *".git" ]]; then
-              echo "Please do not set a full URL in PATCH_SOURCE!"
+              echo "[-] Please do not set a full URL in PATCH_SOURCE!"
               false
             else
               git clone https://github.com/${{ env.PATCHES_SOURCE }}.git -b ${{ env.PATCHES_BRANCH }} NonGKI_Kernel_Patches --depth=1 # It's not necessary.
@@ -64,14 +64,13 @@ runs:
 
           # Check SuSFS
           if grep -q "CONFIG_KSU_SUSFS" "fs/namespace.c"; then
-            echo ">>>>>>>>>>>>Check<<<<<<<<<<<<"
-            echo ">SuSFS is already patched, skipping.<"
-            echo ">>>>>>>>>>>>>> <<<<<<<<<<<<<<"
+            echo "[-] SuSFS is already patched, Skipped."
             echo "SUSFS_SKIP=true" >> $GITHUB_ENV
           else
             cp /tmp/Patches/Patch/susfs_patch_to_${{ env.KERNEL_VERSION }}.patch ./
 
             patch -p1 < susfs_patch_to_${{ env.KERNEL_VERSION }}.patch || true
+            echo "[+] SuSFS Patch completed."
           fi
 
           # Patch .rej find
@@ -89,11 +88,11 @@ runs:
             fi
 
             if [[ "${{ env.SKIP_PATCH }}" == "true" ]] || [ -n "${{ env.SUSFS_PATCH_FIXED }}" ]; then
-                echo "[+] SuSFS Patch Version: v2.0.00. "
-                echo "[+] SKIP_PATCH enabled or found SuSFS v2.0.00 Fixed Patch, skipping."
+                echo "[+] SuSFS Patch Version: v2.1.00. "
+                echo "[+] SKIP_PATCH enabled or found SuSFS v2.1.00 Fixed Patch, skipping."
                 PACK_FILES
             elif [[ "${{ env.SKIP_PATCH }}" != "true" ]] || [ -z "${{ env.SUSFS_PATCH_FIXED }}" ]; then
-                echo "[+] SuSFS Patch Version: v2.0.00. "
+                echo "[+] SuSFS Patch Version: v2.1.00. "
                 echo "[-] Found .rej files, Stopped! "
                 PACK_FILES
                 false
@@ -107,10 +106,10 @@ runs:
           cd $GITHUB_WORKSPACE/device_kernel/
 
           if [[ -z "${{ env.SUSFS_PATCH_FIXED }}" ]]; then
-            echo "You didn't provide any patch file."
+            echo "[-] You didn't provide any patch file."
           else
             IFS=',' read -ra FIXED_LIST <<< "${{ env.SUSFS_PATCH_FIXED }}"
-            echo "<<<<<<<<<<<<<<<<<<<<<>>>>>>>>>>>>>>>>>>>>>>>>>>"
+            echo "[+] =================================== "
             for i in "${!FIXED_LIST[@]}"; do
               echo "Patching -> ${FIXED_LIST[$i]}"
               if [[ -z "${{ env.SUSFS_FOLDER_FIXED }}" ]]; then
@@ -119,8 +118,8 @@ runs:
                 cp NonGKI_Kernel_Patches/"${{ env.SUSFS_FOLDER_FIXED }}"/${FIXED_LIST[$i]}.patch ./
               fi
               patch -p1 < ${FIXED_LIST[$i]}.patch || true
-              echo "Patching successful!"
-              echo "<<<<<<<<<<<<<<<<<<<<<>>>>>>>>>>>>>>>>>>>>>>>>>>"
+              echo "[+] Patching successful!"
+              echo "[+] =================================== "
             done
           fi
 
