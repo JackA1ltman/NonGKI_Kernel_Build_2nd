@@ -74,7 +74,7 @@ env:
   KPM_KPATCH_NEXT: "false" # If u want hook KPatch-Next in build step.
   KPM_PATCH_SOURCE: "https://raw.githubusercontent.com/SukiSU-Ultra/SukiSU_patch/refs/heads/main/kpm/patch_linux" # If u want to use KPM Inline,so you need set patch exec file source -> raw.githubusercontent.com/Test/Test/patch .
 
-  BASEBAND_GUARD_ENABLE: "true" #if u want prevent unauthorized writes to critical partitions/device nodes.
+  BASEBAND_GUARD_ENABLE: "false" #if u want prevent unauthorized writes to critical partitions/device nodes.
   BASEBAND_GUARD_BOOT: "false" #if u want to protect boot partition.
 
   GENERATE_DTB: "false" # if u kernel need DTB , but cannot auto generate it. (Only Anykernel3).
@@ -120,7 +120,7 @@ jobs:
           cd $GITHUB_WORKSPACE/device_kernel
 
           # Get SuSFS KernelSU-Next Patches
-          cd KernelSU-Nexy
+          cd KernelSU-Next
           curl "https://raw.githubusercontent.com/NCJFCQJ/NonGKI_Kernel_Patches_For_cezanne/refs/heads/main/aosp_k30ultra_a14/susfs_fixed.patch" -o susfs_for_kernelsu_next.patch
           patch -p1 < susfs_for_kernelsu_next.patch
 
