@@ -128,7 +128,7 @@ runs:
                     echo "${{ env.KERNELSU_AUTO_FORK }} doesn't support SuSFS! "
                     false
                 else
-                    KERNELSU_BRANCH="dev"
+                    KERNELSU_BRANCH="legacy"
                 fi
             elif [[ "${{ env.KERNELSU_AUTO_FORK }}" == "resukisu" ]]; then
                 KERNELSU_AUTHOR="ReSukiSU"
