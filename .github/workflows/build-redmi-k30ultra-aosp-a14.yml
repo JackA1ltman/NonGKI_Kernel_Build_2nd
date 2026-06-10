@@ -56,10 +56,10 @@ env:
 
   KERNELSU_METHOD: "shell" # shell, manual and only.
 
-  PATCHES_SOURCE: "NCJFCQJ/NonGKI_Kernel_Patches_For_cezanne" # [your_name]/[your_patch] -> gooder123/NonGKI_Patcher
-  PATCHES_BRANCH: "main" # [your_branch] -> main
+  PATCHES_SOURCE: "JackA1ltman/NonGKI_Kernel_Patches" # [your_name]/[your_patch] -> gooder123/NonGKI_Patcher
+  PATCHES_BRANCH: "mi_kernel" # [your_branch] -> main
 
-  SUSFS_FOLDER_FIXED: "aosp_k30ultra_a14" # Fill in your patch prefix directory here. Leave it blank if there isn't one. -> your_folder
+  SUSFS_FOLDER_FIXED: "k30ultra_aosp_a14" # Fill in your patch prefix directory here. Leave it blank if there isn't one. -> your_folder
   SUSFS_PATCH_FIXED: "susfs_fixed" # Fill in your patches here. If there are multiple patches, please separate them with a comma. Leave it blank if there isn't one. -> patch1,patch2
 
   REKERNEL_ENABLE: "true" # if u need Re:Kernel.
@@ -118,7 +118,11 @@ jobs:
         run: |
           # Only ${{ env.DEVICE_NAME }} use it.
           cd $GITHUB_WORKSPACE/device_kernel
-          # Nothing
+
+          # Get SuSFS KernelSU-Next Patches
+          cd KernelSU-Nexy
+          curl "https://raw.githubusercontent.com/NCJFCQJ/NonGKI_Kernel_Patches_For_cezanne/refs/heads/main/aosp_k30ultra_a14/susfs_fixed.patch" -o susfs_for_kernelsu_next.patch
+          patch -p1 < susfs_for_kernelsu_next.patch
 
       - name: 🧰 Patch Kernel of Re:Kernel
         uses: ./.github/workflows/patch-rekernel
