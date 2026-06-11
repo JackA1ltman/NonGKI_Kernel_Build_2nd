@@ -4,105 +4,99 @@ on:
   workflow_call:
   workflow_dispatch:
 
+env:
+  # Device env
+  DEVICE_NAME : "samsung_a71"
+  DEVICE_CODENAME : "a71"
+
+  CUSTOM_CMDS : "CLANG_TRIPLE=aarch64-linux-gnu- CROSS_COMPILE=aarch64-linux-gnu-"
+  EXTRA_CMDS : "LLVM=1 LLVM_IAS=1 CC=clang LD=ld.lld AR=llvm-ar NM=llvm-nm OBJCOPY=llvm-objcopy OBJDUMP=llvm-objdump STRIP=llvm-strip READELF=llvm-readelf HOSTCC=clang HOSTCXX=clang++"
+
+  KERNEL_SOURCE : "https://github.com/nduykha/kernel_samsung_sm7150.git"
+  KERNEL_BRANCH : "paradigm"
+
+  CLANG_SOURCE : "https://github.com/nduykha/kernel_samsung_sm7150/releases/download/clang/llvm.tar.xz"
+  CLANG_BRANCH : ""
+
+  GCC_GNU : true
+  GCC_64_SOURCE : "https://github.com/nduykha/gcc-linaro-7.5.0-2019.12-x86_64_aarch64-linux-gnu.git"
+  GCC_64_BRANCH : "main"
+  GCC_32_SOURCE : ""
+  GCC_32_BRANCH : ""
+
+  DEFCONFIG_SOURCE: ""
+  DEFCONFIG_NAME : "sdmmagpie_defconfig"
+  DEFCONFIG_ORIGIN_IMAGE: ""
+  DEFCONFIG_FROM_BOOT: false
+
+  KERNELSU_SOURCE : ""
+  KERNELSU_BRANCH : ""
+
+  KERNELSU_AUTO_GET : "true"
+  KERNELSU_AUTO_FORK : "resukisu"
+
+  SUSFS_ENABLE : true
+  SUSFS_FIXED : true
+
+  AK3_SOURCE : "https://github.com/osm0sis/AnyKernel3.git"
+  AK3_BRANCH : "master"
+
+  BOOT_SOURCE : ""
+
+  NEED_DTBO : true
+  NEED_SAFE_DTBO : true
+
+  ROM_TEXT : "aosp_oneui_a16"
+
+  # Other env
+  PYTHON_VERSION: "3"
+  PACK_METHOD: "Anykernel3"
+  PACK_KMODULES: "false"
+
+  KERNELSU_METHOD: "shell"
+
+  PATCHES_SOURCE: "JackA1ltman/NonGKI_Kernel_Patches"
+  PATCHES_BRANCH: "samsung_kernel"
+
+  SUSFS_FOLDER_FIXED: "a71_sm7150"
+  SUSFS_PATCH_FIXED: "susfs_fixed"
+
+  REKERNEL_ENABLE: "true"
+  DROIDSPACES_ENABLE: "false"
+
+  HOOK_METHOD: "syscall"
+
+  KERNEL_PATCH: "true"
+
+  KPM_ENABLE: "false"
+  KPM_INLINE: "false"
+  KPM_KPATCH_NEXT: "false"
+  KPM_PATCH_SOURCE: "https://raw.githubusercontent.com/SukiSU-Ultra/SukiSU_patch/refs/heads/main/kpm/patch_linux"
+
+  BASEBAND_GUARD_ENABLE: "true"
+  BASEBAND_GUARD_BOOT: "false"
+
+  GENERATE_DTB: "false"
+  GENERATE_CHIP: "qcom"
+
+  BUILD_DEBUGGER: "false"
+  SKIP_PATCH: "false"
+
+  BUILD_OTHER_CONFIG: "true"
+  MERGE_CONFIG_FILES: "a71.config"
+
+  FREE_MORE_SPACE: "true"
+      
 jobs:
   build-kernel:
-    name: ${{ matrix.ksu.name }} for Galaxy A71
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        ksu:
-          - name: "ReSukiSU"
-            fork: "resukisu"
-            suffix: "ReSukiSU"
-
+    name: Samsung Galaxy A71 (Based AOSP & OneUI A16)
+    runs-on: ubuntu-latest # u can changed to ubuntu 22.04, and need container set ubuntu-latest
+    # container: archlinux/archlinux:latest # if u need use arch linux -> archlinux/archlinux:latest or ubuntu 20.04 -> ubuntu:focal
     env:
       CCACHE_COMPILERCHECK: "%compiler% -dumpmachine; %compiler% -dumpversion"
       CCACHE_NOHASHDIR: "true"
       CCACHE_HARDLINK: "true"
-
-      # Device env
-      DEVICE_NAME : "samsung_a71"
-      DEVICE_CODENAME : "a71"
-
-      CUSTOM_CMDS : "CLANG_TRIPLE=aarch64-linux-gnu- CROSS_COMPILE=aarch64-linux-gnu-"
-      EXTRA_CMDS : "LLVM=1 LLVM_IAS=1 CC=clang LD=ld.lld AR=llvm-ar NM=llvm-nm OBJCOPY=llvm-objcopy OBJDUMP=llvm-objdump STRIP=llvm-strip READELF=llvm-readelf HOSTCC=clang HOSTCXX=clang++"
-
-      KERNEL_SOURCE : "https://github.com/nduykha/kernel_samsung_sm7150.git"
-      KERNEL_BRANCH : "paradigm"
-
-      CLANG_SOURCE : "https://github.com/nduykha/kernel_samsung_sm7150/releases/download/clang/llvm.tar.xz"
-      CLANG_BRANCH : ""
-
-      GCC_GNU : true
-      GCC_64_SOURCE : "https://github.com/nduykha/gcc-linaro-7.5.0-2019.12-x86_64_aarch64-linux-gnu.git"
-      GCC_64_BRANCH : "main"
-      GCC_32_SOURCE : ""
-      GCC_32_BRANCH : ""
-
-      DEFCONFIG_SOURCE: ""
-      DEFCONFIG_NAME : "sdmmagpie_defconfig"
-      DEFCONFIG_ORIGIN_IMAGE: ""
-      DEFCONFIG_FROM_BOOT: false
-
-      KERNELSU_SOURCE : ""
-      KERNELSU_BRANCH : ""
-
-      KERNELSU_AUTO_GET : "true"
-      KERNELSU_AUTO_FORK : "${{ matrix.ksu.fork }}"
-
-      SUSFS_ENABLE : true
-      SUSFS_FIXED : true
-
-      AK3_SOURCE : "https://github.com/osm0sis/AnyKernel3.git"
-      AK3_BRANCH : "master"
-
-      BOOT_SOURCE : ""
-
-      NEED_DTBO : true
-      NEED_SAFE_DTBO : true
-
-      ROM_TEXT : "aosp_oneui_a16"
-
-      # Other env
-      PYTHON_VERSION: "3"
-      PACK_METHOD: "Anykernel3"
-      PACK_KMODULES: "false"
-
-      KERNELSU_METHOD: "shell"
-
-      PATCHES_SOURCE: "JackA1ltman/NonGKI_Kernel_Patches"
-      PATCHES_BRANCH: "samsung_kernel"
-
-      SUSFS_FOLDER_FIXED: "a71_sm7150"
-      SUSFS_PATCH_FIXED: "susfs_fixed"
-
-      REKERNEL_ENABLE: "true"
-      DROIDSPACES_ENABLE: "false"
-
-      HOOK_METHOD: "syscall"
-
-      KERNEL_PATCH: "true"
-
-      KPM_ENABLE: "true"
-      KPM_INLINE: "false"
-      KPM_KPATCH_NEXT: "false"
-      KPM_PATCH_SOURCE: "https://raw.githubusercontent.com/SukiSU-Ultra/SukiSU_patch/refs/heads/main/kpm/patch_linux"
-
-      BASEBAND_GUARD_ENABLE: "true"
-      BASEBAND_GUARD_BOOT: "false"
-
-      GENERATE_DTB: "false"
-      GENERATE_CHIP: "qcom"
-
-      BUILD_DEBUGGER: "false"
-      SKIP_PATCH: "false"
-
-      BUILD_OTHER_CONFIG: "true"
-      MERGE_CONFIG_FILES: "a71.config"
-
-      FREE_MORE_SPACE: "true"
-
+      
     steps:
       - name: ⏰ Checkout repository
         uses: actions/checkout@v4 # Đổi thành v4 vì v6 chưa tồn tại, Github Actions có thể báo lỗi
@@ -123,7 +117,7 @@ jobs:
         run: |
           cd $GITHUB_WORKSPACE/device_kernel
           sed -i 's/CONFIG_LOCALVERSION="-Paradigm"/CONFIG_LOCALVERSION="-HaoticKernel"/g' arch/arm64/configs/sdmmagpie_defconfig
-          echo "[+] Kernel name has been updated to -HaoticKernel-${{ matrix.ksu.suffix }}"
+          echo "[+] Kernel name has been updated to -HaoticKernel-ReSukiSU"
           sed -i -e '/CONFIG_DEBUG_KERNEL/d' -e '/CONFIG_KALLSYMS/d' -e '/CONFIG_KALLSYMS_ALL/d' arch/arm64/configs/sdmmagpie_defconfig
           cat <<EOF >> arch/arm64/configs/sdmmagpie_defconfig
           CONFIG_DEBUG_KERNEL=y
@@ -252,10 +246,10 @@ jobs:
           7za a -mx9 tmp.zip *
           cd ..
 
-          cp -fp tmp/tmp.zip ${{ env.DEVICE_CODENAME }}-${{ env.ROM_TEXT }}-${{ matrix.ksu.suffix }}-$TIME-${{ env.PACK_METHOD }}.zip
+          cp -fp tmp/tmp.zip ${{ env.DEVICE_CODENAME }}-${{ env.ROM_TEXT }}-$TIME-${{ env.PACK_METHOD }}.zip
           rm -rf tmp
 
-          echo "PACK_NAME=${{ env.DEVICE_CODENAME }}-${{ env.ROM_TEXT }}-${{ matrix.ksu.suffix }}-$TIME-${{ env.PACK_METHOD }}.zip" >> $GITHUB_ENV
+          echo "PACK_NAME=${{ env.DEVICE_CODENAME }}-${{ env.ROM_TEXT }}-$TIME-${{ env.PACK_METHOD }}.zip" >> $GITHUB_ENV
 
       - name: ✏️ Upload Artifacts
         uses: ./.github/workflows/upload-files
