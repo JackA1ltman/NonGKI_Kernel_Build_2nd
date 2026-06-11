@@ -104,18 +104,11 @@ jobs:
     uses: ./.github/workflows/build-samsung-note10-oneui-a15.yml
     secrets: inherit
 
-  build-samsung-a71-aosp-a16:
-    name: "Samsung Galaxy A71 (AOSP A16)"
+  build-samsung-a71-aosp-oneui-a16:
+    name: "Samsung Galaxy A71 (Based AOSP & OneUI A16)"
     strategy:
       fail-fast: true
-    uses: ./.github/workflows/build-samsung-a71-aosp-a16.yml
-    secrets: inherit
-
-  build-samsung-a71-oneui-a16:
-    name: "Samsung Galaxy A71 (OneUI A16)"
-    strategy:
-      fail-fast: true
-    uses: ./.github/workflows/build-samsung-a71-oneui-a16.yml
+    uses: ./.github/workflows/build-samsung-a71-aosp-oneui-a16.yml
     secrets: inherit
 
   # Smartisan
