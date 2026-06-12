@@ -62,7 +62,7 @@ jobs:
         | Nothing Phone (1) | spacewar | 5.4 | Lineage OS 23.0 | 16 | AnyKernel3 | ReSukiSU | ✅ | ❌ | ❌ |
         | Samsung A71 | a71 | 4.14 | Based AOSP & OneUI | 16 | AnyKernel3 | ReSukiSU | ✅ | ✅ | ✅ |
         | Xiaomi Mi Pad 4 | clover | 4.19 | Lineage OS 22 | 15 | AnyKernel3 | ReSukiSU | ✅ | ❌ | ❌ |
-        | Redmi K30 Ultra | cezanne | 4.14 | Based AOSP | 14 | AnyKernel3 | Next | ✅ | ✅ | ✅ |
+        | Redmi K30 Ultra | cezanne | 4.14 | Based AOSP | 14 | AnyKernel3 | ReSukiSU | ✅ | ✅ | ✅ |
 
         - Specific device information: [Supported List](Supported_list.md).
         - The KernelSU version is for reference only. It is normal for the KernelSU version embedded in SUSFS to be lower.
