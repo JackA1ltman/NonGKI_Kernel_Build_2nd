@@ -119,6 +119,9 @@ jobs:
           # Only ${{ env.DEVICE_NAME }} use it.
           cd $GITHUB_WORKSPACE/device_kernel
 
+          # Enable ThinLTO
+
+          sed -i '/# CONFIG_THINLTO is not set/d' ./arch/${{ env.KERNEL_ARCH }}/configs/${{ env.DEFCONFIG_NAME }}
 
           # enable CONFIG_TMPFS_XATTR
 
