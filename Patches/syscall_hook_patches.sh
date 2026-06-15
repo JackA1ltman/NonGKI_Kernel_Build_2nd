@@ -184,7 +184,7 @@ for i in "${patch_files[@]}"; do
     # security/ changes
     ## security.c
     security/security.c)
-        if [ "$FIRST_VERSION" -lt 4 ] && [ "$SECOND_VERSION" -lt 19 ]; then
+        if [ "$FIRST_VERSION" -lt 4 ] && [ "$SECOND_VERSION" -lt 19 ] && ! grep -rq --include="*.c" --include="*.h" "ksu_inode_rename" "drivers/kernelsu/" >/dev/null 2>&1; then
             if grep -rq --include="*.c" --include="*.h" "sys_read" "drivers/kernelsu/" >/dev/null 2>&1; then
                 echo "[+] Checked sys_read existed in KernelSU!"
 
@@ -208,6 +208,9 @@ for i in "${patch_files[@]}"; do
             else
                 echo "[-] security/security.c patch failed for unknown reasons, please provide feedback in time."
             fi
+        elif grep -rq --include="*.c" --include="*.h" "ksu_inode_rename" "drivers/kernelsu/" >/dev/null 2>&1; then
+            echo "[-] KernelSU needn't security.c hooks, Skipped."
+
         else
             echo "[-] Kernel needn't setuid, Skipped."
         fi
@@ -248,7 +251,7 @@ for i in "${patch_files[@]}"; do
 
         fi
 
-        if grep -rq --include="*.c" --include="*.h" "ksu_hide_setprocattr" "drivers/kernelsu/" >/dev/null 2>&1; then
+        if grep -rq --include="*.c" --include="*.h" "ksu_hide_setprocattr" "drivers/kernelsu/" && ! grep -rq --include="*.c" --include="*.h" "ksu_inode_rename" "drivers/kernelsu/" >/dev/null 2>&1; then
             if [ "$FIRST_VERSION" -lt 4 ] && [ "$SECOND_VERSION" -lt 19 ]; then
                 echo "[-] Kernel could not hook ksu_hide_setprocattr, Skipped."
 
@@ -273,7 +276,7 @@ for i in "${patch_files[@]}"; do
                 echo "[-] security/selinux/hooks.c patch failed for unknown reasons, please provide feedback in time."
             fi
         else
-            echo "[-] KernelSU needn't ksu_hide_setprocattr, Skipped."
+            echo "[-] KernelSU needn't security extra hooks, Skipped."
         fi
 
         echo "======================================"
