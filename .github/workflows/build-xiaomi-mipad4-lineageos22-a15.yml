@@ -15,6 +15,9 @@ env:
   KERNEL_SOURCE : "https://github.com/pix106/android_kernel_xiaomi_southwest-4.19.git"
   KERNEL_BRANCH : "main"
 
+  DT_URL : ""         
+  DT_BRANCH : ""
+
   CLANG_SOURCE : "https://github.com/llvm/llvm-project/releases/download/llvmorg-19.1.7/LLVM-19.1.7-Linux-X64.tar.xz"
   CLANG_BRANCH : ""
 

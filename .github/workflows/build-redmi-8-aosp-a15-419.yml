@@ -15,6 +15,9 @@ env:
   KERNEL_SOURCE : "https://github.com/JackA1ltman/android_kernel_xiaomi_sdm439-4.19.git"
   KERNEL_BRANCH : "ksu-next"
 
+  DT_URL : ""         
+  DT_BRANCH : ""
+
   CLANG_SOURCE : "https://github.com/kdrag0n/proton-clang.git"
   CLANG_BRANCH : "master"
 

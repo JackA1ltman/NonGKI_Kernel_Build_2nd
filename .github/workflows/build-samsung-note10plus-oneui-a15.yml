@@ -15,6 +15,9 @@ env:
   KERNEL_SOURCE : "https://github.com/JackA1ltman/ExtremeKernel_noksu.git"
   KERNEL_BRANCH : "main"
 
+  DT_URL : ""         
+  DT_BRANCH : ""
+
   CLANG_SOURCE : "https://raw.githubusercontent.com/Neutron-Toolchains/antman/main/antman"
   CLANG_BRANCH : ""
 

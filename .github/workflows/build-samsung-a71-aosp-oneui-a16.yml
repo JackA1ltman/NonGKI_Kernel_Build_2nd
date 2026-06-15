@@ -15,6 +15,9 @@ env:
   KERNEL_SOURCE : "https://github.com/nduykha/kernel_samsung_sm7150.git"
   KERNEL_BRANCH : "paradigm"
 
+  DT_URL : ""         
+  DT_BRANCH : ""
+
   CLANG_SOURCE : "https://github.com/nduykha/kernel_samsung_sm7150/releases/download/clang/llvm.tar.xz"
   CLANG_BRANCH : ""
 

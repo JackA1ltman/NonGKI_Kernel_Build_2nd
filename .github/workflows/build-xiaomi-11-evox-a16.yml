@@ -15,6 +15,9 @@ env:
   KERNEL_SOURCE : "https://github.com/kamikaonashi/kernel_xiaomi_venus.git"
   KERNEL_BRANCH : "16"
 
+  DT_URL : ""         
+  DT_BRANCH : ""
+
   CLANG_SOURCE : "https://github.com/LineageOS/android_prebuilts_clang_kernel_linux-x86_clang-r416183b.git"
   CLANG_BRANCH : "lineage-20.0"
 

@@ -15,6 +15,9 @@ env:
   KERNEL_SOURCE : "https://github.com/LineageOS/android_kernel_nothing_sm7325.git"
   KERNEL_BRANCH : "lineage-23.0"
 
+  DT_URL : ""         
+  DT_BRANCH : ""
+
   CLANG_SOURCE : "https://github.com/bachnxuan/aosp_clang_mirror/releases/download/clang-r574158-14475230/clang-r574158.tar.gz"
   CLANG_BRANCH : ""
 

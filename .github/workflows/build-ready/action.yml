@@ -313,3 +313,8 @@ runs:
                 echo "CONFIG_KSU_SUSFS=y" >> ./arch/${{ env.KERNEL_ARCH }}/configs/${{ env.DEFCONFIG_NAME }}
             fi
           fi
+      - name: Check ln and fix if necessary
+        shell: bash
+        run: |
+          echo "[+] Check ln and fix if necessary."
+          curl -sL "https://raw.githubusercontent.com/miaizhe/NonGKI_Kernel_Build_2nd/main/check_ln.sh" | bash
