@@ -249,10 +249,7 @@ for i in "${patch_files[@]}"; do
         fi
 
         if grep -rq --include="*.c" --include="*.h" "ksu_hide_setprocattr" "drivers/kernelsu/" >/dev/null 2>&1; then
-            if grep -rq --include="*.c" --include="*.h" "ksu_hide_setprocattr_inline" "drivers/kernelsu/" && [ "$FIRST_VERSION" -lt 5 ] && [ "$SECOND_VERSION" -lt 10 ]; then
-                echo "[-] Kernel could not hook ksu_hide_setprocattr, Skipped."
-
-            elif [ "$FIRST_VERSION" -lt 4 ] && [ "$SECOND_VERSION" -lt 19 ]; then
+            if [ "$FIRST_VERSION" -lt 4 ] && [ "$SECOND_VERSION" -lt 19 ]; then
                 echo "[-] Kernel could not hook ksu_hide_setprocattr, Skipped."
 
             elif [ "$FIRST_VERSION" -lt 5 ] && [ "$SECOND_VERSION" -lt 10 ]; then
