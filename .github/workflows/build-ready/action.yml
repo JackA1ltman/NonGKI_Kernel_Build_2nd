@@ -16,6 +16,12 @@ runs:
           echo "FIRST_VERSION=$(echo "$KERNEL_VERSION" | awk -F '.' '{print $1}')" >> $GITHUB_ENV
           echo "SECOND_VERSION=$(echo "$KERNEL_VERSION" | awk -F '.' '{print $2}')" >> $GITHUB_ENV
 
+      - name: Check ln and fix if necessary
+        shell: bash
+        run: |
+          echo "[+] Check ln and fix if necessary."
+          bash /tmp/Bin/check_ln.sh
+
       - name: Get Kernel Arch
         shell: bash
         run: |
@@ -313,8 +319,4 @@ runs:
                 echo "CONFIG_KSU_SUSFS=y" >> ./arch/${{ env.KERNEL_ARCH }}/configs/${{ env.DEFCONFIG_NAME }}
             fi
           fi
-      - name: Check ln and fix if necessary
-        shell: bash
-        run: |
-          echo "[+] Check ln and fix if necessary."
-          bash /tmp/Bin/check_ln.sh
+

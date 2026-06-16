@@ -79,7 +79,6 @@ find . -type l -print0 | while IFS= read -r -d $'\0' link; do
             echo "警告: 软连接 $link 指向的真实目标不存在，已跳过。"
         fi
     fi
-done
 echo "所有目录软连接替换完毕！"
 
 echo "正在恢复内核源码目录结构..."
