@@ -3,18 +3,16 @@ HAS_LINKS=$(find . -type l -print -quit)
 
 if [ -n "$HAS_LINKS" ]; then
     if [ -z "$DT_URL" ] || [ -z "$DT_BRANCH" ]; then
-        echo "致命错误：检测到当前目录下存在软连接，"
-        echo "但未设置设备树仓库 (DT_URL) 和分支 (DT_BRANCH) 变量！"
-        echo "请添加设备树仓库 (DT_URL) 和分支 (DT_BRANCH)"
+        echo "致命错误：检测到当前目录下存在软链接，"
+        echo "但未设置设备树仓库 (DT_URL) 或分支 (DT_BRANCH) 变量！"
+        echo "请编辑脚本顶部的配置区域后重试。"
         exit 1
     fi
 fi
-
 echo "正在检测内核源码目录..."
 KERNEL_DIR_NAME=""
 
 for d in */ ; do
-    # 移除末尾的斜杠
     dir_name="${d%/}"
     
     if [ "$dir_name" = "kernel" ] || [ "$dir_name" = "temp_modules" ] || [ "$dir_name" = "vendor" ] || [ "$dir_name" = "device" ]; then
@@ -37,6 +35,7 @@ if [ -z "$KERNEL_DIR_NAME" ]; then
     exit 1
 fi
 
+echo "成功锁定内核源码目录: $KERNEL_DIR_NAME"
 echo "临时将内核源码移动至 kernel/$KERNEL_DIR_NAME 结构..."
 if [ -d "$KERNEL_DIR_NAME" ] && [ ! -d "kernel/$KERNEL_DIR_NAME" ]; then
     mkdir -p kernel
@@ -66,41 +65,25 @@ if [ -n "$DT_URL" ] && [ -n "$DT_BRANCH" ]; then
     rm -rf temp_modules
     echo "设备树部署完毕。"
 fi
+echo "开始扫描内核目录，并重建外部软链接为绝对路径..."
 
-echo "开始按优先级顺序实体化文件夹软连接..."
-process_symlinks() {
-    local search_dir="$1"
-    local protect_path="$2"
-    if [ ! -d "$search_dir" ]; then
-        return
-    fi
-    echo "正在扫描并处理: $search_dir"
-    find "$search_dir" -type l -print0 | while IFS= read -r -d $'\0' link; do
-        if [ -d "$link" ]; then
-            target=$(readlink -f "$link")
-            if [ -n "$protect_path" ]; then
-                if [[ "$target" == "$protect_path"/* ]] || [[ "$target" == "$protect_path" ]]; then
-                    echo "跳过内部链接: $link"
-                    continue
-                fi
-            fi
-
-            if [ -e "$target" ]; then
-                echo "   正在替换: $link"
-                rm "$link"
-                cp -a "$target" "$link"
-            else
-                echo "警告: 软连接 $link 指向的真实目标不存在，已跳过。"
-            fi
-        fi
-    done
-}
-process_symlinks "./vendor" ""
-process_symlinks "./device" ""
 KERNEL_ABS_PATH=$(readlink -f "kernel/$KERNEL_DIR_NAME")
-process_symlinks "kernel/$KERNEL_DIR_NAME" "$KERNEL_ABS_PATH"
 
-echo "所有外部软连接替换完毕！"
+find "kernel/$KERNEL_DIR_NAME" -type l -print0 | while IFS= read -r -d $'\0' link; do
+    target=$(readlink -f "$link")
+    
+    if [[ "$target" == "$KERNEL_ABS_PATH"/* ]] || [[ "$target" == "$KERNEL_ABS_PATH" ]]; then
+        echo "跳过内部链接: $link"
+        continue
+    fi
+
+    if [ -n "$target" ]; then
+        echo "   正在重写为绝对路径: $link"
+        ln -snf "$target" "$link"
+    fi
+done
+
+echo "内核外部软链接绝对路径重建完毕！"
 
 echo "正在恢复内核源码目录结构..."
 if [ -d "kernel/$KERNEL_DIR_NAME" ]; then
@@ -110,5 +93,5 @@ if [ -d "kernel/$KERNEL_DIR_NAME" ]; then
 fi
 
 echo "========================================"
-echo "脚本执行完毕，环境已准备就绪！"
+echo "           软链接修复已完成！"
 echo "========================================"
