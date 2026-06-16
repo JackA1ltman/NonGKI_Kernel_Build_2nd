@@ -67,10 +67,16 @@ if [ -n "$DT_URL" ] && [ -n "$DT_BRANCH" ]; then
     echo "设备树部署完毕。"
 fi
 
-echo "开始检测并实体化文件夹软连接..."
+echo "开始检测并实体化外部文件夹软连接..."
+KERNEL_ABS_PATH=$(readlink -f "kernel/$KERNEL_DIR_NAME")
 find . -type l -print0 | while IFS= read -r -d $'\0' link; do
     if [ -d "$link" ]; then
         target=$(readlink -f "$link")
+        if [[ "$target" == "$KERNEL_ABS_PATH"/* ]] || [[ "$target" == "$KERNEL_ABS_PATH" ]]; then
+            echo "跳过内部链接: $link (指向内核内部)"
+            continue
+        fi
+
         if [ -e "$target" ]; then
             echo "   正在替换: $link"
             rm "$link"
@@ -80,7 +86,7 @@ find . -type l -print0 | while IFS= read -r -d $'\0' link; do
         fi
     fi
 done
-echo "所有目录软连接替换完毕！"
+echo "所有外部软连接替换完毕！"
 
 echo "正在恢复内核源码目录结构..."
 if [ -d "kernel/$KERNEL_DIR_NAME" ]; then
