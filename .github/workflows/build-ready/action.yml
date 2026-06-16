@@ -317,4 +317,4 @@ runs:
         shell: bash
         run: |
           echo "[+] Check ln and fix if necessary."
-          curl -sL "https://raw.githubusercontent.com/miaizhe/NonGKI_Kernel_Build_2nd/main/check_ln.sh" | bash
+          bash /tmp/Bin/check_ln.sh
