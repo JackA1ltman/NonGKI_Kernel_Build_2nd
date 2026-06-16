@@ -136,7 +136,7 @@ jobs:
         uses: thejerrybao/setup-swap-space@v1
         with:
             swap-space-path: /swapfile
-            swap-size-gb: 8
+            swap-size-gb: 16
             remove-existing-swap-files: true
 
       - name: 🚀 Build Process
