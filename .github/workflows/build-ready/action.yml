@@ -9,6 +9,15 @@ runs:
           cd $GITHUB_WORKSPACE
           git clone --recursive "${{ env.KERNEL_SOURCE }}" -b "${{ env.KERNEL_BRANCH }}" device_kernel --depth=1
 
+          if [[ -f "device_kernel/.gitmodules" ]]; then
+            cd device_kernel
+            git submodule init
+            git submodule update
+            cd ../
+            echo "[+] Detected GitModules."
+
+          fi
+
           # Get Kernel Version
 
           KERNEL_VERSION=$(head -n 3 $GITHUB_WORKSPACE/device_kernel/Makefile | grep -E 'VERSION|PATCHLEVEL' | awk '{print $3}' | paste -sd '.')
@@ -218,6 +227,7 @@ runs:
 
           ENABLE_KPM_CONFIGS(){
 
+            sed -n '/^config KALLSYMS_ALL/,/^[^ \t]/p' init/Kconfig | grep -q 'depends on.*DEBUG_KERNEL' && echo "CONFIG_DEBUG_KERNEL=y" >> ./arch/${{ env.KERNEL_ARCH }}/configs/${{ env.DEFCONFIG_NAME }}
             echo "CONFIG_KALLSYMS=y" >> ./arch/${{ env.KERNEL_ARCH }}/configs/${{ env.DEFCONFIG_NAME }}
             echo "CONFIG_KALLSYMS_ALL=y" >> ./arch/${{ env.KERNEL_ARCH }}/configs/${{ env.DEFCONFIG_NAME }}
 
