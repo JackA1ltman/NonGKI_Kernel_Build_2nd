@@ -93,7 +93,7 @@ env:
 
 jobs:
   build-kernel:
-    name: Oneplus 8 Series (ColorOS 15 A15)
+    name: Reno10 (ColorOS 16 A16)
     runs-on: ubuntu-latest # u can changed to ubuntu 22.04, and need container set ubuntu-latest
     # container: ubuntu:bionic # if u need use arch linux -> archlinux/archlinux:latest or ubuntu 20.04 -> ubuntu:focal
     env:
