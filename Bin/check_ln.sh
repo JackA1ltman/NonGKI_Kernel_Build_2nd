@@ -67,25 +67,39 @@ if [ -n "$DT_URL" ] && [ -n "$DT_BRANCH" ]; then
     echo "设备树部署完毕。"
 fi
 
-echo "开始检测并实体化外部文件夹软连接..."
-KERNEL_ABS_PATH=$(readlink -f "kernel/$KERNEL_DIR_NAME")
-find . -type l -print0 | while IFS= read -r -d $'\0' link; do
-    if [ -d "$link" ]; then
-        target=$(readlink -f "$link")
-        if [[ "$target" == "$KERNEL_ABS_PATH"/* ]] || [[ "$target" == "$KERNEL_ABS_PATH" ]]; then
-            echo "跳过内部链接: $link (指向内核内部)"
-            continue
-        fi
-
-        if [ -e "$target" ]; then
-            echo "   正在替换: $link"
-            rm "$link"
-            cp -a "$target" "$link"
-        else
-            echo "警告: 软连接 $link 指向的真实目标不存在，已跳过。"
-        fi
+echo "开始按优先级顺序实体化文件夹软连接..."
+process_symlinks() {
+    local search_dir="$1"
+    local protect_path="$2"
+    if [ ! -d "$search_dir" ]; then
+        return
     fi
-done
+    echo "正在扫描并处理: $search_dir"
+    find "$search_dir" -type l -print0 | while IFS= read -r -d $'\0' link; do
+        if [ -d "$link" ]; then
+            target=$(readlink -f "$link")
+            if [ -n "$protect_path" ]; then
+                if [[ "$target" == "$protect_path"/* ]] || [[ "$target" == "$protect_path" ]]; then
+                    echo "跳过内部链接: $link"
+                    continue
+                fi
+            fi
+
+            if [ -e "$target" ]; then
+                echo "   正在替换: $link"
+                rm "$link"
+                cp -a "$target" "$link"
+            else
+                echo "警告: 软连接 $link 指向的真实目标不存在，已跳过。"
+            fi
+        fi
+    done
+}
+process_symlinks "./vendor" ""
+process_symlinks "./device" ""
+KERNEL_ABS_PATH=$(readlink -f "kernel/$KERNEL_DIR_NAME")
+process_symlinks "kernel/$KERNEL_DIR_NAME" "$KERNEL_ABS_PATH"
+
 echo "所有外部软连接替换完毕！"
 
 echo "正在恢复内核源码目录结构..."
