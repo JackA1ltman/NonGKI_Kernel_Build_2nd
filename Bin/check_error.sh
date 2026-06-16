@@ -119,6 +119,9 @@ process_error_block() {
     elif grep -q "Error: junk at end of line, first unrecognized character is" <<< "${error_block[@]}"; then
         error_type="Clang版本异常"
         suggestion="建议：降低Clang版本例如从20到12到10，或者修改Makefile在KBUILD_CFLAGS增加-gdwarf-4来声明更低版本DWARF"
+    elif grep -q "undefined symbol: __stack_chk_guard" <<< "${error_block[@]}"; then
+        error_type="Clang版本异常"
+        suggestion="建议：降低Clang版本例如从20到12到10"
     fi
 
     echo "Error: $error_type"
