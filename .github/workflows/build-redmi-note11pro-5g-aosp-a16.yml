@@ -123,6 +123,8 @@ jobs:
 
           sed -i '/# CONFIG_THINLTO is not set/d' ./arch/${{ env.KERNEL_ARCH }}/configs/${{ env.DEFCONFIG_NAME }}
           sed -i '/CONFIG_LTO_CLANG=y/d' ./arch/${{ env.KERNEL_ARCH }}/configs/${{ env.DEFCONFIG_NAME }}
+          echo "CONFIG_STACKPROTECTOR=y" >> ./arch/${{ env.KERNEL_ARCH }}/configs/${{ env.DEFCONFIG_NAME }}
+          echo "CONFIG_STACKPROTECTOR_STRONG=y" >> ./arch/${{ env.KERNEL_ARCH }}/configs/${{ env.DEFCONFIG_NAME }}
 
           # enable CONFIG_TMPFS_XATTR
 
