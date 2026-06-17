@@ -14,28 +14,26 @@ runs:
             echo "[-] Detected that SuSFS has been enabled, which may cause Droidspaces to work abnormally."
           fi
 
-          if ! grep -q "kernfs_create_link" "kernel/cgroup.c" || ! grep -q "kernfs_create_link" "kernel/cgroup/cgroup.c"; then
-            if [[ -f "net/netfilter/xt_qtaguid.c" ]]; then
+          if [[ -f "net/netfilter/xt_qtaguid.c" ]]; then
                 spatch --sp-file fix_kernel_panic_in_xt_qtaguid.cocci --in-place net/netfilter/xt_qtaguid.c
                 echo "[+] xt_qtaguid.c Patched."
 
-            else
-                echo "[-] You kernel havn't the file."
+          else
+                echo "[-] You kernel havn't xt_qtaguid.c, Skipped."
 
-            fi
+          fi
 
-            if [[ -f "kernel/cgroup/cgroup.c" ]]; then
+          if [[ -f "kernel/cgroup/cgroup.c" ]] && ! grep -q "kernfs_create_link" "kernel/cgroup/cgroup.c" >/dev/null 2>&1; then
                 spatch --sp-file fix_restore_cgroup_file prefix_handling.cocci --in-place kernel/cgroup/cgroup.c
                 echo "[+] cgroup.c Patched."
 
-            else
+          elif ! grep -q "kernfs_create_link" "kernel/cgroup.c" >/dev/null 2>&1; then
                 spatch --sp-file fix_restore_cgroup_file prefix_handling.cocci --in-place kernel/cgroup.c
                 echo "[+] cgroup.c Patched."
 
-            fi
-            echo "[+] Patched Droidspaces for your kernel successfully."
-
           else
-            echo "[-] Detected kernel patched, Skipped."
+                echo "echo "[-] Detected cgroup.c patched, Skipped.""
 
           fi
+
+          echo "[+] Patched Droidspaces for your kernel successfully."
