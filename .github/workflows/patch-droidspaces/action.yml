@@ -10,11 +10,18 @@ runs:
           cd $GITHUB_WORKSPACE/device_kernel/
           cp /tmp/Patches/Droidspaces/droidspaces.config ./arch/"${{ env.KERNEL_ARCH }}"/configs/
 
+          cgroup_patch(){
+            cp /tmp/Patches/Droidspaces/fix_restore_cgroup_file_prefix_handling.cocci ./
+            spatch --sp-file fix_restore_cgroup_file_prefix_handling.cocci --in-place kernel/cgroup/cgroup.c
+            echo "[+] cgroup.c Patched."
+          }
+
           if [[ "${{ env.SUSFS_ENABLE }}" == "true" ]]; then
             echo "[-] Detected that SuSFS has been enabled, which may cause Droidspaces to work abnormally."
           fi
 
           if [[ -f "net/netfilter/xt_qtaguid.c" ]]; then
+                cp /tmp/Patches/Droidspaces/fix_kernel_panic_in_xt_qtaguid.cocci ./
                 spatch --sp-file fix_kernel_panic_in_xt_qtaguid.cocci --in-place net/netfilter/xt_qtaguid.c
                 echo "[+] xt_qtaguid.c Patched."
 
@@ -24,12 +31,10 @@ runs:
           fi
 
           if [[ -f "kernel/cgroup/cgroup.c" ]] && ! grep -q "kernfs_create_link" "kernel/cgroup/cgroup.c" >/dev/null 2>&1; then
-                spatch --sp-file fix_restore_cgroup_file_prefix_handling.cocci --in-place kernel/cgroup/cgroup.c
-                echo "[+] cgroup.c Patched."
+                cgroup_patch
 
           elif ! grep -q "kernfs_create_link" "kernel/cgroup.c" >/dev/null 2>&1; then
-                spatch --sp-file fix_restore_cgroup_file_prefix_handling.cocci --in-place kernel/cgroup.c
-                echo "[+] cgroup.c Patched."
+                cgroup_patch
 
           else
                 echo "echo "[-] Detected cgroup.c patched, Skipped.""
