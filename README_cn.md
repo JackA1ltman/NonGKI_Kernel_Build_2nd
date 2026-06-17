@@ -77,4 +77,5 @@
 - [SuSFS](https://gitlab.com/simonpunk/susfs4ksu) - @simonpunk
 - [Re:Kernel](https://github.com/Sakion-Team/Re-Kernel) - @Sakion-Team
 - [Baseband Guard](https://github.com/vc-teahouse/Baseband-guard) - @秋刀鱼
+- [Droidspaces](https://github.com/ravindu644/Droidspaces-OSS) - @ravindu644
 - 以及更多的开源内核作者
