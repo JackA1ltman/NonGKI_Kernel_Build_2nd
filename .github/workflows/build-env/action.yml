@@ -112,16 +112,14 @@ runs:
             apt-get install libtinfo5 -y
 
             # Install Coccinelle
-            if [[ "${{ env.HIDE_STUFF }}" == "true" ]]; then
-                apt-get install pkg-config ocaml-nox ocaml-findlib autoconf libpcre3-dev python3-dev menhir libparmap-ocaml-dev libpcre-ocaml-dev -y
-                wget https://coccinelle.gitlabpages.inria.fr/website/distrib/coccinelle-1.3.tar.gz
-                tar zxf coccinelle-1.3.tar.gz
-                cd coccinelle-1.3
-                ./autogen
-                ./configure
-                make
-                make install
-            fi
+            apt-get install pkg-config ocaml-nox ocaml-findlib autoconf libpcre3-dev python3-dev menhir libparmap-ocaml-dev libpcre-ocaml-dev -y
+            wget https://coccinelle.gitlabpages.inria.fr/website/distrib/coccinelle-1.3.tar.gz
+            tar zxf coccinelle-1.3.tar.gz
+            cd coccinelle-1.3
+            ./autogen
+            ./configure
+            make
+            make install
 
             if [ "${{ env.PYTHON_VERSION }}" == "3" ]; then
                 apt install python3 -y
@@ -162,16 +160,14 @@ runs:
             sudo apt-get install libtinfo5 -y
 
             # Install Coccinelle
-            if [[ "${{ env.HIDE_STUFF }}" == "true" ]]; then
-                apt-get install pkg-config ocaml-nox ocaml-findlib autoconf libpcre3-dev python3-dev menhir libparmap-ocaml-dev libpcre-ocaml-dev -y
-                wget https://coccinelle.gitlabpages.inria.fr/website/distrib/coccinelle-1.3.tar.gz
-                tar zxf coccinelle-1.3.tar.gz
-                cd coccinelle-1.3
-                ./autogen
-                ./configure
-                make
-                make install
-            fi
+            apt-get install pkg-config ocaml-nox ocaml-findlib autoconf libpcre3-dev python3-dev menhir libparmap-ocaml-dev libpcre-ocaml-dev -y
+            wget https://coccinelle.gitlabpages.inria.fr/website/distrib/coccinelle-1.3.tar.gz
+            tar zxf coccinelle-1.3.tar.gz
+            cd coccinelle-1.3
+            ./autogen
+            ./configure
+            make
+            make install
 
             if [ "${{ env.PYTHON_VERSION }}" == "3" ]; then
                 sudo apt install python3 -y
@@ -265,12 +261,10 @@ runs:
             pacman -S git base-devel systemd wget rustup curl patch ccache automake flex lzop bison gperf zip curl bzip2 squashfs-tools pngcrush schedtool make optipng maven pwgen minicom bc unzip 7zip zstd binutils gcc wget which libxml2-legacy cpio --noconfirm
 
             # Install Coccinelle
-            if [[ "${{ env.HIDE_STUFF }}" == "true" ]]; then
-                echo -e "\n[archlinuxcn]\nServer = https://repo.archlinuxcn.org/\$arch" >> /etc/pacman.conf
-                pacman -Syy
-                pacman -S archlinuxcn-keyring --noconfirm
-                pacman -S coccinelle --noconfirm
-            fi
+            echo -e "\n[archlinuxcn]\nServer = https://repo.archlinuxcn.org/\$arch" >> /etc/pacman.conf
+            pacman -Syy
+            pacman -S archlinuxcn-keyring --noconfirm
+            pacman -S coccinelle --noconfirm
 
             if [ "${{ env.PYTHON_VERSION }}" == "3" ]; then
                 pacman -S python3 --noconfirm
