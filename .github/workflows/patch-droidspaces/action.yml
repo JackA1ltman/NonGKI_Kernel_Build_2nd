@@ -33,7 +33,7 @@ runs:
           if [[ -f "kernel/cgroup/cgroup.c" ]] && ! grep -q "kernfs_create_link" "kernel/cgroup/cgroup.c" >/dev/null 2>&1; then
                 cgroup_patch
 
-          elif ! grep -q "kernfs_create_link" "kernel/cgroup.c" >/dev/null 2>&1; then
+          elif [[ -f "kernel/cgroup.c" ]] && ! grep -q "kernfs_create_link" "kernel/cgroup.c" >/dev/null 2>&1; then
                 cgroup_patch
 
           else
