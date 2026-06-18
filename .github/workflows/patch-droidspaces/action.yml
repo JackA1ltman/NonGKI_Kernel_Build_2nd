@@ -37,7 +37,7 @@ runs:
                 cgroup_patch
 
           else
-                echo "echo "[-] Detected cgroup.c patched, Skipped.""
+                echo "[-] Detected cgroup.c patched, Skipped."
 
           fi
 
