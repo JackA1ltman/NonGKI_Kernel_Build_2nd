@@ -49,13 +49,13 @@ runs:
               elif [ "$VERSION_ID" = "24.04" ]; then
                   echo "SYSTEM_VERSION=newer" >> $GITHUB_ENV
               else
-                  echo "❌ Not Supported: $VERSION_ID"
+                  echo "[-] Not supported ubuntu version: $VERSION_ID."
                   false
               fi
           elif [ "$ID" = "arch" ]; then
               echo "SYSTEM_VERSION=arch" >> $GITHUB_ENV
           else
-              echo "❌ Not Supported: $PRETTY_NAME"
+              echo "[-] Not supported system os: $PRETTY_NAME."
               false
           fi
 
@@ -110,16 +110,18 @@ runs:
             apt-get install git ccache automake flex lzop bison gperf build-essential zip curl zlib1g-dev g++-multilib libxml2-utils bzip2 libbz2-dev libbz2-1.0 libghc-bzlib-dev squashfs-tools pngcrush schedtool dpkg-dev liblz4-tool make optipng maven libssl-dev pwgen libswitch-perl policycoreutils minicom libxml-sax-base-perl libxml-simple-perl bc libc6-dev-i386 lib32ncurses5-dev libx11-dev lib32z-dev libgl1-mesa-dev xsltproc unzip device-tree-compiler wget curl cpio -y
             apt-get install p7zip p7zip-full -y
             apt-get install libtinfo5 -y
+            echo "[+] The base packages is installed."
 
             # Install Coccinelle
             apt-get install pkg-config ocaml-nox ocaml-findlib autoconf libpcre3-dev python3-dev menhir libparmap-ocaml-dev libpcre-ocaml-dev -y
-            wget https://coccinelle.gitlabpages.inria.fr/website/distrib/coccinelle-1.3.tar.gz
-            tar zxf coccinelle-1.3.tar.gz
+            ${{ env.CURLX }} "https://coccinelle.gitlabpages.inria.fr/website/distrib/coccinelle-1.3.tar.gz" "coccinelle.tar.gz"
+            tar zxf coccinelle.tar.gz
             cd coccinelle-1.3
             ./autogen
             ./configure
             make
             make install
+            echo "[+] Coccinelle is installed."
 
             if [ "${{ env.PYTHON_VERSION }}" == "3" ]; then
                 apt install python3 -y
@@ -158,16 +160,18 @@ runs:
             sudo apt-get install git ccache automake flex lzop bison gperf build-essential zip curl zlib1g-dev g++-multilib libxml2-utils bzip2 libbz2-dev libbz2-1.0 libghc-bzlib-dev squashfs-tools pngcrush schedtool dpkg-dev liblz4-tool make optipng maven libssl-dev pwgen libswitch-perl policycoreutils minicom libxml-sax-base-perl libxml-simple-perl bc libc6-dev-i386 lib32ncurses5-dev libx11-dev lib32z-dev libgl1-mesa-dev xsltproc unzip device-tree-compiler wget curl cpio -y
             sudo apt-get install p7zip p7zip-full -y
             sudo apt-get install libtinfo5 -y
+            echo "[+] The base packages is installed."
 
             # Install Coccinelle
-            apt-get install pkg-config ocaml-nox ocaml-findlib autoconf libpcre3-dev python3-dev menhir libparmap-ocaml-dev libpcre-ocaml-dev -y
-            wget https://coccinelle.gitlabpages.inria.fr/website/distrib/coccinelle-1.3.tar.gz
-            tar zxf coccinelle-1.3.tar.gz
+            sudo apt-get install pkg-config ocaml-nox ocaml-findlib autoconf libpcre3-dev python3-dev menhir libparmap-ocaml-dev libpcre-ocaml-dev -y
+            ${{ env.CURLX }} "https://coccinelle.gitlabpages.inria.fr/website/distrib/coccinelle-1.3.tar.gz" "coccinelle.tar.gz"
+            tar zxf coccinelle.tar.gz
             cd coccinelle-1.3
             ./autogen
             ./configure
             make
-            make install
+            sudo make install
+            echo "[+] Coccinelle is installed."
 
             if [ "${{ env.PYTHON_VERSION }}" == "3" ]; then
                 sudo apt install python3 -y
@@ -205,8 +209,20 @@ runs:
           elif [ "${{ env.SYSTEM_VERSION }}" == "newer" ]; then
 
             sudo apt update
-            sudo apt install git ccache automake flex lzop bison gperf build-essential zip curl zlib1g-dev g++-multilib libxml2-utils bzip2 libbz2-dev libbz2-1.0 libghc-bzlib-dev squashfs-tools pngcrush schedtool dpkg-dev make optipng maven libssl-dev pwgen libswitch-perl policycoreutils minicom libxml-sax-base-perl libxml-simple-perl bc libc6-dev-i386 libx11-dev lib32z-dev libgl1-mesa-dev xsltproc unzip device-tree-compiler cpio coccinelle -y
+            sudo apt install git ccache automake flex lzop bison gperf build-essential zip curl zlib1g-dev g++-multilib libxml2-utils bzip2 libbz2-dev libbz2-1.0 libghc-bzlib-dev squashfs-tools pngcrush schedtool dpkg-dev make optipng maven libssl-dev pwgen libswitch-perl policycoreutils minicom libxml-sax-base-perl libxml-simple-perl bc libc6-dev-i386 libx11-dev lib32z-dev libgl1-mesa-dev xsltproc unzip device-tree-compiler cpio -y
             sudo apt-get install zstd libc6 binutils libc6-dev-i386 gcc g++ p7zip p7zip-full -y
+            echo "[+] The base packages is installed."
+
+            # Install Coccinelle
+            sudo apt-get install pkg-config ocaml-nox ocaml-findlib autoconf libpcre3-dev python3-dev menhir libparmap-ocaml-dev libpcre-ocaml-dev -y
+            ${{ env.CURLX }} "https://coccinelle.gitlabpages.inria.fr/website/distrib/coccinelle-1.3.tar.gz" "coccinelle.tar.gz"
+            tar zxf coccinelle.tar.gz
+            cd coccinelle-1.3
+            ./autogen
+            ./configure
+            make
+            sudo make install
+            echo "[+] Coccinelle is installed."
 
             # Install Libtinfo5
             ${{ env.CURLX }} http://launchpadlibrarian.net/580830584/libtinfo5_6.3-2_amd64.deb libtinfo5.deb
@@ -259,12 +275,14 @@ runs:
             pacman-key --init
             pacman -Syyu --noconfirm
             pacman -S git base-devel systemd wget rustup curl patch ccache automake flex lzop bison gperf zip curl bzip2 squashfs-tools pngcrush schedtool make optipng maven pwgen minicom bc unzip 7zip zstd binutils gcc wget which libxml2-legacy cpio --noconfirm
+            echo "[+] The base packages is installed."
 
             # Install Coccinelle
             echo -e "\n[archlinuxcn]\nServer = https://repo.archlinuxcn.org/\$arch" >> /etc/pacman.conf
             pacman -Syy
             pacman -S archlinuxcn-keyring --noconfirm
             pacman -S coccinelle --noconfirm
+            echo "[+] Coccinelle is installed."
 
             if [ "${{ env.PYTHON_VERSION }}" == "3" ]; then
                 pacman -S python3 --noconfirm
