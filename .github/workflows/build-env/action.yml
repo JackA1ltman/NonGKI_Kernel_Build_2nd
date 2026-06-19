@@ -163,14 +163,14 @@ runs:
             echo "[+] The base packages is installed."
 
             # Install Coccinelle
-            apt-get install pkg-config ocaml-nox ocaml-findlib autoconf libpcre3-dev python3-dev menhir libparmap-ocaml-dev libpcre-ocaml-dev -y
+            sudo apt-get install pkg-config ocaml-nox ocaml-findlib autoconf libpcre3-dev python3-dev menhir libparmap-ocaml-dev libpcre-ocaml-dev -y
             ${{ env.CURLX }} "https://coccinelle.gitlabpages.inria.fr/website/distrib/coccinelle-1.3.tar.gz" "coccinelle.tar.gz"
             tar zxf coccinelle.tar.gz
             cd coccinelle
             ./autogen
             ./configure
             make
-            make install
+            sudo make install
             echo "[+] Coccinelle is installed."
 
             if [ "${{ env.PYTHON_VERSION }}" == "3" ]; then
@@ -214,14 +214,14 @@ runs:
             echo "[+] The base packages is installed."
 
             # Install Coccinelle
-            apt-get install pkg-config ocaml-nox ocaml-findlib autoconf libpcre3-dev python3-dev menhir libparmap-ocaml-dev libpcre-ocaml-dev -y
+            sudo apt-get install pkg-config ocaml-nox ocaml-findlib autoconf libpcre3-dev python3-dev menhir libparmap-ocaml-dev libpcre-ocaml-dev -y
             ${{ env.CURLX }} "https://coccinelle.gitlabpages.inria.fr/website/distrib/coccinelle-1.3.tar.gz" "coccinelle.tar.gz"
             tar zxf coccinelle.tar.gz
             cd coccinelle
             ./autogen
             ./configure
             make
-            make install
+            sudo make install
             echo "[+] Coccinelle is installed."
 
             # Install Libtinfo5
