@@ -22,7 +22,7 @@ patch_files=(
     include/linux/seccomp.h
 )
 
-PATCH_LEVEL="2.1.00"
+PATCH_LEVEL="2.2.00"
 KERNEL_VERSION=$(head -n 3 Makefile | grep -E 'VERSION|PATCHLEVEL' | awk '{print $3}' | paste -sd '.')
 FIRST_VERSION=$(echo "$KERNEL_VERSION" | awk -F '.' '{print $1}')
 SECOND_VERSION=$(echo "$KERNEL_VERSION" | awk -F '.' '{print $2}')
