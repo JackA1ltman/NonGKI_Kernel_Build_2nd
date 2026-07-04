@@ -121,6 +121,7 @@ jobs:
           echo "[KernelSU-SukiSU-Ultra](https://github.com/ShirkNeko/SukiSU-Ultra) Version: $KSU_SUKISU_ULTRA_VERSION  " >> $GITHUB_ENV
           echo "[KernelSU-Next](https://github.com/KernelSU-Next/KernelSU-Next) Version: $KSU_NEXT_VERSION  " >> $GITHUB_ENV
           echo "[KernelSU-ReSukiSU](https://github.com/ReSukiSU/ReSukiSU) Version: $KSU_RESUKISU_VERSION  " >> $GITHUB_ENV
+          echo "[KernelSU-ReSukiSU-CI](https://github.com/cctv18/ReSukiSU_CI) Version: $KSU_RESUKISU_VERSION  " >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
 
       # Create GitHub Release and upload files if make_release is true

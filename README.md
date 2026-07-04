@@ -76,6 +76,7 @@ It also aims to provide an easier compilation process using **GitHub Actions**, 
   - [xxksu](https://github.com/backslashxx/KernelSU) - @backslashxx
   - [SukiSU-Ultra](https://github.com/SukiSU-Ultra/SukiSU-Ultra) - @ShirkNeko
     - [ReSukiSU](https://github.com/ReSukiSU/ReSukiSU) - @ReSukiSU Development
+      - [ReSukiSU_CI](https://github.com/cctv18/ReSukiSU_CI) - @cctv18
   - [Next](https://github.com/KernelSU-Next/KernelSU-Next) - @rifsxd
 - [SuSFS](https://gitlab.com/simonpunk/susfs4ksu) - @simonpunk
 - [Re:Kernel](https://github.com/Sakion-Team/Re-Kernel) - @Sakion-Team
