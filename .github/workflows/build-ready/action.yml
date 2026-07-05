@@ -45,9 +45,13 @@ runs:
           if [[ "${{ env.PACK_METHOD }}" == "Anykernel3" ]]; then
             cd $GITHUB_WORKSPACE/device_kernel
             if [[ -d "Anykernel3" ]]; then
-              echo "Found Anykernel3 in Kernel!"
+              echo "[+] Found Anykernel3 in Kernel!"
             else
               git clone "${{ env.AK3_SOURCE }}" -b "${{ env.AK3_BRANCH }}" Anykernel3 --depth=1
+              cd Anykernel3
+              git checkout dca9dc370838d919d56c1f59ec78b27a14a72c68
+              cd ../
+              echo "[+] Get Anykernel3 successfully!"
             fi
           elif [[ "${{ env.PACK_METHOD }}" == "MKBOOTIMG" ]] || [ "${{ env.DEFCONFIG_FROM_BOOT }}" == "true" ]; then
             cd $GITHUB_WORKSPACE
@@ -55,7 +59,7 @@ runs:
             ${{ env.CURLX }} ${{ env.BOOT_SOURCE }} $GITHUB_WORKSPACE/boot_source_${{ env.DEVICE_NAME }}.img
             cd device_kernel
           else
-            echo "Need packing method! "
+            echo "[-] Need packing method! "
             false
           fi
           echo "PACK_METHOD=${{ env.PACK_METHOD }}" >> $GITHUB_ENV
