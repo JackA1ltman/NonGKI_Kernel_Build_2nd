@@ -48,19 +48,15 @@ runs:
             if [[ -d "Anykernel3" ]]; then
               echo "[+] Found Anykernel3 in Kernel!"
 
-            elif [[ "${{ env.AK3_SOURCE }}" == "*osm0sis/AnyKernel3.git" ]]; then
-              git clone "${{ env.AK3_SOURCE }}" -b "${{ env.AK3_BRANCH }}" -b  Anykernel3 --depth=1
+            elif [[ "${{ env.AK3_SOURCE }}" == *"osm0sis/AnyKernel3.git" ]]; then
+              git clone "${{ env.AK3_SOURCE }}" -b "${{ env.AK3_BRANCH }}" -b  Anykernel3
               cd Anykernel3
               git checkout dca9dc370838d919d56c1f59ec78b27a14a72c68
               cd ../
               echo "[+] Get Anykernel3 successfully!"
 
             else
-              git clone "${{ env.AK3_SOURCE }}" -b "${{ env.AK3_BRANCH }}" Anykernel3
-              cd Anykernel3
-              git checkout dca9dc370838d919d56c1f59ec78b27a14a72c68
-              cd ../
-              echo "[+] Get Anykernel3 successfully!"
+              git clone "${{ env.AK3_SOURCE }}" -b "${{ env.AK3_BRANCH }}" Anykernel3 --depth=1
 
             fi
           elif [[ "${{ env.PACK_METHOD }}" == "MKBOOTIMG" ]] || [ "${{ env.DEFCONFIG_FROM_BOOT }}" == "true" ]; then
