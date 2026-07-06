@@ -44,24 +44,38 @@ runs:
 
           if [[ "${{ env.PACK_METHOD }}" == "Anykernel3" ]]; then
             cd $GITHUB_WORKSPACE/device_kernel
+
             if [[ -d "Anykernel3" ]]; then
               echo "[+] Found Anykernel3 in Kernel!"
-            else
-              git clone "${{ env.AK3_SOURCE }}" -b "${{ env.AK3_BRANCH }}" Anykernel3 --depth=1
+
+            elif [[ "${{ env.AK3_SOURCE }}" == "*osm0sis/AnyKernel3.git" ]]; then
+              git clone "${{ env.AK3_SOURCE }}" -b "${{ env.AK3_BRANCH }}" -b  Anykernel3 --depth=1
               cd Anykernel3
               git checkout dca9dc370838d919d56c1f59ec78b27a14a72c68
               cd ../
               echo "[+] Get Anykernel3 successfully!"
+
+            else
+              git clone "${{ env.AK3_SOURCE }}" -b "${{ env.AK3_BRANCH }}" Anykernel3
+              cd Anykernel3
+              git checkout dca9dc370838d919d56c1f59ec78b27a14a72c68
+              cd ../
+              echo "[+] Get Anykernel3 successfully!"
+
             fi
           elif [[ "${{ env.PACK_METHOD }}" == "MKBOOTIMG" ]] || [ "${{ env.DEFCONFIG_FROM_BOOT }}" == "true" ]; then
             cd $GITHUB_WORKSPACE
             git clone https://android.googlesource.com/platform/system/tools/mkbootimg $GITHUB_WORKSPACE/mkboottools -b main-kernel-build-2024 --depth=1
             ${{ env.CURLX }} ${{ env.BOOT_SOURCE }} $GITHUB_WORKSPACE/boot_source_${{ env.DEVICE_NAME }}.img
+            echo "[+] Get MKBOOTIMG successfully!"
             cd device_kernel
+
           else
             echo "[-] Need packing method! "
             false
+
           fi
+
           echo "PACK_METHOD=${{ env.PACK_METHOD }}" >> $GITHUB_ENV
 
       - name: Get DEFCONFIG
