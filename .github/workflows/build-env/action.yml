@@ -225,7 +225,7 @@ runs:
             echo "[+] Coccinelle is installed."
 
             # Install Libtinfo5
-            ${{ env.CURLX }} http://launchpadlibrarian.net/580830584/libtinfo5_6.3-2_amd64.deb libtinfo5.deb
+            ${{ env.CURLX }} https://security.ubuntu.com/ubuntu/pool/universe/n/ncurses/libtinfo5_6.3-2_amd64.deb libtinfo5.deb
             sudo apt install ./libtinfo5.deb
             rm -f libtinfo5.deb
 
