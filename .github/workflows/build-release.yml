@@ -70,7 +70,7 @@ jobs:
     steps:
       # Checkout the code
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v6
 
       # Download Artifacts for A12 (Only if A12 Build is successful or input is true or empty)
       - name: Download Artifacts

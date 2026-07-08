@@ -99,7 +99,7 @@ jobs:
       
     steps:
       - name: ⏰ Checkout repository
-        uses: actions/checkout@v4 # Đổi thành v4 vì v6 chưa tồn tại, Github Actions có thể báo lỗi
+        uses: actions/checkout@v6 # Đổi thành v4 vì v6 chưa tồn tại, Github Actions có thể báo lỗi
 
       - name: ⌛️ Compilation environment preparation
         uses: ./.github/workflows/build-env
