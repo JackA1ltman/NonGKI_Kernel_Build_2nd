@@ -1145,7 +1145,7 @@ index 9e17d92..c416100 100644
  		start_vaddr = end;
  
 diff --git a/fs/proc_namespace.c b/fs/proc_namespace.c
-index bd07f0f..36ada06 100644
+index bd07f0f..40d82ef 100644
 --- a/fs/proc_namespace.c
 +++ b/fs/proc_namespace.c
 @@ -12,12 +12,20 @@
@@ -1169,7 +1169,7 @@ index bd07f0f..36ada06 100644
  static __poll_t mounts_poll(struct file *file, poll_table *wait)
  {
  	struct seq_file *m = file->private_data;
-@@ -239,6 +247,228 @@ out:
+@@ -239,6 +247,162 @@ out:
  	return err;
  }
  
@@ -1204,77 +1204,9 @@ index bd07f0f..36ada06 100644
 +	if (err)
 +		goto out;
 +	show_mnt_opts(m, mnt);
-+	if (sb->s_op->show_options)
-+		err = sb->s_op->show_options(m, mnt_path.dentry);
-+	seq_puts(m, " 0 0\n");
-+out:
-+	return err;
-+}
-+
-+static int susfs_show_mountinfo(struct seq_file *m, struct vfsmount *mnt)
-+{
-+	struct proc_mounts *p = m->private;
-+	struct mount *r = real_mount(mnt);
-+	struct super_block *sb = mnt->mnt_sb;
-+	struct path mnt_path = { .dentry = mnt->mnt_root, .mnt = mnt };
-+	int err;
-+
-+	if (r->mnt_id >= DEFAULT_KSU_MNT_ID)
-+		return 0;
-+
-+	seq_printf(m, "%i %i %u:%u ", r->mnt_id, r->mnt_parent->mnt_id,
-+		   MAJOR(sb->s_dev), MINOR(sb->s_dev));
-+	if (sb->s_op->show_path) {
-+		err = sb->s_op->show_path(m, mnt->mnt_root);
-+		if (err)
-+			goto out;
-+	} else {
-+		seq_dentry(m, mnt->mnt_root, " \t\n\\");
-+	}
-+	seq_putc(m, ' ');
-+
-+	/* mountpoints outside of chroot jail will give SEQ_SKIP on this */
-+	err = seq_path_root(m, &mnt_path, &p->root, " \t\n\\");
-+	if (err)
-+		goto out;
-+
-+	seq_puts(m, mnt->mnt_flags & MNT_READONLY ? " ro" : " rw");
-+	show_mnt_opts(m, mnt);
-+
-+	/* Tagged fields ("foo:X" or "bar") */
-+	if (IS_MNT_SHARED(r))
-+		seq_printf(m, " shared:%i", r->mnt_group_id);
-+	if (IS_MNT_SLAVE(r)) {
-+		int master = r->mnt_master->mnt_group_id;
-+		int dom = get_dominating_id(r, &p->root);
-+		seq_printf(m, " master:%i", master);
-+		if (dom && dom != master)
-+			seq_printf(m, " propagate_from:%i", dom);
-+	}
-+	if (IS_MNT_UNBINDABLE(r))
-+		seq_puts(m, " unbindable");
-+
-+	/* Filesystem specific data */
-+	seq_puts(m, " - ");
-+	show_type(m, sb);
-+	seq_putc(m, ' ');
-+	if (sb->s_op->show_devname) {
-+		err = sb->s_op->show_devname(m, mnt->mnt_root);
-+		if (err)
-+			goto out;
-+	seq_putc(m, ' ');
-+	/* mountpoints outside of chroot jail will give SEQ_SKIP on this */
-+	err = seq_path_root(m, &mnt_path, &p->root, " \t\n\\");
-+	if (err)
-+		goto out;
-+	seq_putc(m, ' ');
-+	show_type(m, sb);
-+	seq_puts(m, __mnt_is_readonly(mnt) ? " ro" : " rw");
-+	err = show_sb_opts(m, sb);
-+	if (err)
-+		goto out;
-+	show_mnt_opts(m, mnt);
-+	if (sb->s_op->show_options)
++	if (sb->s_op->show_options2)
++			err = sb->s_op->show_options2(mnt, m, mnt_path.dentry);
++	else if (sb->s_op->show_options)
 +		err = sb->s_op->show_options(m, mnt_path.dentry);
 +	seq_puts(m, " 0 0\n");
 +out:
@@ -1339,7 +1271,9 @@ index bd07f0f..36ada06 100644
 +	err = show_sb_opts(m, sb);
 +	if (err)
 +		goto out;
-+	if (sb->s_op->show_options)
++	if (sb->s_op->show_options2) {
++		err = sb->s_op->show_options2(mnt, m, mnt->mnt_root);
++	} else if (sb->s_op->show_options)
 +		err = sb->s_op->show_options(m, mnt->mnt_root);
 +	seq_putc(m, '\n');
 +out:
@@ -1398,7 +1332,7 @@ index bd07f0f..36ada06 100644
  static int mounts_open_common(struct inode *inode, struct file *file,
  			      int (*show)(struct seq_file *, struct vfsmount *))
  {
-@@ -306,16 +536,34 @@ static int mounts_release(struct inode *inode, struct file *file)
+@@ -306,16 +470,34 @@ static int mounts_release(struct inode *inode, struct file *file)
  
  static int mounts_open(struct inode *inode, struct file *file)
  {
