@@ -49,7 +49,7 @@ runs:
               echo "[+] Found Anykernel3 in Kernel!"
 
             elif [[ "${{ env.AK3_SOURCE }}" == *"osm0sis/AnyKernel3.git" ]]; then
-              git clone "${{ env.AK3_SOURCE }}" -b "${{ env.AK3_BRANCH }}" -b  Anykernel3
+              git clone "${{ env.AK3_SOURCE }}" -b "${{ env.AK3_BRANCH }}" Anykernel3
               cd Anykernel3
               git checkout dca9dc370838d919d56c1f59ec78b27a14a72c68
               cd ../
