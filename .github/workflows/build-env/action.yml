@@ -105,6 +105,7 @@ runs:
             TZ=America/Los_Angeles
             ln -snf "/usr/share/zoneinfo/$TZ" /etc/localtime
             echo "$TZ" > /etc/timezone
+            echo "[+] Timezone has been set."
 
             apt-get update
             apt-get install git ccache automake flex lzop bison gperf build-essential zip curl zlib1g-dev g++-multilib libxml2-utils bzip2 libbz2-dev libbz2-1.0 libghc-bzlib-dev squashfs-tools pngcrush schedtool dpkg-dev liblz4-tool make optipng maven libssl-dev pwgen libswitch-perl policycoreutils minicom libxml-sax-base-perl libxml-simple-perl bc libc6-dev-i386 lib32ncurses5-dev libx11-dev lib32z-dev libgl1-mesa-dev xsltproc unzip device-tree-compiler wget curl cpio -y
@@ -127,35 +128,18 @@ runs:
                 apt install python3 -y
                 rm -rf /usr/bin/python
                 ln -s /usr/bin/python3 /usr/bin/python
-                echo ">>>>>>><<<<<<<"
-                echo ">            <"
-                echo "> Python - 3 <"
-                echo ">            <"
-                echo ">>>>>>><<<<<<<"
+                echo "[+] Python version: $(python -V)"
             elif [ "${{ env.PYTHON_VERSION }}" == "2" ]; then
                 apt install python2 -y
                 rm -rf /usr/bin/python
                 ln -s /usr/bin/python2.7 /usr/bin/python
-                echo ">>>>>>><<<<<<<"
-                echo ">            <"
-                echo "> Python - 2 <"
-                echo ">            <"
-                echo ">>>>>>><<<<<<<"
+                echo "[+] Python version: $(python -V)"
             else
-                echo ">>>>>>>>>>>>>>>>>Error<<<<<<<<<<<<<<<<<"
-                echo ">                                     <"
-                echo ">You need choose a vaild python version"
-                echo ">                                     <"
-                echo ">>>>>>>>>>>>>>>>>>><<<<<<<<<<<<<<<<<<<<"
+                echo "[-] You need choose a vaild python version!"
                 false
             fi
 
-            echo "Python Version"
-            echo ">$(python -V)"
-            echo ">>EOF"
-
           elif [ "${{ env.SYSTEM_VERSION }}" == "older" ]; then
-
             sudo apt-get update
             sudo apt-get install git ccache automake flex lzop bison gperf build-essential zip curl zlib1g-dev g++-multilib libxml2-utils bzip2 libbz2-dev libbz2-1.0 libghc-bzlib-dev squashfs-tools pngcrush schedtool dpkg-dev liblz4-tool make optipng maven libssl-dev pwgen libswitch-perl policycoreutils minicom libxml-sax-base-perl libxml-simple-perl bc libc6-dev-i386 lib32ncurses5-dev libx11-dev lib32z-dev libgl1-mesa-dev xsltproc unzip device-tree-compiler wget curl cpio -y
             sudo apt-get install p7zip p7zip-full -y
@@ -177,37 +161,18 @@ runs:
                 sudo apt install python3 -y
                 sudo rm -rf /usr/bin/python
                 sudo ln -s /usr/bin/python3 /usr/bin/python
-                echo ">>>>>>><<<<<<<"
-                echo ">            <"
-                echo "> Python - 3 <"
-                echo ">            <"
-                echo ">>>>>>><<<<<<<"
+                echo "[+] Python version: $(python -V)"
             elif [ "${{ env.PYTHON_VERSION }}" == "2" ]; then
                 sudo apt install python2 -y
                 sudo rm -rf /usr/bin/python
                 sudo ln -s /usr/bin/python2.7 /usr/bin/python
-                echo ">>>>>>><<<<<<<"
-                echo ">            <"
-                echo "> Python - 2 <"
-                echo ">            <"
-                echo ">>>>>>><<<<<<<"
+                echo "[+] Python version: $(python -V)"
             else
-                echo ">>>>>>>>>>>>>>>>>Error<<<<<<<<<<<<<<<<<"
-                echo ">                                     <"
-                echo ">You need choose a vaild python version"
-                echo ">                                     <"
-                echo ">>>>>>>>>>>>>>>>>>><<<<<<<<<<<<<<<<<<<<"
+                echo "[-] You need choose a vaild python version!"
                 false
             fi
 
-            echo "Python Version"
-            echo ">"
-            echo "$(python -V)"
-            echo ">"
-            echo ">EOF"
-
           elif [ "${{ env.SYSTEM_VERSION }}" == "newer" ]; then
-
             sudo apt update
             sudo apt install git ccache automake flex lzop bison gperf build-essential zip curl zlib1g-dev g++-multilib libxml2-utils bzip2 libbz2-dev libbz2-1.0 libghc-bzlib-dev squashfs-tools pngcrush schedtool dpkg-dev make optipng maven libssl-dev pwgen libswitch-perl policycoreutils minicom libxml-sax-base-perl libxml-simple-perl bc libc6-dev-i386 libx11-dev lib32z-dev libgl1-mesa-dev xsltproc unzip device-tree-compiler cpio -y
             sudo apt-get install zstd libc6 binutils libc6-dev-i386 gcc g++ p7zip p7zip-full -y
@@ -233,11 +198,7 @@ runs:
                 sudo apt install python3 -y
                 sudo rm -rf /usr/bin/python
                 sudo ln -s /usr/bin/python3 /usr/bin/python
-                echo ">>>>>>><<<<<<<"
-                echo ">            <"
-                echo "> Python - 3 <"
-                echo ">            <"
-                echo ">>>>>>><<<<<<<"
+                echo "[+] Python version: $(python -V)"
             elif [ "${{ env.PYTHON_VERSION }}" == "2" ]; then
                 wget https://www.python.org/ftp/python/2.7.18/Python-2.7.18.tgz
                 tar -xvf Python-2.7.18.tgz
@@ -250,28 +211,13 @@ runs:
                 sudo update-alternatives --install /usr/bin/python python /usr/local/lib/python2.7 1
                 cd ../
                 rm -rf Python-2.7.18 Python-2.7.18.tgz
-                echo ">>>>>>><<<<<<<"
-                echo ">            <"
-                echo "> Python - 2 <"
-                echo ">            <"
-                echo ">>>>>>><<<<<<<"
+                echo "[+] Python version: $(python -V)"
             else
-                echo ">>>>>>>>>>>>>>>>>Error<<<<<<<<<<<<<<<<<"
-                echo ">                                     <"
-                echo ">You need choose a vaild python version"
-                echo ">                                     <"
-                echo ">>>>>>>>>>>>>>>>>>><<<<<<<<<<<<<<<<<<<<"
+                echo "[-] You need choose a vaild python version!"
                 false
             fi
 
-            echo "Python Version"
-            echo ">"
-            echo "$(python -V)"
-            echo ">"
-            echo ">EOF"
-
           elif [ "${{ env.SYSTEM_VERSION }}" == "arch" ]; then
-
             pacman-key --init
             pacman -Syyu --noconfirm
             pacman -S git base-devel systemd wget rustup curl patch ccache automake flex lzop bison gperf zip curl bzip2 squashfs-tools pngcrush schedtool make optipng maven pwgen minicom bc unzip 7zip zstd binutils gcc wget which libxml2-legacy cpio --noconfirm
@@ -288,38 +234,22 @@ runs:
                 pacman -S python3 --noconfirm
                 rm -rf /usr/bin/python
                 ln -s /usr/bin/python3 /usr/bin/python
-                echo ">>>>>>><<<<<<<"
-                echo ">            <"
-                echo "> Python - 3 <"
-                echo ">            <"
-                echo ">>>>>>><<<<<<<"
+                echo "[+] Python version: $(python -V)"
             elif [ "${{ env.PYTHON_VERSION }}" == "2" ]; then
-                echo ">>>>>>>>>>>>>>>><<<<<<<<<<<<<<<<"
-                echo ">                              <"
-                echo "> Could not supported Python 2 <"
-                echo ">                              <"
-                echo ">>>>>>>>>>>>>>>><<<<<<<<<<<<<<<<"
+                echo "[-] Current System OS could not get Python 2!"
                 false
             else
-                echo ">>>>>>>>>>>>>>>>>Error<<<<<<<<<<<<<<<<<"
-                echo ">                                     <"
-                echo ">You need choose a vaild python version"
-                echo ">                                     <"
-                echo ">>>>>>>>>>>>>>>>>>><<<<<<<<<<<<<<<<<<<<"
+                echo "[-] You need choose a vaild python version!"
                 false
             fi
-
-            echo "Python Version"
-            echo ">"
-            echo "$(python -V)"
-            echo ">"
-            echo ">EOF"
 
             # Update Rust Toolchain
             rustup default stable
 
           else
-            echo "❌ Your system os cannot supported."
+            echo "[-] Support is currently unavailable for the operating system you selected!"
+            false
+
           fi
 
       - name: Install GNU GCC
@@ -327,23 +257,27 @@ runs:
         shell: bash
         run: |
           if [ "${{ env.SYSTEM_VERSION }}" == "newer" ] || [ "${{ env.SYSTEM_VERSION }}" == "older" ] || [ "${{ env.SYSTEM_VERSION }}" == "oldest" ]; then
-
             sudo apt install binutils-aarch64-linux-gnu gcc-aarch64-linux-gnu
             sudo apt install gcc-arm-linux-gnueabi -y
 
             echo "GCC_64=CROSS_COMPILE=aarch64-linux-gnu-" >> $GITHUB_ENV
             echo "GCC_32=CROSS_COMPILE_ARM32=arm-linux-gnueabi-" >> $GITHUB_ENV
 
-          elif [ "${{ env.SYSTEM_VERSION }}" == "arch" }} ]; then
+            echo "[+] Get GNU GCC successfully."
 
-            pacman -S aarch64-linux-gnu-binutils aarch64-linux-gnu-gcc aarch64-linux-gnu-glibc aarch64-linux-gnu-linux-api-headers aarch64-linux-gnu-glibc --noconfirm
-            pacman -S arm-none-eabi-binutils arm-none-eabi-gcc arm-none-eabi-newlib --noconfirm
+          elif [ "${{ env.SYSTEM_VERSION }}" == "arch" }} ]; then
+            pacman -S aarch64-linux-gnu-binutils aarch64-linux-gnu-gcc aarch64-linux-gnu-linux-api-headers aarch64-linux-gnu-glibc --noconfirm
+            pacman -S arm-linux-gnueabihf-binutils arm-linux-gnueabihf-gcc arm-linux-gnueabihf-linux-api-headers arm-linux-gnueabihf-glibc --noconfirm
 
             echo "GCC_64=CROSS_COMPILE=aarch64-linux-gnu-" >> $GITHUB_ENV
-            echo "GCC_32=CROSS_COMPILE_ARM32=arm-none-eabi-" >> $GITHUB_ENV
+            echo "GCC_32=CROSS_COMPILE_ARM32=arm-linux-gnueabihf-" >> $GITHUB_ENV
+
+            echo "[+] Get GNU GCC successfully."
 
           else
-            echo "❌ Your system os cannot supported."
+            echo "[-] Support is currently unavailable for the operating system you selected!"
+            false
+
           fi
 
       - name: Set Compile Environment
@@ -353,171 +287,128 @@ runs:
 
           # Set GCC
           if [[ "${{ env.CLANG_SOURCE }}" == *proton* ]]; then
-            echo ">>>>>>>>>>GCC Status<<<<<<<<<<"
-            echo ">                            <"
-            echo ">   Detected Pronton Clang   <"
-            echo ">     Needn't other GCC      <"
-            echo ">                            <"
-            echo ">>>>>>>>>>>>>>><<<<<<<<<<<<<<<"
+            echo "[+] Detected Proton Clang. Automatically Configure GCC."
             echo "GCC_64=CROSS_COMPILE=aarch64-linux-gnu-" >> $GITHUB_ENV
             echo "GCC_32=CROSS_COMPILE_ARM32=arm-linux-gnueabi-" >> $GITHUB_ENV
 
           elif [[ "${{ env.GCC_GNU }}" == "true" ]]; then
-            echo ">>>>>>>>>>GCC Status<<<<<<<<<<"
-            echo ">                            <"
-            echo ">      Detected GNU GCC      <"
-            echo ">                            <"
-            echo ">>>>>>>>>>>>>>><<<<<<<<<<<<<<<"
+            echo "[+] Detect GNU GCC, Skipped."
+
           elif [[ -z "${{ env.GCC_64_SOURCE }}" ]] && [[ -z "${{ env.GCC_32_SOURCE }}" ]]; then
-            echo ">>>>>>>>>>GCC Status<<<<<<<<<<"
-            echo ">                            <"
-            echo ">   Have not found any GCC   <"
-            echo ">                            <"
-            echo ">>>>>>>>>>>>>>><<<<<<<<<<<<<<<"
+            echo "[-] GCC is not configured, Skipped."
+
           elif [[ -n "${{ env.GCC_64_SOURCE }}" ]] && [[ -n "${{ env.GCC_32_SOURCE }}" ]]; then
-            echo ">>>>>>>>>>GCC Status<<<<<<<<<<"
-            echo ">                            <"
-            echo ">         Get GCC 64         <"
-            echo ">                            <"
-            echo ">>>>>>>>>>>>>>><<<<<<<<<<<<<<<"
+            echo "::group::[+] Getting GCC 64..."
+
             if [[ "${{ env.GCC_64_SOURCE }}" == *".git" ]]; then
               git clone "${{ env.GCC_64_SOURCE }}" -b "${{ env.GCC_64_BRANCH }}" gcc-64 --depth=1
+
             elif [[ "${{ env.GCC_64_SOURCE }}" == *'.tar.gz' ]]; then
               ${{ env.CURLX }} "${{ env.GCC_64_SOURCE }}" gcc-64.tar.gz
               mkdir gcc-64
               tar -C gcc-64/ -zxf gcc-64.tar.gz
+
             elif [[ "${{ env.GCC_64_SOURCE }}" == *'.tar.xz' ]]; then
               ${{ env.CURLX }} "${{ env.GCC_64_SOURCE }}" gcc-64.tar.xz
               mkdir gcc-64
               tar -C gcc-64/ -xf gcc-64.tar.xz --strip-components 1
+
             elif [[ "${{ env.GCC_64_SOURCE }}" == *'.xz' ]]; then
               ${{ env.CURLX }} "${{ env.GCC_64_SOURCE }}" gcc-64.xz
               mkdir gcc-64
               tar -C gcc-64/ -xf gcc-64.xz --strip-components 1
+
             elif [[ "${{ env.GCC_64_SOURCE }}" == *'.zip' ]]; then
               ${{ env.CURLX }} "${{ env.GCC_64_SOURCE }}" gcc-64.zip
               mkdir gcc-64
               unzip gcc-64.zip -d gcc-64/
+
             else
-                echo ">>>>>>>>>>GCC Status<<<<<<<<<<"
-                echo ">                            <"
-                echo ">Please input vaild GCC link!<"
-                echo ">                            <"
-                echo ">>>>>>>>>>>>>>><<<<<<<<<<<<<<<"
+                echo "::endgroup::"
+                echo "[-] Please input a valid GCC link!"
                 false
             fi
+
+            echo "::endgroup::"
             bash found_gcc.sh GCC_64
 
-            echo ">>>>>>>>>>GCC Status<<<<<<<<<<"
-            echo ">                            <"
-            echo ">         Get GCC 32         <"
-            echo ">                            <"
-            echo ">>>>>>>>>>>>>>><<<<<<<<<<<<<<<"
+            echo "::group::[+] Getting GCC 32..."
             if [[ "${{ env.GCC_32_SOURCE }}" == *".git" ]]; then
               git clone "${{ env.GCC_32_SOURCE }}" -b "${{ env.GCC_32_BRANCH }}" gcc-32 --depth=1
+
             elif [[ "${{ env.GCC_32_SOURCE }}" == *'.tar.gz' ]]; then
               ${{ env.CURLX }} "${{ env.GCC_32_SOURCE }}" gcc-32.tar.gz
               mkdir gcc-32
               tar -C gcc-32/ -zxf gcc-32.tar.gz
+
             elif [[ "${{ env.GCC_32_SOURCE }}" == *'.tar.xz' ]]; then
               ${{ env.CURLX }} "${{ env.GCC_32_SOURCE }}" gcc-32.tar.xz
               mkdir gcc-32
               tar -C gcc-32/ -xf gcc-32.tar.xz --strip-components 1
+
             elif [[ "${{ env.GCC_32_SOURCE }}" == *'.xz' ]]; then
               ${{ env.CURLX }} "${{ env.GCC_32_SOURCE }}" gcc-32.xz
               mkdir gcc-32
               tar -C gcc-32/ -xf gcc-32.xz --strip-components 1
-            elif [[ "${{ env.GCC_32_SOURCE }}" == *'.zip' ]]; then
-              ${{ env.CURLX }} "${{ env.GCC_32_SOURCE }}" gcc-32.zip
-              mkdir gcc-32
-              unzip gcc-32.zip -d gcc-32/
-            else
-                echo ">>>>>>>>>>GCC Status<<<<<<<<<<"
-                echo ">                            <"
-                echo ">Please input vaild GCC link!<"
-                echo ">                            <"
-                echo ">>>>>>>>>>>>>>><<<<<<<<<<<<<<<"
-                false
-            fi
-            bash found_gcc.sh GCC_32
 
-          elif [[ -n "${{ env.GCC_32_SOURCE }}" ]]; then
-            echo ">>>>>>>>>>GCC Status<<<<<<<<<<"
-            echo ">                            <"
-            echo ">         Get GCC 32         <"
-            echo ">                            <"
-            echo ">>>>>>>>>>>>>>><<<<<<<<<<<<<<<"
-            if [[ "${{ env.GCC_32_SOURCE }}" == *".git" ]]; then
-              git clone "${{ env.GCC_32_SOURCE }}" -b "${{ env.GCC_32_BRANCH }}" gcc-32 --depth=1
-            elif [[ "${{ env.GCC_32_SOURCE }}" == *'.tar.gz' ]]; then
-              ${{ env.CURLX }} "${{ env.GCC_32_SOURCE }}" gcc-32.tar.gz
-              mkdir gcc-32
-              tar -C gcc-32/ -zxf gcc-32.tar.gz
-            elif [[ "${{ env.GCC_32_SOURCE }}" == *'.tar.xz' ]]; then
-              ${{ env.CURLX }} "${{ env.GCC_32_SOURCE }}" gcc-32.tar.xz
-              mkdir gcc-32
-              tar -C gcc-32/ -xf gcc-32.tar.xz --strip-components 1
             elif [[ "${{ env.GCC_32_SOURCE }}" == *'.zip' ]]; then
               ${{ env.CURLX }} "${{ env.GCC_32_SOURCE }}" gcc-32.zip
               mkdir gcc-32
               unzip gcc-32.zip -d gcc-32/
+
             else
-                echo ">>>>>>>>>>GCC Status<<<<<<<<<<"
-                echo ">                            <"
-                echo ">Please input vaild GCC link!<"
-                echo ">                            <"
-                echo ">>>>>>>>>>>>>>><<<<<<<<<<<<<<<"
+                echo "::endgroup::"
+                echo "[-] Please input a valid GCC link!"
                 false
             fi
-            bash found_gcc.sh GCC_32_ONLY
-          fi
+
+            bash found_gcc.sh GCC_32
+            echo "::endgroup::"
 
           # Set Clang
           if [[ -z "${{ env.CLANG_SOURCE }}" ]]; then
-            echo ">>>>>>>>>>Clang Status<<<<<<<<<<"
-            echo ">                              <"
-            echo ">        Not Set Clang!        <"
-            echo ">                              <"
-            echo ">>>>>>>>>>>>>>>><<<<<<<<<<<<<<<<"
+            echo "[-] GCC is not configured, Skipped."
+
           else
-            echo ">>>>>>>>>>Clang Status<<<<<<<<<<"
-            echo ">                              <"
-            echo ">          Get Clang.          <"
-            echo ">                              <"
-            echo ">>>>>>>>>>>>>>>><<<<<<<<<<<<<<<<"
+            echo "::group::[+] Getting Clang..."
 
             if [[ "${{ env.CLANG_SOURCE }}" == *".git" ]]; then
                 git clone "${{ env.CLANG_SOURCE }}" -b "${{ env.CLANG_BRANCH }}" clang-custom --depth=1
+
             elif [[ "${{ env.CLANG_SOURCE }}" == *'.tar.gz' ]]; then
                 ${{ env.CURLX }} "${{ env.CLANG_SOURCE }}" clang.tar.gz
                 mkdir clang-custom
                 tar -C clang-custom/ -zxf clang.tar.gz
+
             elif [[ "${{ env.CLANG_SOURCE }}" == *'.tar.xz' ]]; then
                 ${{ env.CURLX }} "${{ env.CLANG_SOURCE }}" clang.tar.xz
                 mkdir clang-custom
                 tar -C clang-custom/ -xf clang.tar.xz --strip-components 1
+
             elif [[ "${{ env.CLANG_SOURCE }}" == *'.zip' ]]; then
                 ${{ env.CURLX }} "${{ env.CLANG_SOURCE }}" clang.zip
                 mkdir clang-custom
                 unzip clang.zip -d clang-custom/
+
             elif [[ "${{ env.CLANG_SOURCE }}" == *"antman" ]]; then
                 mkdir clang-custom
                 cd clang-custom
                 ${{ env.CURLX }} "${{ env.CLANG_SOURCE }}" antman
                 chmod +x antman
                 bash antman -S=10032024
+
             elif [[ "${{ env.CLANG_SOURCE }}" == *"android.googlesource.com"* ]]; then
                 git clone "${{ env.CLANG_SOURCE }}" -b "${{ env.CLANG_BRANCH }}" clang-custom --depth=1
                 SUBDIR=$(find clang-custom -maxdepth 1 -type d -name 'clang-r*' | head -n 1)
+
                 if [ -n "$SUBDIR" ]; then
-                 mv "$SUBDIR"/* clang-custom/
-                fi    
+                    mv "$SUBDIR"/* clang-custom/
+                fi
+
             else
-                echo ">>>>>>>>>>Clang Status<<<<<<<<<<"
-                echo ">                              <"
-                echo ">Please input vaild Clang link!<"
-                echo ">                              <"
-                echo ">>>>>>>>>>>>>>>><<<<<<<<<<<<<<<<"
+                echo "::endgroup::"
+                echo "[-] Please input vaild Clang link!"
                 false
             fi
+            echo "::endgroup::"
           fi

@@ -32,9 +32,11 @@ runs:
 
           if [[ -d "arch/arm64/configs" ]]; then
             echo "KERNEL_ARCH=arm64" >> $GITHUB_ENV
+
           else
             echo "[-] Non-ARM64 Devies not supported!"
             false
+
           fi
 
       - name: Get Packing Tools
@@ -124,6 +126,7 @@ runs:
                 else
                     KERNELSU_BRANCH="master"
                 fi
+
             elif [[ "${{ env.KERNELSU_AUTO_FORK }}" == "rsuntk" ]]; then
                 KERNELSU_AUTHOR="rsuntk"
                 KERNELSU_NAME="KernelSU"
@@ -134,6 +137,7 @@ runs:
                 else
                     KERNELSU_BRANCH="main"
                 fi
+
             elif [[ "${{ env.KERNELSU_AUTO_FORK }}" == "sukisu" ]]; then
                 KERNELSU_AUTHOR="SukiSU-Ultra"
                 KERNELSU_NAME="SukiSU-Ultra"
@@ -143,6 +147,7 @@ runs:
                 else
                     KERNELSU_BRANCH="builtin"
                 fi
+
             elif [[ "${{ env.KERNELSU_AUTO_FORK }}" == "next" ]]; then
                 KERNELSU_AUTHOR="KernelSU-Next"
                 KERNELSU_NAME="KernelSU-Next"
@@ -153,6 +158,7 @@ runs:
                 else
                     KERNELSU_BRANCH="legacy"
                 fi
+
             elif [[ "${{ env.KERNELSU_AUTO_FORK }}" == "resukisu" ]]; then
                 KERNELSU_AUTHOR="ReSukiSU"
                 KERNELSU_NAME="ReSukiSU"
@@ -162,9 +168,11 @@ runs:
                 else
                     KERNELSU_BRANCH="main"
                 fi
+
             else
                 echo "Please input vaild fork name!"
                 false
+
             fi
 
             if [[ "${{ env.KERNELSU_AUTO_FORK }}" == "next" ]]; then
@@ -240,7 +248,6 @@ runs:
           cd $GITHUB_WORKSPACE/device_kernel
 
           ENABLE_KPM_CONFIGS(){
-
             sed -n '/^config KALLSYMS_ALL/,/^[^ \t]/p' init/Kconfig | grep -q 'depends on.*DEBUG_KERNEL' && echo "CONFIG_DEBUG_KERNEL=y" >> ./arch/${{ env.KERNEL_ARCH }}/configs/${{ env.DEFCONFIG_NAME }}
             echo "CONFIG_KALLSYMS=y" >> ./arch/${{ env.KERNEL_ARCH }}/configs/${{ env.DEFCONFIG_NAME }}
             echo "CONFIG_KALLSYMS_ALL=y" >> ./arch/${{ env.KERNEL_ARCH }}/configs/${{ env.DEFCONFIG_NAME }}
@@ -248,7 +255,6 @@ runs:
           }
 
           GET_KPM_TOOLS(){
-
             echo "[+] Detected set_memory."
             echo "CONFIG_KPM=y" >> ./arch/"${{ env.KERNEL_ARCH }}"/configs/${{ env.DEFCONFIG_NAME }}
             ${{ env.CURLX }} "${{ env.KPM_PATCH_SOURCE }}" patch
@@ -264,7 +270,6 @@ runs:
           }
 
           GET_KPATCH_NEXT_TOOLS(){
-
             REPO="KernelSU-Next/KPatch-Next"
             ${{ env.CURLX }} "https://github.com/$REPO/releases/latest/download/kpimg-linux" kpimg-linux
             ${{ env.CURLX }} "https://github.com/$REPO/releases/latest/download/kptools-linux" kptools-linux
