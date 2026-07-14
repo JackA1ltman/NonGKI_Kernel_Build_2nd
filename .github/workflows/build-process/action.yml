@@ -22,6 +22,8 @@ runs:
           sed -i '/PHONY += vdso_install/i \ifeq ($(CONFIG_BUILD_ARM64_DT_OVERLAY),y)\n$(KBUILD_DTBO_IMG): dtbs\n\t$(Q)$(MAKE) $(build)=$(boot) $(boot)/$@\n\nall: $(KBUILD_DTBO_IMG)\nendif' arch/"${{ env.KERNEL_ARCH }}"/Makefile
           sed -i '/dtc-tmp = $(subst $(comma),_,$(dot-target)\.dts\.tmp)/a \#DTBO\n# mkdtimg\n#----------------------------------------------------------------------------\nquiet_cmd_mkdtimg = DTBOIMG $@\ncmd_mkdtimg = python3 $(srctree)\/scripts\/dtc\/mkdtboimg.py create $@ --page_size=4096 $(filter-out FORCE,$^)' ./scripts/Makefile.lib
 
+          echo "[+] Added mkdtboimg into your kernel."
+
       - name: Setup ccache
         uses: hendrikmuhs/ccache-action@v1.2.22
         with:
@@ -226,6 +228,12 @@ runs:
             python dtbo_tool/src/mkdtboimg.py create $GITHUB_WORKSPACE/device_kernel/out/arch/"${{ env.KERNEL_ARCH }}"/boot/dtbo.img $GITHUB_WORKSPACE/device_kernel/out/arch/"${{ env.KERNEL_ARCH }}"/boot/dts/${{ env.GENERATE_CHIP }}/*.dtbo
           fi
 
+          if [[ -f "$GITHUB_WORKSPACE/device_kernel/out/arch/"${{ env.KERNEL_ARCH }}"/boot/dtbo.img" ]]; then
+            echo "[+] DTBO generated."
+          else
+            echo "[-] DTBO not generated. Please check your kernel."
+          fi
+
       - name: Analyze compile error
         if: ${{ failure() && env.BUILD_DEBUGGER == 'true' }}
         shell: bash
@@ -247,13 +255,17 @@ runs:
 
           if [[ -f "$IMAGE_DIR/Image.gz-dtb" ]]; then
               MODE="gz-dtb"
+
           elif [[ -f "$IMAGE_DIR/Image.gz" ]]; then
               MODE="gz"
+
           elif [[ -f "$IMAGE_DIR/Image" ]]; then
               MODE="plain"
+
           else
-              echo "No valid Image file found."
-              exit 1
+              echo "[-] No valid Image file found."
+              false
+
           fi
 
           case "$MODE" in
@@ -264,7 +276,7 @@ runs:
                   elif ls $IMAGE_DIR/dts/vendor/${{ env.GENERATE_CHIP }}/*.dtb 1> /dev/null 2>&1; then
                       DTB_PATH="dts/vendor"
                   else
-                      echo "Not found dts, abort."
+                      echo "[-] Could not found dts, abort."
                       false
                   fi
 
@@ -289,10 +301,11 @@ runs:
                   mv oImage Image
                   gzip -c Image > Image.gz
                   cat Image.gz $DTB_PATH/${{ env.GENERATE_CHIP }}/*.dtb > Image.gz-dtb
-                  echo "Hook Image successfully !"
+                  echo "[+] Hook Image successfully!"
               else
-                  echo "Not supported for your kernel !"
+                  echo "[+] Not supported for your kernel!"
               fi
+
               ;;
             gz)
               rm -f "$IMAGE_DIR/Image.gz"
@@ -315,10 +328,10 @@ runs:
               rm -f Image
               mv oImage Image
               gzip -c Image > Image.gz
-              echo "Hook Image successfully !"
+              echo "[+] Hook Image successfully !"
+
               ;;
             plain)
-
               if [[ "${{ env.KPM_INLINE }}" == "true" ]]; then
                 cp patch "$IMAGE_DIR/"
               else
@@ -335,7 +348,8 @@ runs:
               fi
 
               mv oImage Image
-              echo "Hook Image successfully !"
+              echo "[+] Hook Image successfully !"
+
               ;;
           esac
 
