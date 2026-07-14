@@ -129,14 +129,17 @@ runs:
                 rm -rf /usr/bin/python
                 ln -s /usr/bin/python3 /usr/bin/python
                 echo "[+] Python version: $(python -V)"
+
             elif [ "${{ env.PYTHON_VERSION }}" == "2" ]; then
                 apt install python2 -y
                 rm -rf /usr/bin/python
                 ln -s /usr/bin/python2.7 /usr/bin/python
                 echo "[+] Python version: $(python -V)"
+
             else
                 echo "[-] You need choose a vaild python version!"
                 false
+
             fi
 
           elif [ "${{ env.SYSTEM_VERSION }}" == "older" ]; then
@@ -162,14 +165,17 @@ runs:
                 sudo rm -rf /usr/bin/python
                 sudo ln -s /usr/bin/python3 /usr/bin/python
                 echo "[+] Python version: $(python -V)"
+
             elif [ "${{ env.PYTHON_VERSION }}" == "2" ]; then
                 sudo apt install python2 -y
                 sudo rm -rf /usr/bin/python
                 sudo ln -s /usr/bin/python2.7 /usr/bin/python
                 echo "[+] Python version: $(python -V)"
+
             else
                 echo "[-] You need choose a vaild python version!"
                 false
+
             fi
 
           elif [ "${{ env.SYSTEM_VERSION }}" == "newer" ]; then
@@ -199,6 +205,7 @@ runs:
                 sudo rm -rf /usr/bin/python
                 sudo ln -s /usr/bin/python3 /usr/bin/python
                 echo "[+] Python version: $(python -V)"
+
             elif [ "${{ env.PYTHON_VERSION }}" == "2" ]; then
                 wget https://www.python.org/ftp/python/2.7.18/Python-2.7.18.tgz
                 tar -xvf Python-2.7.18.tgz
@@ -212,9 +219,11 @@ runs:
                 cd ../
                 rm -rf Python-2.7.18 Python-2.7.18.tgz
                 echo "[+] Python version: $(python -V)"
+
             else
                 echo "[-] You need choose a vaild python version!"
                 false
+
             fi
 
           elif [ "${{ env.SYSTEM_VERSION }}" == "arch" ]; then
@@ -235,12 +244,15 @@ runs:
                 rm -rf /usr/bin/python
                 ln -s /usr/bin/python3 /usr/bin/python
                 echo "[+] Python version: $(python -V)"
+
             elif [ "${{ env.PYTHON_VERSION }}" == "2" ]; then
                 echo "[-] Current System OS could not get Python 2!"
                 false
+
             else
                 echo "[-] You need choose a vaild python version!"
                 false
+
             fi
 
             # Update Rust Toolchain
@@ -365,6 +377,8 @@ runs:
 
             bash found_gcc.sh GCC_32
             echo "::endgroup::"
+
+          fi
 
           # Set Clang
           if [[ -z "${{ env.CLANG_SOURCE }}" ]]; then
