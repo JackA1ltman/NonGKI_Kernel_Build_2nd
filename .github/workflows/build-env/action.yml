@@ -333,6 +333,7 @@ runs:
             bash found_gcc.sh GCC_64
 
             echo "::group::[+] Getting GCC 32..."
+
             if [[ "${{ env.GCC_32_SOURCE }}" == *".git" ]]; then
               git clone "${{ env.GCC_32_SOURCE }}" -b "${{ env.GCC_32_BRANCH }}" gcc-32 --depth=1
 
