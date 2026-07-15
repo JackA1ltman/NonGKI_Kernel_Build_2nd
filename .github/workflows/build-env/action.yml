@@ -400,8 +400,8 @@ runs:
                 false
             fi
 
-            bash found_gcc.sh GCC_32
             echo "::endgroup::"
+            bash found_gcc.sh GCC_32
 
           fi
 
@@ -450,5 +450,7 @@ runs:
                 echo "[-] Please input vaild Clang link!"
                 false
             fi
+
             echo "::endgroup::"
+
           fi
