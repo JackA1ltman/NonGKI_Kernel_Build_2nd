@@ -107,13 +107,16 @@ runs:
             echo "$TZ" > /etc/timezone
             echo "[+] Timezone has been set."
 
+            echo "::group::[+] Starting install base packages..."
             apt-get update
             apt-get install git ccache automake flex lzop bison gperf build-essential zip curl zlib1g-dev g++-multilib libxml2-utils bzip2 libbz2-dev libbz2-1.0 libghc-bzlib-dev squashfs-tools pngcrush schedtool dpkg-dev liblz4-tool make optipng maven libssl-dev pwgen libswitch-perl policycoreutils minicom libxml-sax-base-perl libxml-simple-perl bc libc6-dev-i386 lib32ncurses5-dev libx11-dev lib32z-dev libgl1-mesa-dev xsltproc unzip device-tree-compiler wget curl cpio -y
             apt-get install p7zip p7zip-full -y
             apt-get install libtinfo5 -y
+            echo "::endgroup::"
             echo "[+] The base packages is installed."
 
             # Install Coccinelle
+            echo "::group::[+] Starting build coccinelle..."
             apt-get install pkg-config ocaml-nox ocaml-findlib autoconf libpcre3-dev python3-dev menhir libparmap-ocaml-dev libpcre-ocaml-dev -y
             ${{ env.CURLX }} "https://coccinelle.gitlabpages.inria.fr/website/distrib/coccinelle-1.3.tar.gz" "coccinelle.tar.gz"
             tar zxf coccinelle.tar.gz
@@ -122,6 +125,7 @@ runs:
             ./configure
             make
             make install
+            echo "::endgroup::"
             echo "[+] Coccinelle is installed."
 
             if [ "${{ env.PYTHON_VERSION }}" == "3" ]; then
@@ -143,13 +147,16 @@ runs:
             fi
 
           elif [ "${{ env.SYSTEM_VERSION }}" == "older" ]; then
+            echo "::group::[+] Starting install base packages..."
             sudo apt-get update
             sudo apt-get install git ccache automake flex lzop bison gperf build-essential zip curl zlib1g-dev g++-multilib libxml2-utils bzip2 libbz2-dev libbz2-1.0 libghc-bzlib-dev squashfs-tools pngcrush schedtool dpkg-dev liblz4-tool make optipng maven libssl-dev pwgen libswitch-perl policycoreutils minicom libxml-sax-base-perl libxml-simple-perl bc libc6-dev-i386 lib32ncurses5-dev libx11-dev lib32z-dev libgl1-mesa-dev xsltproc unzip device-tree-compiler wget curl cpio -y
             sudo apt-get install p7zip p7zip-full -y
             sudo apt-get install libtinfo5 -y
+            echo "::endgroup::"
             echo "[+] The base packages is installed."
 
             # Install Coccinelle
+            echo "::group::[+] Starting build coccinelle..."
             sudo apt-get install pkg-config ocaml-nox ocaml-findlib autoconf libpcre3-dev python3-dev menhir libparmap-ocaml-dev libpcre-ocaml-dev -y
             ${{ env.CURLX }} "https://coccinelle.gitlabpages.inria.fr/website/distrib/coccinelle-1.3.tar.gz" "coccinelle.tar.gz"
             tar zxf coccinelle.tar.gz
@@ -158,6 +165,7 @@ runs:
             ./configure
             make
             sudo make install
+            echo "::endgroup::"
             echo "[+] Coccinelle is installed."
 
             if [ "${{ env.PYTHON_VERSION }}" == "3" ]; then
@@ -179,12 +187,15 @@ runs:
             fi
 
           elif [ "${{ env.SYSTEM_VERSION }}" == "newer" ]; then
+            echo "::group::[+] Starting install base packages..."
             sudo apt update
             sudo apt install git ccache automake flex lzop bison gperf build-essential zip curl zlib1g-dev g++-multilib libxml2-utils bzip2 libbz2-dev libbz2-1.0 libghc-bzlib-dev squashfs-tools pngcrush schedtool dpkg-dev make optipng maven libssl-dev pwgen libswitch-perl policycoreutils minicom libxml-sax-base-perl libxml-simple-perl bc libc6-dev-i386 libx11-dev lib32z-dev libgl1-mesa-dev xsltproc unzip device-tree-compiler cpio -y
             sudo apt-get install zstd libc6 binutils libc6-dev-i386 gcc g++ p7zip p7zip-full -y
+            echo "::endgroup::"
             echo "[+] The base packages is installed."
 
             # Install Coccinelle
+            echo "::group::[+] Starting build coccinelle..."
             sudo apt-get install pkg-config ocaml-nox ocaml-findlib autoconf libpcre3-dev python3-dev menhir libparmap-ocaml-dev libpcre-ocaml-dev -y
             ${{ env.CURLX }} "https://coccinelle.gitlabpages.inria.fr/website/distrib/coccinelle-1.3.tar.gz" "coccinelle.tar.gz"
             tar zxf coccinelle.tar.gz
@@ -193,6 +204,7 @@ runs:
             ./configure
             make
             sudo make install
+            echo "::endgroup::"
             echo "[+] Coccinelle is installed."
 
             # Install Libtinfo5
@@ -207,6 +219,7 @@ runs:
                 echo "[+] Python version: $(python -V)"
 
             elif [ "${{ env.PYTHON_VERSION }}" == "2" ]; then
+                echo "::group::[+] Starting build Python 2..."
                 wget https://www.python.org/ftp/python/2.7.18/Python-2.7.18.tgz
                 tar -xvf Python-2.7.18.tgz
                 cd Python-2.7.18
@@ -218,6 +231,7 @@ runs:
                 sudo update-alternatives --install /usr/bin/python python /usr/local/lib/python2.7 1
                 cd ../
                 rm -rf Python-2.7.18 Python-2.7.18.tgz
+                echo "::endgroup::"
                 echo "[+] Python version: $(python -V)"
 
             else
@@ -227,16 +241,20 @@ runs:
             fi
 
           elif [ "${{ env.SYSTEM_VERSION }}" == "arch" ]; then
+            echo "::group::[+] Starting install base packages..."
             pacman-key --init
             pacman -Syyu --noconfirm
             pacman -S git base-devel systemd wget rustup curl patch ccache automake flex lzop bison gperf zip curl bzip2 squashfs-tools pngcrush schedtool make optipng maven pwgen minicom bc unzip 7zip zstd binutils gcc wget which libxml2-legacy cpio --noconfirm
+            echo "::endgroup::"
             echo "[+] The base packages is installed."
 
             # Install Coccinelle
+            echo "::group::[+] Starting install coccinelle..."
             echo -e "\n[archlinuxcn]\nServer = https://repo.archlinuxcn.org/\$arch" >> /etc/pacman.conf
             pacman -Syy
             pacman -S archlinuxcn-keyring --noconfirm
             pacman -S coccinelle --noconfirm
+            echo "::endgroup::"
             echo "[+] Coccinelle is installed."
 
             if [ "${{ env.PYTHON_VERSION }}" == "3" ]; then
@@ -246,7 +264,10 @@ runs:
                 echo "[+] Python version: $(python -V)"
 
             elif [ "${{ env.PYTHON_VERSION }}" == "2" ]; then
-                echo "[-] Current System OS could not get Python 2!"
+                pacman -S python2 --noconfirm
+                rm -rf /usr/bin/python
+                ln -s /usr/bin/python2.7 /usr/bin/python
+                echo "[+] Python version: $(python -V)"
                 false
 
             else
@@ -269,21 +290,25 @@ runs:
         shell: bash
         run: |
           if [ "${{ env.SYSTEM_VERSION }}" == "newer" ] || [ "${{ env.SYSTEM_VERSION }}" == "older" ] || [ "${{ env.SYSTEM_VERSION }}" == "oldest" ]; then
+            echo "::group::[+] Starting install GNU GCC..."
             sudo apt install binutils-aarch64-linux-gnu gcc-aarch64-linux-gnu
             sudo apt install gcc-arm-linux-gnueabi -y
 
             echo "GCC_64=CROSS_COMPILE=aarch64-linux-gnu-" >> $GITHUB_ENV
             echo "GCC_32=CROSS_COMPILE_ARM32=arm-linux-gnueabi-" >> $GITHUB_ENV
 
+            echo "::endgroup::"
             echo "[+] Get GNU GCC successfully."
 
           elif [ "${{ env.SYSTEM_VERSION }}" == "arch" }} ]; then
+            echo "::group::[+] Starting install GNU GCC..."
             pacman -S aarch64-linux-gnu-binutils aarch64-linux-gnu-gcc aarch64-linux-gnu-linux-api-headers aarch64-linux-gnu-glibc --noconfirm
             pacman -S arm-linux-gnueabihf-binutils arm-linux-gnueabihf-gcc arm-linux-gnueabihf-linux-api-headers arm-linux-gnueabihf-glibc --noconfirm
 
             echo "GCC_64=CROSS_COMPILE=aarch64-linux-gnu-" >> $GITHUB_ENV
             echo "GCC_32=CROSS_COMPILE_ARM32=arm-linux-gnueabihf-" >> $GITHUB_ENV
 
+            echo "::endgroup::"
             echo "[+] Get GNU GCC successfully."
 
           else
