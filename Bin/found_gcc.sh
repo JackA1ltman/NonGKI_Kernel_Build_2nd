@@ -83,17 +83,7 @@ elif [ "$1" == "GCC_32" ]; then
         echo "Error: Could not determine 32-bit GCC prefix in $SET." >&2
         exit 1
     fi
-elif [ "$1" == "GCC_32_ONLY" ]; then
-    SET="$GITHUB_WORKSPACE/gcc-32/bin"
-    REAL_PREFIX=$(find_toolchain_prefix "$SET")
-    if [ -n "$REAL_PREFIX" ]; then
-        echo "GCC_32=CROSS_COMPILE=$GITHUB_WORKSPACE/gcc-32/bin/${REAL_PREFIX}" >> "$GITHUB_ENV"
-        echo "Detected 32-bit ONLY GCC prefix (>5 chars): ${REAL_PREFIX}"
-    else
-        echo "Error: Could not determine 32-bit ONLY GCC prefix in $SET." >&2
-        exit 1
-    fi
 else
-    echo "Usage: $0 [GCC_64|GCC_32|GCC_32_ONLY]" >&2
+    echo "Usage: $0 [GCC_64|GCC_32]" >&2
     exit 1
 fi
