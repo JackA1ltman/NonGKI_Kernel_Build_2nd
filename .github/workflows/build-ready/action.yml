@@ -7,6 +7,8 @@ runs:
         shell: bash
         run: |
           cd $GITHUB_WORKSPACE
+
+          echo "::group::[+] Starting git clone kernel source code..."
           git clone --recursive "${{ env.KERNEL_SOURCE }}" -b "${{ env.KERNEL_BRANCH }}" device_kernel --depth=1
 
           if [[ -f "device_kernel/.gitmodules" ]]; then
@@ -17,6 +19,8 @@ runs:
             echo "[+] Detected GitModules."
 
           fi
+          echo "::endgroup::"
+          echo "[+] Kernel source code is cloned."
 
           # Get Kernel Version
 
@@ -106,8 +110,11 @@ runs:
         run: |
           cd $GITHUB_WORKSPACE/device_kernel
 
+          echo "::group::[+] Starting clean hook..."
           cp /tmp/Bin/clean_hook.sh ./
           bash clean_hook.sh
+          echo "::endgroup::"
+          echo "[+] Cleaned hook."
 
       - name: Set KernelSU
         shell: bash
