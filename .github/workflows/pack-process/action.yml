@@ -63,7 +63,7 @@ runs:
             elif ls $IMAGE_DIR/dts/vendor/${{ env.GENERATE_CHIP }}/*.dtb 1> /dev/null 2>&1; then
                 DTB_PATH="dts/vendor"
             else
-                echo "[-] could not found dts, abort."
+                echo "[-] Could not found dts, abort."
                 false
             fi
 
