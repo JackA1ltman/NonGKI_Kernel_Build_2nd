@@ -333,7 +333,7 @@ index fd6caf2..fecc8bf 100644
 +		if (fake_filename && !IS_ERR(fake_filename)) {
 +			path_put(&path);
 +			restore_nameidata();
-+			set_nameidata(nd, old_dfd, fake_filename, NULL);
++			set_nameidata(nd, old_dfd, fake_filename);
 +			error = path_lookupat(nd, flags | LOOKUP_DIRECTORY, &path);
 +			if (unlikely(error)) {
 +				putname(fake_filename);
@@ -373,7 +373,7 @@ index fd6caf2..fecc8bf 100644
 +			if (fake_filename && !IS_ERR(fake_filename)) {
 +				path_put(&path);
 +				restore_nameidata();
-+				set_nameidata(nd, old_dfd, fake_filename, NULL);
++				set_nameidata(nd, old_dfd, fake_filename);
 +				error = path_lookupat(nd, flags, &path);
 +				if (unlikely(error)) {
 +					putname(fake_filename);
