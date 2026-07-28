@@ -12,7 +12,7 @@ index 0fc34ca..8f4b814 100644
  obj-y +=	buffer.o block_dev.o direct-io.o mpage.o
  else
 diff --git a/fs/namei.c b/fs/namei.c
-index 94f388e..291b6c2 100644
+index 94f388e..0c43799 100644
 --- a/fs/namei.c
 +++ b/fs/namei.c
 @@ -40,6 +40,9 @@
@@ -415,7 +415,7 @@ index 94f388e..291b6c2 100644
 +				const char *new_s = NULL;
 +				terminate_walk(nd);
 +				restore_nameidata();
-+				set_nameidata(nd, old_dfd, fake_filename, NULL);
++				set_nameidata(nd, old_dfd, fake_filename);
 +				new_s = path_init(nd, flags);
 +				while (!(error = link_path_walk(new_s, nd)) &&
 +					(error = do_last(nd, file, op)) > 0) {
