@@ -1845,7 +1845,7 @@ index 083dc0a..f437695 100644
  		buf->f_flags = calculate_f_flags(path->mnt);
 diff --git a/fs/susfs.c b/fs/susfs.c
 new file mode 100644
-index 0000000..a1967f6
+index 0000000..3036e80
 --- /dev/null
 +++ b/fs/susfs.c
 @@ -0,0 +1,1492 @@
@@ -2236,7 +2236,7 @@ index 0000000..a1967f6
 +			hash_del_rcu(&tmp_entry->node);
 +			hash_add_rcu(SUS_KSTAT_HLIST, &new_entry->node, info.target_ino);
 +			mutex_unlock(&susfs_mutex_lock_sus_kstat);
-+			synchronize_srcu(&susfs_srcu_open_redirect);
++			synchronize_rcu();
 +			kfree(tmp_entry);
 +			info.err = 0;
 +			goto out_copy_to_user;
@@ -2751,7 +2751,7 @@ index 0000000..a1967f6
 +		set_bit(AS_FLAGS_OPEN_REDIRECT, &redirected_inode->i_state);
 +		set_bit(AS_FLAGS_OPEN_REDIRECT, &target_inode->i_state);
 +		mutex_unlock(&susfs_mutex_lock_open_redirect);
-+		synchronize_rcu();
++		synchronize_srcu(&susfs_srcu_open_redirect);
 +		if (is_second_dup_found)
 +			kfree(tmp_entry_redirected);
 +		kfree(tmp_entry_target);
