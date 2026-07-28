@@ -12,7 +12,7 @@ index 0fc34ca..8f4b814 100644
  obj-y +=	buffer.o block_dev.o direct-io.o mpage.o
  else
 diff --git a/fs/namei.c b/fs/namei.c
-index 94f388e..0c43799 100644
+index 94f388e..cfb4083 100644
 --- a/fs/namei.c
 +++ b/fs/namei.c
 @@ -40,6 +40,9 @@
@@ -332,7 +332,7 @@ index 94f388e..0c43799 100644
 +		if (fake_filename && !IS_ERR(fake_filename)) {
 +			path_put(&path);
 +			restore_nameidata();
-+			set_nameidata(nd, old_dfd, fake_filename, NULL);
++			set_nameidata(nd, old_dfd, fake_filename);
 +			error = path_lookupat(nd, flags | LOOKUP_DIRECTORY, &path);
 +			if (unlikely(error)) {
 +				putname(fake_filename);
@@ -372,7 +372,7 @@ index 94f388e..0c43799 100644
 +			if (fake_filename && !IS_ERR(fake_filename)) {
 +				path_put(&path);
 +				restore_nameidata();
-+				set_nameidata(nd, old_dfd, fake_filename, NULL);
++				set_nameidata(nd, old_dfd, fake_filename);
 +				error = path_lookupat(nd, flags, &path);
 +				if (unlikely(error)) {
 +					putname(fake_filename);
