@@ -1128,7 +1128,7 @@ index 4274f83..1963ff3 100644
  	if (seq_has_overflowed(m))
  		goto out;
 diff --git a/fs/proc/task_mmu.c b/fs/proc/task_mmu.c
-index e19a9b1..60a6e29 100644
+index e19a9b1..039fbd4 100644
 --- a/fs/proc/task_mmu.c
 +++ b/fs/proc/task_mmu.c
 @@ -17,6 +17,9 @@
@@ -1168,7 +1168,7 @@ index e19a9b1..60a6e29 100644
 +			if (!ret) {
 +				pgoff = ((loff_t)vma->vm_pgoff) << PAGE_SHIFT;
 +				start = vma->vm_start;
-+				end = VMA_PAD_START(vma);
++				end = vma->vm_end;
 +				show_vma_header_prefix(m, start, end, flags, pgoff, dev, ino);
 +				seq_pad(m, ' ');
 +				if (spoofed_redirected_name)
