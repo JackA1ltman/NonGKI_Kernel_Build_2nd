@@ -45,9 +45,9 @@ jobs:
       RELEASE_NOTES: |
         Below is the codename reference table. Please select the image or archive you need based on this table.
 
-        | Device Name | Codename | Kernel | System | Android | Method | KernelSU | SuSFS | Re:Kernel | BBG |
-        |----------|----------|----------|----------|----------|----------|----------|----------|----------|----------|
-        | Sample | sam | 4.19 | Custom OS | 15 | AnyKernel3 | KernelSU | ✅ | ❌ | ❌ |
+        | Device Name | Codename | Kernel | System | Android | Method | KernelSU | SuSFS | Re:Kernel | BBG | NoMount |
+        |----------|----------|----------|----------|----------|----------|----------|----------|----------|----------|----------|
+        | Sample | sam | 4.19 | Custom OS | 15 | AnyKernel3 | KernelSU | ✅ | ❌ | ❌ | ❌ |
 
         - Specific device information: [Supported List](Supported_list.md).
         - The KernelSU version is for reference only. It is normal for the KernelSU version embedded in SUSFS to be lower.
