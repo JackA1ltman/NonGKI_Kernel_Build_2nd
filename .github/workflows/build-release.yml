@@ -45,24 +45,24 @@ jobs:
       RELEASE_NOTES: |
         Below is the codename reference table. Please select the image or archive you need based on this table.
 
-        | Device Name | Codename | Kernel | System | Android | Method | KernelSU | SuSFS | Re:Kernel | BBG |
-        |----------|----------|----------|----------|----------|----------|----------|----------|----------|----------|
-        | OnePlus 8 | instantnoodle | 4.19 | Oxygen OS 13.1 | 13 | AnyKernel3 | ReSukiSU | ✅ | ❌ | ✅ |
-        | Xiaomi Mix2s | polaris | 4.9 | Evolution X 10.X | 15 | AnyKernel3 | ReSukiSU | ✅ | ✅ | ✅ |
-        | Redmi K20 Pro | raphael | 4.14 | Based AOSP | 15 | AnyKernel3 | ReSukiSU | ✅ | ❌ | ❌ |
-        | Samsung Note 10 Plus | d2s | 4.14 | OneUI 7 | 15 | AnyKernel3 | ReSukiSU | ✅ | ❌ | ❌ |
-        | Xiaomi 11 | venus | 5.4 | Evolution X 11.X | 16 | AnyKernel3 | ReSukiSU | ✅ | ✅ | ❌ |
-        | Smartisan U3 Pro | osborn | 4.4 | Lineage OS 18 | 11 | AnyKernel3 | xxksu | ❌ | ❌ | ❌ |
-        | Redmi 8 | olive | 4.19 | Based AOSP | 15 | AnyKernel3 | ReSukiSU | ✅ | ✅ | ✅ |
-        | Redmi Note 7 | lavender | 4.19 | Based AOSP | 15 | AnyKernel3 | ReSukiSU | ✅ | ❌ | ❌ |
-        | Samsung Note 10 | d1 | 4.14 | OneUI 7 | 15 | AnyKernel3 | ReSukiSU | ✅ | ❌ | ❌ |
-        | Redmi Note 11 Pro 5G | veux | 5.4 | Based AOSP | 16 | AnyKernel3 | ReSukiSU | ✅ | ❌ | ❌ |
-        | OnePlus 8 | instantnoodle | 4.19 | Color OS 15 | 15 | AnyKernel3 | ReSukiSU | ✅ | ❌ | ✅ |
-        | Xiaomi Mix2s | polaris | 4.19 | Based AOSP | 16 | AnyKernel3 | ReSukiSU | ✅ | ❌ | ❌ |
-        | Nothing Phone (1) | spacewar | 5.4 | Lineage OS 23.0 | 16 | AnyKernel3 | ReSukiSU | ✅ | ❌ | ❌ |
-        | Samsung A71 | a71 | 4.14 | Based AOSP & OneUI | 16 | AnyKernel3 | ReSukiSU | ✅ | ✅ | ✅ |
-        | Xiaomi Mi Pad 4 | clover | 4.19 | Lineage OS 22 | 15 | AnyKernel3 | ReSukiSU | ✅ | ❌ | ❌ |
-        | Redmi K30 Ultra | cezanne | 4.14 | Based AOSP | 14 | AnyKernel3 | ReSukiSU | ✅ | ✅ | ✅ |
+        | Device Name | Codename | Kernel | System | Android | Method | KernelSU | SuSFS | Re:Kernel | BBG | NoMount |
+        |----------|----------|----------|----------|----------|----------|----------|----------|----------|----------|----------|
+        | OnePlus 8 | instantnoodle | 4.19 | Oxygen OS 13.1 | 13 | AnyKernel3 | ReSukiSU | ✅ | ❌ | ✅ | ❌ |
+        | Xiaomi Mix2s | polaris | 4.9 | Evolution X 10.X | 15 | AnyKernel3 | ReSukiSU | ✅ | ✅ | ✅ | ❌ |
+        | Redmi K20 Pro | raphael | 4.14 | Based AOSP | 15 | AnyKernel3 | ReSukiSU | ✅ | ❌ | ❌ | ❌ |
+        | Samsung Note 10 Plus | d2s | 4.14 | OneUI 7 | 15 | AnyKernel3 | ReSukiSU | ✅ | ❌ | ❌ | ❌ |
+        | Xiaomi 11 | venus | 5.4 | Evolution X 11.X | 16 | AnyKernel3 | ReSukiSU | ✅ | ✅ | ❌ | ❌ |
+        | Smartisan U3 Pro | osborn | 4.4 | Lineage OS 18 | 11 | AnyKernel3 | xxksu | ❌ | ❌ | ❌ | ❌ |
+        | Redmi 8 | olive | 4.19 | Based AOSP | 15 | AnyKernel3 | ReSukiSU | ✅ | ✅ | ✅ | ❌ |
+        | Redmi Note 7 | lavender | 4.19 | Based AOSP | 15 | AnyKernel3 | ReSukiSU | ✅ | ❌ | ❌ | ❌ |
+        | Samsung Note 10 | d1 | 4.14 | OneUI 7 | 15 | AnyKernel3 | ReSukiSU | ✅ | ❌ | ❌ | ❌ |
+        | Redmi Note 11 Pro 5G | veux | 5.4 | Based AOSP | 16 | AnyKernel3 | ReSukiSU | ✅ | ❌ | ❌ | ❌ |
+        | OnePlus 8 | instantnoodle | 4.19 | Color OS 15 | 15 | AnyKernel3 | ReSukiSU | ✅ | ❌ | ✅ | ❌ |
+        | Xiaomi Mix2s | polaris | 4.19 | Based AOSP | 16 | AnyKernel3 | ReSukiSU | ✅ | ❌ | ❌ | ❌ |
+        | Nothing Phone (1) | spacewar | 5.4 | Lineage OS 23.0 | 16 | AnyKernel3 | ReSukiSU | ✅ | ❌ | ❌ | ❌ |
+        | Samsung A71 | a71 | 4.14 | Based AOSP & OneUI | 16 | AnyKernel3 | ReSukiSU | ✅ | ✅ | ✅ | ❌ |
+        | Xiaomi Mi Pad 4 | clover | 4.19 | Lineage OS 22 | 15 | AnyKernel3 | ReSukiSU | ✅ | ❌ | ❌ | ❌ |
+        | Redmi K30 Ultra | cezanne | 4.14 | Based AOSP | 14 | AnyKernel3 | ReSukiSU | ✅ | ✅ | ✅ | ❌ |
 
         - Specific device information: [Supported List](Supported_list.md).
         - The KernelSU version is for reference only. It is normal for the KernelSU version embedded in SUSFS to be lower.
