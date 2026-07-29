@@ -63,6 +63,7 @@ env:
 
   REKERNEL_ENABLE: "true"
   DROIDSPACES_ENABLE: "false"
+  NOMOUNT_ENABLE: "false" # if u need NoMount.
 
   HOOK_METHOD: "syscall"
 
