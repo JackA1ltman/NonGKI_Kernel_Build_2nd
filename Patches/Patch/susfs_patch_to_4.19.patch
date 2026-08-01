@@ -1949,10 +1949,10 @@ index 2978659..19b6914 100644
  		buf->f_flags = calculate_f_flags(path->mnt);
 diff --git a/fs/susfs.c b/fs/susfs.c
 new file mode 100644
-index 0000000..3036e80
+index 0000000..69c66c8
 --- /dev/null
 +++ b/fs/susfs.c
-@@ -0,0 +1,1492 @@
+@@ -0,0 +1,1491 @@
 +#include <linux/version.h>
 +#include <linux/cred.h>
 +#include <linux/fs.h>
@@ -2206,7 +2206,6 @@ index 0000000..3036e80
 +		goto out_copy_to_user;
 +	}
 +	
-+
 +	if (info.enabled) {
 +		static_branch_enable(&susfs_is_hide_sus_mnts_for_non_su_procs_enabled);
 +	} else {
@@ -2593,9 +2592,9 @@ index 0000000..3036e80
 +		strscpy(my_uname.release, info.release, __NEW_UTS_LEN);
 +	}
 +	if (!strcmp(info.version, "default")) {
-+		strscpy(my_uname.version, info.version, __NEW_UTS_LEN);
++		strscpy(my_uname.version, utsname()->version, __NEW_UTS_LEN);
 +	} else {
-+		strncpy(my_uname.version, info.version, __NEW_UTS_LEN);
++		strscpy(my_uname.version, info.version, __NEW_UTS_LEN);
 +	}
 +	write_sequnlock(&susfs_uname_seqlock);
 +
@@ -3430,9 +3429,9 @@ index 0000000..3036e80
 +static void susfs_run_extra_works(struct work_struct *work) {
 +	if (!ksu_cred)
 +		return;
-+	#ifdef CONFIG_KSU_SUSFS_SUS_PATH
++#ifdef CONFIG_KSU_SUSFS_SUS_PATH
 +	susfs_run_sus_path_loop();
-+	#endif // #ifdef CONFIG_KSU_SUSFS_SUS_PATH
++#endif // #ifdef CONFIG_KSU_SUSFS_SUS_PATH
 +}
 +
 +/* susfs_init */
@@ -3983,7 +3982,7 @@ index 3189d79..56c3f9e 100644
  				gup_flags, &page, &vma, NULL);
  		if (ret <= 0) {
 diff --git a/security/selinux/avc.c b/security/selinux/avc.c
-index 74ab889..bacf96d 100644
+index 74ab889..664cf5c 100644
 --- a/security/selinux/avc.c
 +++ b/security/selinux/avc.c
 @@ -164,6 +164,11 @@ static void avc_dump_av(struct audit_buffer *ab, u16 tclass, u32 av)
@@ -3998,20 +3997,15 @@ index 74ab889..bacf96d 100644
  
  /**
   * avc_dump_query - Display a SID pair and a class in human-readable form.
-@@ -177,8 +182,12 @@ static void avc_dump_query(struct audit_buffer *ab, struct selinux_state *state,
- 	int rc;
- 	char *scontext;
+@@ -179,6 +184,7 @@ static void avc_dump_query(struct audit_buffer *ab, struct selinux_state *state,
  	u32 scontext_len;
-+#ifdef CONFIG_KSU_SUSFS
-+	struct selinux_audit_data sad;
-+#endif
  
  	rc = security_sid_to_context(state, ssid, &scontext, &scontext_len);
 +
  	if (rc)
  		audit_log_format(ab, "ssid=%d", ssid);
  	else {
-@@ -187,6 +196,20 @@ static void avc_dump_query(struct audit_buffer *ab, struct selinux_state *state,
+@@ -187,6 +193,20 @@ static void avc_dump_query(struct audit_buffer *ab, struct selinux_state *state,
  	}
  
  	rc = security_sid_to_context(state, tsid, &scontext, &scontext_len);
@@ -4019,7 +4013,7 @@ index 74ab889..bacf96d 100644
 +
 +#ifdef CONFIG_KSU_SUSFS
 +	if (static_branch_likely(&susfs_is_avc_log_spoofing_enabled)) {
-+		if (unlikely(sad.tsid == susfs_ksu_sid)) {
++		if (unlikely(tsid == susfs_ksu_sid)) {
 +			if (rc)
 +				audit_log_format(ab, " tsid=%d", susfs_priv_app_sid);
 +			else
@@ -4032,7 +4026,7 @@ index 74ab889..bacf96d 100644
  	if (rc)
  		audit_log_format(ab, " tsid=%d", tsid);
  	else {
-@@ -194,6 +217,9 @@ static void avc_dump_query(struct audit_buffer *ab, struct selinux_state *state,
+@@ -194,6 +214,9 @@ static void avc_dump_query(struct audit_buffer *ab, struct selinux_state *state,
  		kfree(scontext);
  	}
  

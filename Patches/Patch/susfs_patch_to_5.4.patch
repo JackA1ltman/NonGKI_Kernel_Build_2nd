@@ -1952,10 +1952,10 @@ index 4960c69..5a5f082 100644
  		buf->f_flags = calculate_f_flags(path->mnt);
 diff --git a/fs/susfs.c b/fs/susfs.c
 new file mode 100644
-index 0000000..3036e80
+index 0000000..69c66c8
 --- /dev/null
 +++ b/fs/susfs.c
-@@ -0,0 +1,1492 @@
+@@ -0,0 +1,1491 @@
 +#include <linux/version.h>
 +#include <linux/cred.h>
 +#include <linux/fs.h>
@@ -2209,7 +2209,6 @@ index 0000000..3036e80
 +		goto out_copy_to_user;
 +	}
 +	
-+
 +	if (info.enabled) {
 +		static_branch_enable(&susfs_is_hide_sus_mnts_for_non_su_procs_enabled);
 +	} else {
@@ -2596,9 +2595,9 @@ index 0000000..3036e80
 +		strscpy(my_uname.release, info.release, __NEW_UTS_LEN);
 +	}
 +	if (!strcmp(info.version, "default")) {
-+		strscpy(my_uname.version, info.version, __NEW_UTS_LEN);
++		strscpy(my_uname.version, utsname()->version, __NEW_UTS_LEN);
 +	} else {
-+		strncpy(my_uname.version, info.version, __NEW_UTS_LEN);
++		strscpy(my_uname.version, info.version, __NEW_UTS_LEN);
 +	}
 +	write_sequnlock(&susfs_uname_seqlock);
 +
@@ -3433,9 +3432,9 @@ index 0000000..3036e80
 +static void susfs_run_extra_works(struct work_struct *work) {
 +	if (!ksu_cred)
 +		return;
-+	#ifdef CONFIG_KSU_SUSFS_SUS_PATH
++#ifdef CONFIG_KSU_SUSFS_SUS_PATH
 +	susfs_run_sus_path_loop();
-+	#endif // #ifdef CONFIG_KSU_SUSFS_SUS_PATH
++#endif // #ifdef CONFIG_KSU_SUSFS_SUS_PATH
 +}
 +
 +/* susfs_init */
