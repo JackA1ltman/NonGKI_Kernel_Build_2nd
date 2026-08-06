@@ -10,7 +10,7 @@
 | Redmi Note 7 | CN | lavender | [4.19/pix106/southwest](https://github.com/pix106/android_kernel_xiaomi_southwest-4.19) | Based AOSP | 15 | AnyKernel3 | ReSukiSU | ✅ | Inline | ❌ | ❌ | ❌ | ❌ | Stable |  
 | Samsung Note 10 | EU | d1 | [4.14/Ocin4ever/ExtremeKernel](https://github.com/Ocin4ever/ExtremeKernel) | OneUI 7 | 15 | AnyKernel3 | ReSukiSU | ✅ | Inline | ❌ | ❌ | ❌ | ❌ | Stable |  
 | Redmi Note 11 Pro 5G | INT | veux | [5.4/dereference23/eplus](https://github.com/dereference23/kernel_xiaomi_sm6375) | Based AOSP | 16 | AnyKernel3 | ReSukiSU | ✅ | Inline | ❌ | ❌ | ❌ | ❌ | Stable |  
-| Oneplus 8 | All | instantnoodle | [4.19/toraidl/los](https://github.com/toraidl/android_kernel_oneplus_sm8250_los) | Color OS 15 | 15 | AnyKernel3 | ReSukiSU | ✅ | Inline | ❌ | ❌ | ✅ | ❌ | Stable |  
+| Oneplus 8 | All | instantnoodle | [4.19/toraidl/sm8250](https://github.com/toraidl/android_kernel_oneplus_sm8250) | Color OS 15 | 15 | AnyKernel3 | ReSukiSU | ✅ | Inline | ❌ | ❌ | ✅ | ❌ | Stable |  
 | Xiaomi Mix2s | All | polaris | [4.19/duckyduckG/sdm845_419](https://github.com/duckyduckG/android_kernel_xiaomi_sdm845_419) | Based AOSP | 16 | AnyKernel3 | ReSukiSU | ✅ | Inline | ❌ | ❌ | ❌ | ❌ | Stable |  
 | Samsung A71 | All | a71 | [4.14/nduykha/kernel_samsung_sm7150](https://github.com/nduykha/kernel_samsung_sm7150) | Based AOSP & OneUI | 16 | AnyKernel3 | ReSukiSU | ✅ | Inline | ❌ | ✅ | ✅ | ❌ | Stable |   
 | Xiaomi Mi Pad 4 | All | clover | [4.19/pix106/southwest](https://github.com/pix106/android_kernel_xiaomi_southwest-4.19) | Lineage OS 22 | 15 | AnyKernel3 | ReSukiSU | ✅ | Inline | ❌ | ❌ | ❌ | ❌ | Stable |  
