@@ -12,7 +12,7 @@ index 3bbe62a..c9d9eef 100644
  obj-y +=	buffer.o block_dev.o direct-io.o mpage.o
  else
 diff --git a/fs/namei.c b/fs/namei.c
-index 80b743c..1fc376d 100644
+index 80b743c..44e5219 100644
 --- a/fs/namei.c
 +++ b/fs/namei.c
 @@ -39,6 +39,9 @@
@@ -83,18 +83,22 @@ index 80b743c..1fc376d 100644
  	return dentry;
  }
  
-@@ -1663,14 +1689,38 @@ static struct dentry *__lookup_hash(const struct qstr *name,
+@@ -1663,15 +1689,52 @@ static struct dentry *__lookup_hash(const struct qstr *name,
  		struct dentry *base, unsigned int flags)
  {
  	struct dentry *dentry = lookup_dcache(name, base, flags);
--
--	if (dentry)
 +#ifdef CONFIG_KSU_SUSFS_SUS_PATH
 +	bool found_sus_path = false;
 +#endif
+ 
++#ifdef CONFIG_KSU_SUSFS_SUS_PATH
 +	if (dentry) {
- 		return dentry;
++		return dentry;
 +	}
++#else
+ 	if (dentry)
+ 		return dentry;
++#endif
  
  	dentry = d_alloc(base, name);
 +#ifdef CONFIG_KSU_SUSFS_SUS_PATH
@@ -104,6 +108,8 @@ index 80b743c..1fc376d 100644
  		return ERR_PTR(-ENOMEM);
  
 +#ifdef CONFIG_KSU_SUSFS_SUS_PATH
++	dentry = lookup_real(base->d_inode, dentry, flags);
++
 +	if (unlikely(dentry) && !IS_ERR(dentry) && dentry->d_inode && !found_sus_path && susfs_is_inode_sus_path(dentry->d_inode)) {
 +		if (d_in_lookup(dentry))
 +			d_lookup_done(dentry);
@@ -121,10 +127,16 @@ index 80b743c..1fc376d 100644
 +		goto retry;
 +	}
 +#endif
++
++#ifdef CONFIG_KSU_SUSFS_SUS_PATH
++	return dentry;
++#else
  	return lookup_real(base->d_inode, dentry, flags);
++#endif
  }
  
-@@ -1681,6 +1731,9 @@ static int lookup_fast(struct nameidata *nd,
+ static int lookup_fast(struct nameidata *nd,
+@@ -1681,6 +1744,9 @@ static int lookup_fast(struct nameidata *nd,
  	struct vfsmount *mnt = nd->path.mnt;
  	struct dentry *dentry, *parent = nd->path.dentry;
  	int status = 1;
@@ -134,7 +146,7 @@ index 80b743c..1fc376d 100644
  	int err;
  
  	/*
-@@ -1692,6 +1745,16 @@ static int lookup_fast(struct nameidata *nd,
+@@ -1692,6 +1758,16 @@ static int lookup_fast(struct nameidata *nd,
  		unsigned seq;
  		bool negative;
  		dentry = __d_lookup_rcu(parent, &nd->last, &seq);
@@ -151,7 +163,7 @@ index 80b743c..1fc376d 100644
  		if (unlikely(!dentry)) {
  			if (unlazy_walk(nd))
  				return -ECHILD;
-@@ -1738,6 +1801,16 @@ static int lookup_fast(struct nameidata *nd,
+@@ -1738,6 +1814,16 @@ static int lookup_fast(struct nameidata *nd,
  			status = d_revalidate(dentry, nd->flags);
  	} else {
  		dentry = __d_lookup(parent, &nd->last);
@@ -168,7 +180,7 @@ index 80b743c..1fc376d 100644
  		if (unlikely(!dentry))
  			return 0;
  		status = d_revalidate(dentry, nd->flags);
-@@ -1769,6 +1842,10 @@ static struct dentry *lookup_slow(const struct qstr *name,
+@@ -1769,6 +1855,10 @@ static struct dentry *lookup_slow(const struct qstr *name,
  	struct dentry *dentry = ERR_PTR(-ENOENT), *old;
  	struct inode *inode = dir->d_inode;
  	DECLARE_WAIT_QUEUE_HEAD_ONSTACK(wq);
@@ -179,7 +191,7 @@ index 80b743c..1fc376d 100644
  
  	inode_lock_shared(inode);
  	/* Don't go there if it's already dead */
-@@ -1776,6 +1853,9 @@ static struct dentry *lookup_slow(const struct qstr *name,
+@@ -1776,6 +1866,9 @@ static struct dentry *lookup_slow(const struct qstr *name,
  		goto out;
  again:
  	dentry = d_alloc_parallel(dir, name, &wq);
@@ -189,7 +201,7 @@ index 80b743c..1fc376d 100644
  	if (IS_ERR(dentry))
  		goto out;
  	if (unlikely(!d_in_lookup(dentry))) {
-@@ -1785,6 +1865,12 @@ again:
+@@ -1785,6 +1878,12 @@ again:
  				if (!error) {
  					d_invalidate(dentry);
  					dput(dentry);
@@ -202,7 +214,7 @@ index 80b743c..1fc376d 100644
  					goto again;
  				}
  				dput(dentry);
-@@ -1799,6 +1885,19 @@ again:
+@@ -1799,6 +1898,19 @@ again:
  			dentry = old;
  		}
  	}
@@ -222,7 +234,7 @@ index 80b743c..1fc376d 100644
  out:
  	inode_unlock_shared(inode);
  	return dentry;
-@@ -1921,6 +2020,11 @@ static int walk_component(struct nameidata *nd, int flags)
+@@ -1921,6 +2033,11 @@ static int walk_component(struct nameidata *nd, int flags)
  	if (unlikely(err <= 0)) {
  		if (err < 0)
  			return err;
@@ -234,7 +246,7 @@ index 80b743c..1fc376d 100644
  		path.dentry = lookup_slow(&nd->last, nd->path.dentry,
  					  nd->flags);
  		if (IS_ERR(path.dentry))
-@@ -2197,6 +2301,17 @@ static int link_path_walk(const char *name, struct nameidata *nd)
+@@ -2197,6 +2314,17 @@ static int link_path_walk(const char *name, struct nameidata *nd)
  		if (err)
  			return err;
  
@@ -252,7 +264,7 @@ index 80b743c..1fc376d 100644
  		hash_len = hash_name(nd->path.dentry, name);
  
  		type = LAST_NORM;
-@@ -2387,6 +2502,9 @@ static inline int lookup_last(struct nameidata *nd)
+@@ -2387,6 +2515,9 @@ static inline int lookup_last(struct nameidata *nd)
  {
  	if (nd->last_type == LAST_NORM && nd->last.name[nd->last.len])
  		nd->flags |= LOOKUP_FOLLOW | LOOKUP_DIRECTORY;
@@ -262,7 +274,7 @@ index 80b743c..1fc376d 100644
  
  	nd->flags &= ~LOOKUP_PARENT;
  	return walk_component(nd, 0);
-@@ -3257,15 +3375,39 @@ static int lookup_open(struct nameidata *nd, struct path *path,
+@@ -3257,15 +3388,39 @@ static int lookup_open(struct nameidata *nd, struct path *path,
  	int error, create_error = 0;
  	umode_t mode = op->mode;
  	DECLARE_WAIT_QUEUE_HEAD_ONSTACK(wq);
@@ -302,7 +314,7 @@ index 80b743c..1fc376d 100644
  			if (IS_ERR(dentry))
  				return PTR_ERR(dentry);
  		}
-@@ -3391,6 +3533,10 @@ static int do_last(struct nameidata *nd,
+@@ -3391,6 +3546,10 @@ static int do_last(struct nameidata *nd,
  	struct path path;
  	int error;
  
@@ -313,7 +325,7 @@ index 80b743c..1fc376d 100644
  	nd->flags &= ~LOOKUP_PARENT;
  	nd->flags |= op->intent;
  
-@@ -3605,9 +3751,31 @@ static int do_tmpfile(struct nameidata *nd, unsigned flags,
+@@ -3605,9 +3764,31 @@ static int do_tmpfile(struct nameidata *nd, unsigned flags,
  		const struct open_flags *op,
  		struct file *file, int *opened)
  {
@@ -345,7 +357,7 @@ index 80b743c..1fc376d 100644
  	if (unlikely(error))
  		return error;
  	error = mnt_want_write(path.mnt);
-@@ -3635,24 +3803,57 @@ out2:
+@@ -3635,24 +3816,57 @@ out2:
  	mnt_drop_write(path.mnt);
  out:
  	path_put(&path);
@@ -403,7 +415,7 @@ index 80b743c..1fc376d 100644
  	const char *s;
  	struct file *file;
  	int opened = 0;
-@@ -3690,12 +3891,43 @@ static struct file *path_openat(struct nameidata *nd,
+@@ -3690,12 +3904,43 @@ static struct file *path_openat(struct nameidata *nd,
  			break;
  		}
  	}
@@ -426,8 +438,8 @@ index 80b743c..1fc376d 100644
 +					(error = do_last(nd, file, op, &opened)) > 0) {
 +					nd->flags &= ~(LOOKUP_OPEN|LOOKUP_CREATE|LOOKUP_EXCL);
 +					s = trailing_symlink(nd);
-+					if (IS_ERR(new_s)) {
-+						error = PTR_ERR(new_s);
++					if (IS_ERR(s)) {
++						error = PTR_ERR(s);
 +						break;
 +					}
 +				}
@@ -447,7 +459,7 @@ index 80b743c..1fc376d 100644
  	if (unlikely(error)) {
  		if (error == -EOPENSTALE) {
  			if (flags & LOOKUP_RCU)
-@@ -4876,6 +5108,10 @@ out:
+@@ -4876,6 +5121,10 @@ out:
  	return len;
  }
  
@@ -458,7 +470,7 @@ index 80b743c..1fc376d 100644
  /*
   * A helper for ->readlink().  This should be used *ONLY* for symlinks that
   * have ->get_link() not calling nd_jump_link().  Using (or not using) it
-@@ -4896,6 +5132,15 @@ static int generic_readlink(struct dentry *dentry, char __user *buffer,
+@@ -4896,6 +5145,15 @@ static int generic_readlink(struct dentry *dentry, char __user *buffer,
  		if (IS_ERR(link))
  			return PTR_ERR(link);
  	}
@@ -474,7 +486,7 @@ index 80b743c..1fc376d 100644
  	res = readlink_copy(buffer, buflen, link);
  	do_delayed_call(&done);
  	return res;
-@@ -4914,10 +5159,24 @@ static int generic_readlink(struct dentry *dentry, char __user *buffer,
+@@ -4914,10 +5172,24 @@ static int generic_readlink(struct dentry *dentry, char __user *buffer,
  int vfs_readlink(struct dentry *dentry, char __user *buffer, int buflen)
  {
  	struct inode *inode = d_inode(dentry);
@@ -1113,7 +1125,7 @@ index 96fc702..2c8a2df 100644
  	show_fd_locks(m, file, files);
  	if (seq_has_overflowed(m))
 diff --git a/fs/proc/task_mmu.c b/fs/proc/task_mmu.c
-index 1347939..a01362f 100644
+index 1347939..5c594b9 100644
 --- a/fs/proc/task_mmu.c
 +++ b/fs/proc/task_mmu.c
 @@ -20,6 +20,9 @@
@@ -1178,20 +1190,19 @@ index 1347939..a01362f 100644
  	}
  
  	start = vma->vm_start;
-@@ -884,6 +922,12 @@ static int show_smap(struct seq_file *m, void *v, int is_pid)
+@@ -831,6 +869,11 @@ static int show_smap(struct seq_file *m, void *v, int is_pid)
+ 		mss = &mss_stack;
  	}
  
- 	if (!rollup_mode)
 +#ifdef CONFIG_KSU_SUSFS_SUS_MAP
-+	if (vma->vm_file) {
-+		if (SUSFS_IS_INODE_SUS_MAP(file_inode(vma->vm_file)))
-+			return 0;
-+	}
++	if (vma->vm_file && SUSFS_IS_INODE_SUS_MAP(file_inode(vma->vm_file)))
++		return 0;
 +#endif
- 		seq_printf(m,
- 			   "Size:           %8lu kB\n"
- 			   "KernelPageSize: %8lu kB\n"
-@@ -892,7 +936,6 @@ static int show_smap(struct seq_file *m, void *v, int is_pid)
++
+ 	smaps_walk.private = mss;
+ 
+ #ifdef CONFIG_SHMEM
+@@ -892,7 +935,6 @@ static int show_smap(struct seq_file *m, void *v, int is_pid)
  			   vma_kernel_pagesize(vma) >> 10,
  			   vma_mmu_pagesize(vma) >> 10);
  
@@ -1199,27 +1210,15 @@ index 1347939..a01362f 100644
  	if (!rollup_mode || last_vma)
  		seq_printf(m,
  			   "Rss:            %8lu kB\n"
-@@ -929,9 +972,19 @@ static int show_smap(struct seq_file *m, void *v, int is_pid)
- 			   (unsigned long)(mss->pss_locked >> (10 + PSS_SHIFT)));
- 
- 	if (!rollup_mode) {
-+#ifdef CONFIG_KSU_SUSFS_SUS_MAP
-+	if (vma->vm_file) {
-+		if (vma->vm_file && SUSFS_IS_INODE_SUS_MAP(file_inode(vma->vm_file)))
-+			goto bypass_orig_flow;
-+	}
-+#endif
+@@ -932,6 +974,7 @@ static int show_smap(struct seq_file *m, void *v, int is_pid)
  		arch_show_smap(m, vma);
  		show_smap_vma_flags(m, vma);
  	}
 +
-+#ifdef CONFIG_KSU_SUSFS_SUS_MAP
-+bypass_orig_flow:
-+#endif
  	m_cache_vma(m, vma);
  	return ret;
  }
-@@ -1618,6 +1671,9 @@ static ssize_t pagemap_read(struct file *file, char __user *buf,
+@@ -1618,6 +1661,9 @@ static ssize_t pagemap_read(struct file *file, char __user *buf,
  	while (count && (start_vaddr < end_vaddr)) {
  		int len;
  		unsigned long end;
@@ -1229,7 +1228,7 @@ index 1347939..a01362f 100644
  
  		pm.pos = 0;
  		end = (start_vaddr + PAGEMAP_WALK_SIZE) & PAGEMAP_WALK_MASK;
-@@ -1625,7 +1681,15 @@ static ssize_t pagemap_read(struct file *file, char __user *buf,
+@@ -1625,7 +1671,15 @@ static ssize_t pagemap_read(struct file *file, char __user *buf,
  		if (end < start_vaddr || end > end_vaddr)
  			end = end_vaddr;
  		down_read(&mm->mmap_sem);
@@ -2000,10 +1999,10 @@ index e6ceb3e..9af3977 100644
  		buf->f_flags = calculate_f_flags(path->mnt);
 diff --git a/fs/susfs.c b/fs/susfs.c
 new file mode 100644
-index 0000000..3036e80
+index 0000000..69c66c8
 --- /dev/null
 +++ b/fs/susfs.c
-@@ -0,0 +1,1492 @@
+@@ -0,0 +1,1491 @@
 +#include <linux/version.h>
 +#include <linux/cred.h>
 +#include <linux/fs.h>
@@ -2257,7 +2256,6 @@ index 0000000..3036e80
 +		goto out_copy_to_user;
 +	}
 +	
-+
 +	if (info.enabled) {
 +		static_branch_enable(&susfs_is_hide_sus_mnts_for_non_su_procs_enabled);
 +	} else {
@@ -2644,9 +2642,9 @@ index 0000000..3036e80
 +		strscpy(my_uname.release, info.release, __NEW_UTS_LEN);
 +	}
 +	if (!strcmp(info.version, "default")) {
-+		strscpy(my_uname.version, info.version, __NEW_UTS_LEN);
++		strscpy(my_uname.version, utsname()->version, __NEW_UTS_LEN);
 +	} else {
-+		strncpy(my_uname.version, info.version, __NEW_UTS_LEN);
++		strscpy(my_uname.version, info.version, __NEW_UTS_LEN);
 +	}
 +	write_sequnlock(&susfs_uname_seqlock);
 +
@@ -3481,9 +3479,9 @@ index 0000000..3036e80
 +static void susfs_run_extra_works(struct work_struct *work) {
 +	if (!ksu_cred)
 +		return;
-+	#ifdef CONFIG_KSU_SUSFS_SUS_PATH
++#ifdef CONFIG_KSU_SUSFS_SUS_PATH
 +	susfs_run_sus_path_loop();
-+	#endif // #ifdef CONFIG_KSU_SUSFS_SUS_PATH
++#endif // #ifdef CONFIG_KSU_SUSFS_SUS_PATH
 +}
 +
 +/* susfs_init */
@@ -4007,7 +4005,7 @@ index 30801ea..0fd8fad 100644
  	if (copy_to_user(name, &tmp, sizeof(tmp)))
  		return -EFAULT;
 diff --git a/mm/memory.c b/mm/memory.c
-index 0879df7..af46de6 100644
+index 0879df7..23c4b11 100644
 --- a/mm/memory.c
 +++ b/mm/memory.c
 @@ -79,6 +79,10 @@
@@ -4021,17 +4019,16 @@ index 0879df7..af46de6 100644
  #include "internal.h"
  
  #define CREATE_TRACE_POINTS
-@@ -5085,6 +5089,9 @@ int __access_remote_vm(struct task_struct *tsk, struct mm_struct *mm,
- 	struct vm_area_struct *vma;
- 	void *old_buf = buf;
+@@ -5087,12 +5091,20 @@ int __access_remote_vm(struct task_struct *tsk, struct mm_struct *mm,
  	int write = gup_flags & FOLL_WRITE;
+ 
+ 	down_read(&mm->mmap_sem);
 +#ifdef CONFIG_KSU_SUSFS_SUS_MAP
 +	vma = find_vma(mm, addr);
 +#endif // #ifdef CONFIG_KSU_SUSFS_SUS_MAP
- 
- 	down_read(&mm->mmap_sem);
  	/* ignore errors, just check how much was successfully transferred */
-@@ -5093,6 +5100,11 @@ int __access_remote_vm(struct task_struct *tsk, struct mm_struct *mm,
+ 	while (len) {
+ 		int bytes, ret, offset;
  		void *maddr;
  		struct page *page = NULL;
  
@@ -4044,7 +4041,7 @@ index 0879df7..af46de6 100644
  				gup_flags, &page, &vma, NULL);
  		if (ret <= 0) {
 diff --git a/security/selinux/avc.c b/security/selinux/avc.c
-index 1b8f957..9e216e0 100644
+index 1b8f957..872fc13 100644
 --- a/security/selinux/avc.c
 +++ b/security/selinux/avc.c
 @@ -164,6 +164,11 @@ static void avc_dump_av(struct audit_buffer *ab, u16 tclass, u32 av)
@@ -4059,24 +4056,14 @@ index 1b8f957..9e216e0 100644
  
  /**
   * avc_dump_query - Display a SID pair and a class in human-readable form.
-@@ -177,6 +182,9 @@ static void avc_dump_query(struct audit_buffer *ab, struct selinux_state *state,
- 	int rc;
- 	char *scontext;
- 	u32 scontext_len;
-+#ifdef CONFIG_KSU_SUSFS
-+	struct selinux_audit_data sad;
-+#endif
- 
- 	rc = security_sid_to_context(state, ssid, &scontext, &scontext_len);
- 	if (rc)
-@@ -187,6 +195,19 @@ static void avc_dump_query(struct audit_buffer *ab, struct selinux_state *state,
+@@ -187,6 +192,19 @@ static void avc_dump_query(struct audit_buffer *ab, struct selinux_state *state,
  	}
  
  	rc = security_sid_to_context(state, tsid, &scontext, &scontext_len);
 +
 +#ifdef CONFIG_KSU_SUSFS
 +	if (static_branch_likely(&susfs_is_avc_log_spoofing_enabled)) {
-+		if (unlikely(sad.tsid == susfs_ksu_sid)) {
++		if (unlikely(tsid == susfs_ksu_sid)) {
 +			if (rc)
 +				audit_log_format(ab, " tsid=%d", susfs_priv_app_sid);
 +			else
@@ -4089,7 +4076,7 @@ index 1b8f957..9e216e0 100644
  	if (rc)
  		audit_log_format(ab, " tsid=%d", tsid);
  	else {
-@@ -194,6 +215,9 @@ static void avc_dump_query(struct audit_buffer *ab, struct selinux_state *state,
+@@ -194,6 +212,9 @@ static void avc_dump_query(struct audit_buffer *ab, struct selinux_state *state,
  		kfree(scontext);
  	}
  
@@ -4099,6 +4086,3 @@ index 1b8f957..9e216e0 100644
  	BUG_ON(!tclass || tclass >= ARRAY_SIZE(secclass_map));
  	audit_log_format(ab, " tclass=%s", secclass_map[tclass-1].name);
  }
-diff --git a/susfs_fixed.patch b/susfs_fixed.patch
-new file mode 100644
-index 0000000..e69de29
