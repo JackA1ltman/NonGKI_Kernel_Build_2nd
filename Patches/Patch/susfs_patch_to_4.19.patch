@@ -3693,10 +3693,10 @@ index 0000000..6ede629
 +#endif
 diff --git a/include/linux/susfs_def.h b/include/linux/susfs_def.h
 new file mode 100644
-index 0000000..e91c5db
+index 0000000..fb50e74
 --- /dev/null
 +++ b/include/linux/susfs_def.h
-@@ -0,0 +1,171 @@
+@@ -0,0 +1,180 @@
 +#ifndef KSU_SUSFS_DEF_H
 +#define KSU_SUSFS_DEF_H
 +
@@ -3706,6 +3706,15 @@ index 0000000..e91c5db
 +#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 12, 0)
 +#include <linux/cred.h>
 +#endif
++
++#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 7, 0)
++#define d_in_lookup(dentry) (0)
++#define d_lookup_done(dentry) do {} while (0)
++#endif // to support 4.4 and older kernel
++
++#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 7, 0)
++#define GFP_KERNEL_ACCOUNT GFP_KERNEL
++#endif // to support 4.4 and older kernel
 +
 +/********/
 +/* ENUM */
