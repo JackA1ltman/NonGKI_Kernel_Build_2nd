@@ -3852,7 +3852,7 @@ index a7f8232..6799a2c 100644
  	if (copy_to_user(name, &tmp, sizeof(tmp)))
  		return -EFAULT;
 diff --git a/mm/memory.c b/mm/memory.c
-index be6a0ae..9bf160c 100755
+index be6a0ae..74cb215 100755
 --- a/mm/memory.c
 +++ b/mm/memory.c
 @@ -73,6 +73,10 @@
@@ -3866,17 +3866,16 @@ index be6a0ae..9bf160c 100755
  #include "internal.h"
  
  #define CREATE_TRACE_POINTS
-@@ -4464,6 +4468,9 @@ int __access_remote_vm(struct task_struct *tsk, struct mm_struct *mm,
- 	struct vm_area_struct *vma;
- 	void *old_buf = buf;
+@@ -4466,12 +4470,20 @@ int __access_remote_vm(struct task_struct *tsk, struct mm_struct *mm,
  	int write = gup_flags & FOLL_WRITE;
+ 
+ 	down_read(&mm->mmap_sem);
 +#ifdef CONFIG_KSU_SUSFS_SUS_MAP
 +	vma = find_vma(mm, addr);
 +#endif // #ifdef CONFIG_KSU_SUSFS_SUS_MAP
- 
- 	down_read(&mm->mmap_sem);
  	/* ignore errors, just check how much was successfully transferred */
-@@ -4472,6 +4479,11 @@ int __access_remote_vm(struct task_struct *tsk, struct mm_struct *mm,
+ 	while (len) {
+ 		int bytes, ret, offset;
  		void *maddr;
  		struct page *page = NULL;
  

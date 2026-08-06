@@ -12,7 +12,7 @@ index 969caba..cdd3d90 100644
  obj-y +=	buffer.o block_dev.o direct-io.o mpage.o
  else
 diff --git a/fs/namei.c b/fs/namei.c
-index 9ec0013..73c4f86 100644
+index 9ec0013..0fa8df4 100644
 --- a/fs/namei.c
 +++ b/fs/namei.c
 @@ -37,6 +37,9 @@
@@ -127,7 +127,20 @@ index 9ec0013..73c4f86 100644
  	}
  
  	if (unlikely(!dentry))
-@@ -1888,6 +1937,11 @@ static int walk_component(struct nameidata *nd, int flags)
+@@ -1781,6 +1830,12 @@ static int lookup_slow(struct nameidata *nd, struct path *path)
+ 	mutex_unlock(&parent->d_inode->i_mutex);
+ 	if (IS_ERR(dentry))
+ 		return PTR_ERR(dentry);
++
++#ifdef CONFIG_KSU_SUSFS_SUS_PATH
++	if (!dentry)
++		return -ENOENT;
++#endif
++
+ 	path->mnt = nd->path.mnt;
+ 	path->dentry = dentry;
+ 	return follow_managed(path, nd);
+@@ -1888,6 +1943,11 @@ static int walk_component(struct nameidata *nd, int flags)
  	if (unlikely(err)) {
  		if (err < 0)
  			return err;
@@ -139,7 +152,7 @@ index 9ec0013..73c4f86 100644
  
  		err = lookup_slow(nd, &path);
  		if (err < 0)
-@@ -2114,6 +2168,15 @@ OK:
+@@ -2114,6 +2174,17 @@ OK:
  		if (err < 0)
  			return err;
  
@@ -147,6 +160,8 @@ index 9ec0013..73c4f86 100644
 +		{
 +			struct dentry *dentry = nd->path.dentry;
 +			if (dentry->d_inode && susfs_is_inode_sus_path(dentry->d_inode)) {
++				// - No need to dput() here
++				// - return -ENOENT here since it is walking the sub path of sus path
 +				return -ENOENT;
 +			}
 +		}
@@ -155,7 +170,7 @@ index 9ec0013..73c4f86 100644
  		if (err) {
  			const char *s = get_link(nd);
  
-@@ -2257,6 +2320,10 @@ static const char *trailing_symlink(struct nameidata *nd)
+@@ -2257,6 +2328,10 @@ static const char *trailing_symlink(struct nameidata *nd)
  
  static inline int lookup_last(struct nameidata *nd)
  {
@@ -166,7 +181,7 @@ index 9ec0013..73c4f86 100644
  	if (nd->last_type == LAST_NORM && nd->last.name[nd->last.len])
  		nd->flags |= LOOKUP_FOLLOW | LOOKUP_DIRECTORY;
  
-@@ -3198,6 +3265,9 @@ static int do_last(struct nameidata *nd,
+@@ -3198,6 +3273,9 @@ static int do_last(struct nameidata *nd,
  
  	nd->flags &= ~LOOKUP_PARENT;
  	nd->flags |= op->intent;
@@ -176,7 +191,7 @@ index 9ec0013..73c4f86 100644
  
  	if (nd->last_type != LAST_NORM) {
  		error = handle_dots(nd, nd->last_type);
-@@ -3475,6 +3545,10 @@ out:
+@@ -3475,6 +3553,10 @@ out:
  static struct file *path_openat(struct nameidata *nd,
  			const struct open_flags *op, unsigned flags)
  {
@@ -187,7 +202,7 @@ index 9ec0013..73c4f86 100644
  	const char *s;
  	struct file *file;
  	int opened = 0;
-@@ -3505,12 +3579,43 @@ static struct file *path_openat(struct nameidata *nd,
+@@ -3505,12 +3587,43 @@ static struct file *path_openat(struct nameidata *nd,
  			break;
  		}
  	}
@@ -231,7 +246,7 @@ index 9ec0013..73c4f86 100644
  	if (unlikely(error)) {
  		if (error == -EOPENSTALE) {
  			if (flags & LOOKUP_RCU)
-@@ -4728,6 +4833,10 @@ out:
+@@ -4728,6 +4841,10 @@ out:
  }
  EXPORT_SYMBOL(readlink_copy);
  
@@ -242,7 +257,7 @@ index 9ec0013..73c4f86 100644
  /*
   * A helper for ->readlink().  This should be used *ONLY* for symlinks that
   * have ->follow_link() touching nd only in nd_set_link().  Using (or not
-@@ -4745,6 +4854,16 @@ int generic_readlink(struct dentry *dentry, char __user *buffer, int buflen)
+@@ -4745,6 +4862,16 @@ int generic_readlink(struct dentry *dentry, char __user *buffer, int buflen)
  		if (IS_ERR(link))
  			return PTR_ERR(link);
  	}
@@ -3619,7 +3634,7 @@ index 25cf2aa..3b1ff66 100644
  	if (copy_to_user(name, &tmp, sizeof(tmp)))
  		return -EFAULT;
 diff --git a/mm/memory.c b/mm/memory.c
-index 0c69908..8e4ad1c 100644
+index 0c69908..9d0b82a 100644
 --- a/mm/memory.c
 +++ b/mm/memory.c
 @@ -70,6 +70,10 @@
@@ -3633,17 +3648,16 @@ index 0c69908..8e4ad1c 100644
  #include "internal.h"
  
  #if defined(LAST_CPUPID_NOT_IN_PAGE_FLAGS) && !defined(CONFIG_COMPILE_TEST)
-@@ -3711,6 +3715,9 @@ static int __access_remote_vm(struct task_struct *tsk, struct mm_struct *mm,
- 	struct vm_area_struct *vma;
- 	void *old_buf = buf;
+@@ -3713,12 +3717,20 @@ static int __access_remote_vm(struct task_struct *tsk, struct mm_struct *mm,
  	int write = gup_flags & FOLL_WRITE;
+ 
+ 	down_read(&mm->mmap_sem);
 +#ifdef CONFIG_KSU_SUSFS_SUS_MAP
 +	vma = find_vma(mm, addr);
 +#endif // #ifdef CONFIG_KSU_SUSFS_SUS_MAP
- 
- 	down_read(&mm->mmap_sem);
  	/* ignore errors, just check how much was successfully transferred */
-@@ -3719,6 +3726,11 @@ static int __access_remote_vm(struct task_struct *tsk, struct mm_struct *mm,
+ 	while (len) {
+ 		int bytes, ret, offset;
  		void *maddr;
  		struct page *page = NULL;
  
