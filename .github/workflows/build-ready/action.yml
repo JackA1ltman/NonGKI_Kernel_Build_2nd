@@ -128,7 +128,7 @@ runs:
                 KERNELSU_NAME="KernelSU"
                 KERNELSU_ORIGIN_BRANCH="master"
                 if [[ "${{ env.SUSFS_ENABLE }}" == "true" ]]; then
-                    echo "${{ env.KERNELSU_AUTO_FORK }} doesn't support SuSFS! "
+                    echo "[-] ${{ env.KERNELSU_AUTO_FORK }} doesn't support SuSFS! "
                     false
                 else
                     KERNELSU_BRANCH="master"
@@ -139,7 +139,7 @@ runs:
                 KERNELSU_NAME="KernelSU"
                 KERNELSU_ORIGIN_BRANCH="main"
                 if [[ "${{ env.SUSFS_ENABLE }}" == "true" ]]; then
-                    echo "${{ env.KERNELSU_AUTO_FORK }} doesn't support SuSFS! "
+                    echo "[-] ${{ env.KERNELSU_AUTO_FORK }} doesn't support SuSFS! "
                     false
                 else
                     KERNELSU_BRANCH="main"
@@ -160,7 +160,7 @@ runs:
                 KERNELSU_NAME="KernelSU-Next"
                 KERNELSU_ORIGIN_BRANCH="legacy"
                 if [[ "${{ env.SUSFS_ENABLE }}" == "true" ]]; then
-                    echo "${{ env.KERNELSU_AUTO_FORK }} doesn't support SuSFS! "
+                    echo "[-] ${{ env.KERNELSU_AUTO_FORK }} doesn't support SuSFS! "
                     false
                 else
                     KERNELSU_BRANCH="legacy"
@@ -177,7 +177,7 @@ runs:
                 fi
 
             else
-                echo "Please input vaild fork name!"
+                echo "[-] Please input vaild fork name!"
                 false
 
             fi
@@ -200,7 +200,7 @@ runs:
                 ln -sf "../$KERNELSU_FOLDER/kernel" "drivers/kernelsu"
                 grep -q "kernelsu" "$GITHUB_WORKSPACE/device_kernel/drivers/Makefile" || printf "\nobj-\$(CONFIG_KSU) += kernelsu/\n" >> $GITHUB_WORKSPACE/device_kernel/drivers/Makefile
                 grep -q "source \"drivers/kernelsu/Kconfig\"" "$GITHUB_WORKSPACE/device_kernel/drivers/Kconfig" || sed -i "/endmenu/i\source \"drivers/kernelsu/Kconfig\"" "${GITHUB_WORKSPACE}/device_kernel/drivers/Kconfig"
-                echo "KernelSU Settings done."
+                echo "[+] KernelSU Settings done."
 
             elif [[ "${{ env.KERNELSU_METHOD }}" == "only" ]]; then
                 git clone "https://github.com/$KERNELSU_AUTHOR/$KERNELSU_NAME.git" -b "$KERNELSU_BRANCH" "$KERNELSU_FOLDER"
@@ -228,7 +228,7 @@ runs:
                 ln -sf "../$KERNELSU_FOLDER/kernel" "drivers/kernelsu"
                 grep -q "kernelsu" "$GITHUB_WORKSPACE/device_kernel/drivers/Makefile" || printf "\nobj-\$(CONFIG_KSU) += kernelsu/\n" >> $GITHUB_WORKSPACE/device_kernel/drivers/Makefile
                 grep -q "source \"drivers/kernelsu/Kconfig\"" "$GITHUB_WORKSPACE/device_kernel/drivers/Kconfig" || sed -i "/endmenu/i\source \"drivers/kernelsu/Kconfig\"" "${GITHUB_WORKSPACE}/device_kernel/drivers/Kconfig"
-                echo "KernelSU Settings done."
+                echo "[+] KernelSU Settings done."
 
             elif [[ "${{ env.KERNELSU_METHOD }}" == "only" ]]; then
                 git clone "${{ env.KERNELSU_SOURCE }}" -b "${{ env.KERNELSU_BRANCH }}" "$KERNELSU_FOLDER"
