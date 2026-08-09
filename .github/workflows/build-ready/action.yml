@@ -248,6 +248,23 @@ runs:
           fi
           echo "KERNELSU_METHOD=${{ env.KERNELSU_METHOD }}" >> $GITHUB_ENV
 
+      - name: SukiSU-Ultra Fixed
+        shell: bash
+        run: |
+          cd $GITHUB_WORKSPACE/device_kernel/drivers/kernelsu
+
+          if [[ "${{ env.KERNELSU_SOURCE }}" == *SukiSU* ]] || [[ "${{ env.KERNELSU_AUTO_FORK }}" == "sukisu" ]]; then
+            sed -i -e '/ksu_selinux_hide_handle_post_fs_data();/i #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0)' -e '/ksu_selinux_hide_handle_post_fs_data();/a #endif' runtime/ksud.c
+            sed -i -e '/ksu_selinux_hide_handle_second_stage();/i #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0)' -e '/ksu_selinux_hide_handle_second_stage();/a #endif' runtime/ksud.c
+            sed -E -i -e 's/^static inline struct user_arg_ptr \*user_arg_null_ptr\(void\)$/static inline struct user_arg_ptr user_arg_null_ptr(void)/' -e 's/^    return &null_arg;$/    return null_arg;/' sulog/event.c
+
+            echo "[+] SukiSU-Ultra mitigation measures implemented."
+
+          else
+            echo "[-] Your KernelSU Fork needn't it, Skipped."
+
+          fi
+
       - name: KPM Function Support
         if: env.KPM_ENABLE == 'true'
         shell: bash
