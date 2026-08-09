@@ -15,6 +15,7 @@
 | Samsung A71 | All | a71 | [4.14/nduykha/kernel_samsung_sm7150](https://github.com/nduykha/kernel_samsung_sm7150) | Based AOSP & OneUI | 16 | AnyKernel3 | ReSukiSU | ✅ | Inline | ❌ | ✅ | ✅ | ❌ | Stable |   
 | Xiaomi Mi Pad 4 | All | clover | [4.19/pix106/southwest](https://github.com/pix106/android_kernel_xiaomi_southwest-4.19) | Lineage OS 22 | 15 | AnyKernel3 | ReSukiSU | ✅ | Inline | ❌ | ❌ | ❌ | ❌ | Stable |  
 | Redmi K30 Ultra | All | cezanne | [4.14/HuaLiMao-AQ/AOSP](https://github.com/HuaLiMao-AQ/android_kernel_xiaomi_mt6873) | Based AOSP | 14 | AnyKernel3 | ReSukiSU | ✅ | Inline | ❌ | ✅ | ✅ | ❌ | Stable |  
+| Google Pixel 4 | All | flame | [4.14/Pixel4/4XL/LineageOS](https://github.com/Z-fly/android_kernel_google_msm-4.14) | Lineage OS 23 | 16 | AnyKernel3 | SukiSU-Ultra<br>ReSukiSU | ❌ | Inline | ❌ | ✅ | ❌ | ❌ | Stable |  
 
 **English**:  
 - OnePlus 8 OxygenOS/ColorOS 13.1 XTD has been tested and can be used on the OnePlus 8, 8T, 8 Pro and 9R.
