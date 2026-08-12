@@ -8,13 +8,21 @@ runs:
         shell: bash
         run: |
           cd $GITHUB_WORKSPACE/device_kernel/
-          cp /tmp/Patches/Rekernel/rekernel_patches.sh ./
-          bash rekernel_patches.sh
 
-          mkdir -p drivers/rekernel
-          cp /tmp/Patches/Rekernel/rekernel_extra.patch ./
-          patch -p1 < rekernel_extra.patch || true
+          if grep -q "cgroup_task_frozen" "kernel/cgroup.c" || grep -q "cgroup_task_frozen" "kernel/cgroup/cgroup.c"; then
 
-          echo "CONFIG_REKERNEL=y" >> ./arch/${{ env.KERNEL_ARCH }}/configs/${{ env.DEFCONFIG_NAME }}
+            cp /tmp/Patches/Rekernel/rekernel_patches.sh ./
+            bash rekernel_patches.sh
 
-          echo "[+] Patched Re:Kernel for your kernel successfully."
+            mkdir -p drivers/rekernel
+            cp /tmp/Patches/Rekernel/rekernel_extra.patch ./
+            patch -p1 < rekernel_extra.patch || true
+
+            echo "CONFIG_REKERNEL=y" >> ./arch/${{ env.KERNEL_ARCH }}/configs/${{ env.DEFCONFIG_NAME }}
+
+            echo "[+] Patched Re:Kernel for your kernel successfully."
+          else
+
+            echo "[-] Kernel's Cgroup is detected to be missing the specified function, please enable Re:Kernel after porting the full Cgroup V2."
+            false
+          fi
