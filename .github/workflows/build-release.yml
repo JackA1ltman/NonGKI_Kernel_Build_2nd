@@ -59,7 +59,7 @@ jobs:
         | Redmi Note 11 Pro 5G | veux | 5.4 | Based AOSP | 16 | AnyKernel3 | ReSukiSU | ✅ | ❌ | ❌ | ❌ |
         | OnePlus 8 | instantnoodle | 4.19 | Color OS 15 | 15 | AnyKernel3 | ReSukiSU | ✅ | ❌ | ✅ | ❌ |
         | Xiaomi Mix2s | polaris | 4.19 | Based AOSP | 16 | AnyKernel3 | ReSukiSU | ✅ | ❌ | ❌ | ❌ |
-        | Nothing Phone (1) | spacewar | 5.4 | Lineage OS 23.0 | 16 | AnyKernel3 | ReSukiSU | ✅ | ❌ | ❌ | ❌ |
+        | Nothing Phone (1) | spacewar | 5.4 | Lineage OS 23.2 | 16 | AnyKernel3 | ReSukiSU | ✅ | ❌ | ❌ | ❌ |
         | Samsung A71 | a71 | 4.14 | Based AOSP & OneUI | 16 | AnyKernel3 | ReSukiSU | ✅ | ✅ | ✅ | ❌ |
         | Xiaomi Mi Pad 4 | clover | 4.19 | Lineage OS 22 | 15 | AnyKernel3 | ReSukiSU | ✅ | ❌ | ❌ | ❌ |
         | Redmi K30 Ultra | cezanne | 4.14 | Based AOSP | 14 | AnyKernel3 | ReSukiSU | ✅ | ✅ | ✅ | ❌ |

@@ -121,7 +121,7 @@ jobs:
 
   # Nothing
   build-nothing-phone-1-lineageos23-a16:
-    name: "Nothing Phone (1) (LineageOS 23.0 A16)"
+    name: "Nothing Phone (1) (LineageOS 23.2 A16)"
     strategy:
       fail-fast: true
     uses: ./.github/workflows/build-nothing-phone-1-lineageos23-a16.yml
