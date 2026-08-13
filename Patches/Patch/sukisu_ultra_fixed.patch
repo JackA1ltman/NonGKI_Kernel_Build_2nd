@@ -1,7 +1,7 @@
-diff --git a/infra/kernel_compat.h b/infra/kernel_compat.h
+diff --git a/kernel/infra/kernel_compat.h b/kernel/infra/kernel_compat.h
 index 5b10ee7..c7e4714 100644
---- a/infra/kernel_compat.h
-+++ b/infra/kernel_compat.h
+--- a/kernel/infra/kernel_compat.h
++++ b/kernel/infra/kernel_compat.h
 @@ -1,6 +1,23 @@
  #ifndef __KSU_H_KERNEL_COMPAT
  #define __KSU_H_KERNEL_COMPAT
@@ -37,10 +37,10 @@ index 5b10ee7..c7e4714 100644
  extern int install_session_keyring_to_cred(struct cred *cred, struct key *keyring);
  static struct key *init_session_keyring = NULL;
  
-diff --git a/runtime/ksud.c b/runtime/ksud.c
+diff --git a/kernel/runtime/ksud.c b/kernel/runtime/ksud.c
 index c9d11da..ad18fe5 100644
---- a/runtime/ksud.c
-+++ b/runtime/ksud.c
+--- a/kernel/runtime/ksud.c
++++ b/kernel/runtime/ksud.c
 @@ -61,7 +61,10 @@ void on_post_fs_data(void)
  #else
      stop_input_hook();
@@ -62,10 +62,10 @@ index c9d11da..ad18fe5 100644
                  apply_kernelsu_rules();
                  cache_sid();
                  setup_ksu_cred();
-diff --git a/selinux/selinux.c b/selinux/selinux.c
+diff --git a/kernel/selinux/selinux.c b/kernel/selinux/selinux.c
 index 1f8fd0e..4183b1c 100644
---- a/selinux/selinux.c
-+++ b/selinux/selinux.c
+--- a/kernel/selinux/selinux.c
++++ b/kernel/selinux/selinux.c
 @@ -317,4 +317,4 @@ void susfs_set_batch_sid(void)
      susfs_set_sid(KERNEL_INIT_DOMAIN, &susfs_init_sid);
      susfs_set_sid(KERNEL_PRIV_APP_DOMAIN, &susfs_priv_app_sid);
@@ -73,10 +73,10 @@ index 1f8fd0e..4183b1c 100644
 -#endif
 \ No newline at end of file
 +#endif
-diff --git a/sulog/event.c b/sulog/event.c
+diff --git a/kernel/sulog/event.c b/kernel/sulog/event.c
 index e45f01f..ac10632 100644
---- a/sulog/event.c
-+++ b/sulog/event.c
+--- a/kernel/sulog/event.c
++++ b/kernel/sulog/event.c
 @@ -361,10 +361,10 @@ out_drop:
  }
  #endif
