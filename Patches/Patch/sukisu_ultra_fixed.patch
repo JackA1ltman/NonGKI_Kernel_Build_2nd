@@ -1,7 +1,7 @@
-diff --git a/infra/kernel_compat.h b/infra/kernel_compat.h
+diff --git a/infra_compat.h b/infra_compat.h
 index 5b10ee7..a6cc583 100644
---- a/infra/kernel_compat.h
-+++ b/infra/kernel_compat.h
+--- a/infra_compat.h
++++ b/infra_compat.h
 @@ -1,6 +1,23 @@
  #ifndef __KSU_H_KERNEL_COMPAT
  #define __KSU_H_KERNEL_COMPAT
