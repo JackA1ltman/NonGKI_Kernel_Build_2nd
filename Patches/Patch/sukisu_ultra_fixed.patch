@@ -1,5 +1,5 @@
 diff --git a/infra/kernel_compat.h b/infra/kernel_compat.h
-index 5b10ee7..927476f 100644
+index 5b10ee7..a6cc583 100644
 --- a/infra/kernel_compat.h
 +++ b/infra/kernel_compat.h
 @@ -1,6 +1,23 @@
@@ -10,7 +10,7 @@ index 5b10ee7..927476f 100644
 +
 +#ifndef __has_attribute
 +#define __has_attribute(x) __GCC4_has_attribute_##x
-+#define __GCC4_has_attribute___fallthrough__ 0
++#define __GCC4_has_attribute__fallthrough__ 0
 +#endif
 +
 +#ifndef fallthrough
@@ -26,7 +26,7 @@ index 5b10ee7..927476f 100644
  #if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 9, 0)) && (LINUX_VERSION_CODE < KERNEL_VERSION(4, 10, 0)) ||              \
      (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)) && (LINUX_VERSION_CODE < KERNEL_VERSION(4, 15, 0))
  #ifdef HISI_SELINUX_EBITMAP_RO
-@@ -11,6 +28,28 @@
+@@ -11,6 +28,26 @@
  #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 10, 0) || defined(CONFIG_IS_HW_HISI) ||                                     \
      defined(CONFIG_KSU_ALLOWLIST_WORKAROUND)
  
@@ -37,17 +37,15 @@ index 5b10ee7..927476f 100644
 +#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 1, 0)
 +
 +#ifndef KSU_HAS_SELINUX_INODE
-+static inline struct inode_security_struct *selinux_inode(const struct inode *inode)
-+{
-+    return inode->i_security;
-+}
++#define selinux_inode(inode) ((struct inode_security_struct *)((inode)->i_security))
 +#endif
 +
 +#ifndef KSU_HAS_SELINUX_CRED
-+static inline struct task_security_struct *selinux_cred(const struct cred *cred)
-+{
-+    return cred->security;
-+}
++#define selinux_cred(cred) ((struct cred_security_struct *)((cred)->i_security))
++#endif
++
++#ifndef current_sid
++#define current_sid() (((struct cred_security_struct *)current_security())->sid)
 +#endif
 +
 +#endif
@@ -80,27 +78,6 @@ index c9d11da..ad18fe5 100644
                  apply_kernelsu_rules();
                  cache_sid();
                  setup_ksu_cred();
-diff --git a/selinux/selinux.c b/selinux/selinux.c
-index 1f8fd0e..9d2de21 100644
---- a/selinux/selinux.c
-+++ b/selinux/selinux.c
-@@ -1,3 +1,9 @@
-+static inline u32 current_sid(void)
-+{
-+    const struct task_security_struct *tsec = current_security();
-+
-+    return tsec->sid;
-+}
- #if LINUX_VERSION_CODE <= KERNEL_VERSION(4, 19, 0)
- bool __maybe_unused is_ksu_transition(const struct task_security_struct *old_tsec,
-                                       const struct task_security_struct *new_tsec)
-@@ -317,4 +323,4 @@ void susfs_set_batch_sid(void)
-     susfs_set_sid(KERNEL_INIT_DOMAIN, &susfs_init_sid);
-     susfs_set_sid(KERNEL_PRIV_APP_DOMAIN, &susfs_priv_app_sid);
- }
--#endif
-\ No newline at end of file
-+#endif
 diff --git a/sulog/event.c b/sulog/event.c
 index e45f01f..ac10632 100644
 --- a/sulog/event.c
