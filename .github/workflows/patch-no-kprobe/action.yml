@@ -9,7 +9,7 @@ runs:
           cd $GITHUB_WORKSPACE/device_kernel
 
           # Detect SUSFS is used to enable the SUSFS inline hook
-          if [[ ${{ env.SUSFS_ENABLE }} == "true" ]]; then
+          if [[ ${{ env.SUSFS_ENABLE }} == "true" ]] && { [[ "${{ env.KERNELSU_SOURCE }}" == *ReSukiSU* ]] || [[ "${{ env.KERNELSU_AUTO_FORK }}" == "resukisu" ]]; }; then
             # Core
             cp /tmp/Patches/susfs_inline_hook_patches.sh ./
             bash susfs_inline_hook_patches.sh ./
@@ -27,6 +27,14 @@ runs:
             fi
 
             echo "[+] executed syscall hook successfully."
+
+          elif [[ ${{ env.HOOK_METHOD }} == "tamper" ]]; then
+            echo "CONFIG_KSU_TAMPER_SYSCALL_TABLE=y" >> ./arch/${{ env.KERNEL_ARCH }}/configs/${{ env.DEFCONFIG_NAME }}
+            echo "[+] applied CONFIG_KSU_TAMPER_SYSCALL_TABLE."
+
+          elif [[ ${{ env.HOOK_METHOD }} == "branchlink" ]]; then
+            echo "CONFIG_KSU_HACK_ARM64_BRANCH_LINK=y" >> ./arch/${{ env.KERNEL_ARCH }}/configs/${{ env.DEFCONFIG_NAME }}
+            echo "[+] applied CONFIG_KSU_HACK_ARM64_BRANCH_LINK."
 
           else
             echo "[-] please input a vaild option!"
