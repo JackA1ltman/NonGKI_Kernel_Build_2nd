@@ -1,57 +1,55 @@
-name: 📱 Device Request
-description: Request a kernel port for a specific device and ROM
-title: "[DevicePort]"
-labels: ["help wanted"]
-assignees:
-  - JackA1ltman
+name: Build Redmi 10X 5G Kernel
 
-body:
-  - type: input
-    attributes:
-      label: Device Name
-      placeholder: ex. OnePlus8
-    validations:
-      required: true
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:  # 允许手动触发
 
-  - type: input
-    attributes:
-      label: Device Codename
-      placeholder: ex. instantnoodle
-    validations:
-      required: true
+env:
+  # ========== 请根据实际情况修改以下变量 ==========
+  KERNEL_REPO: https://github.com/MiCode/Xiaomi_Kernel_OpenSource
+  KERNEL_BRANCH: atom-q-oss          # 如果不存在，请用 git ls-remote 查询
+  DEFCONFIG: atom_defconfig          # 如果不存在，请改为实际的 defconfig 名称
+  ARCH: arm64
+  CROSS_COMPILE: aarch64-linux-gnu-
+  # ================================================
 
-  - type: input
-    attributes:
-      label: ROM Name
-      placeholder: ex. OxygenOS
-    validations:
-      required: true
+jobs:
+  build:
+    runs-on: ubuntu-20.04   # 使用 20.04 以获得较旧的 GCC 9，兼容 4.14 内核
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
-  - type: input
-    attributes:
-      label: ROM Version
-      placeholder: ex. 13.1
-    validations:
-      required: true
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu \
+              libssl-dev flex bison bc
 
-  - type: input
-    attributes:
-      label: Android Version
-      placeholder: ex. 13
-    validations:
-      required: true
+      - name: Clone kernel source
+        run: |
+          git clone --depth=1 -b ${{ env.KERNEL_BRANCH }} ${{ env.KERNEL_REPO }} kernel-source
 
-  - type: input
-    attributes:
-      label: Kernel Source Link
-      placeholder: ex. https://github.com/oppo-source/android_kernel_oppo_sm8250
+      - name: List available defconfigs (for debugging)
+        run: |
+          echo "Available defconfigs containing 'atom':"
+          ls kernel-source/arch/arm64/configs/ | grep -i atom || echo "No matching defconfig found!"
 
-  - type: input
-    attributes:
-      label: Kernel Source Branch
-      placeholder: ex. oppo/sm8250_s_12.1
+      - name: Build kernel
+        working-directory: kernel-source
+        run: |
+          export ARCH=${{ env.ARCH }}
+          export CROSS_COMPILE=${{ env.CROSS_COMPILE }}
+          make ${{ env.DEFCONFIG }}
+          make -j$(nproc) KCFLAGS="-Wno-error"
 
-  - type: input
-    attributes:
-      label: Kernel Version
-      placeholder: ex. 4.19.325
+      - name: Upload kernel artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: atom-kernel
+          path: |
+            kernel-source/arch/arm64/boot/Image
+            kernel-source/arch/arm64/boot/Image.gz
+            kernel-source/arch/arm64/boot/Image.gz-dtb
+            kernel-source/arch/arm64/boot/dts/
