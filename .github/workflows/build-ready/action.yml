@@ -328,6 +328,8 @@ runs:
             false
 
           elif [[ "${{ env.KPM_KPATCH_NEXT }}" == "true" ]]; then
+            echo "[+] Detected KPatch-Next, enabling required KPM configs."
+            ENABLE_KPM_CONFIGS
             GET_KPATCH_NEXT_TOOLS
 
           else
