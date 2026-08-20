@@ -125,8 +125,35 @@ jobs:
             exit 1
           fi
           echo "[+] Bulunan patch: $PATCH_FILE"
+
           # Yamayı uygula (--fuzz=0 ile: context hiç eşleşmiyorsa sessizce yanlış yere yamamak yerine hata versin)
-          patch -p1 --fuzz=0 < "$PATCH_FILE"
+          rm -f fs/*.rej fs/*/*.rej
+          if ! patch -p1 --fuzz=0 < "$PATCH_FILE"; then
+            REJ_FILES=$(find fs -name "*.rej")
+            if [ "$REJ_FILES" = "fs/Makefile.rej" ]; then
+              # Bilinen tek uyumsuzluk: bu kernel fork'unda fs/Makefile'a özel
+              # CONFIG_PROC_DLOG satırı eklenmiş olduğu için hunk context'i eşleşmiyor.
+              # Patch'in tek amacı obj-$(CONFIG_NOMOUNT) satırını eklemek, bunu elle yapıyoruz.
+              echo "[!] fs/Makefile hunk'ı bilinen fork-özel context farkı nedeniyle reddedildi, elle uygulanıyor."
+              if grep -q "CONFIG_NOMOUNT" fs/Makefile; then
+                echo "[+] fs/Makefile zaten CONFIG_NOMOUNT içeriyor, atlanıyor."
+              else
+                sed -i '/^obj-\$(CONFIG_PROC_FS) += proc_namespace.o/i obj-$(CONFIG_NOMOUNT) += nomount.o\n' fs/Makefile
+                if grep -q "CONFIG_NOMOUNT" fs/Makefile; then
+                  echo "[+] fs/Makefile elle düzeltildi."
+                else
+                  echo "[-] fs/Makefile elle düzeltme de başarısız oldu, abort."
+                  exit 1
+                fi
+              fi
+              rm -f fs/Makefile.rej fs/Makefile.orig
+            else
+              echo "[-] Beklenmeyen patch hatası (.rej dosyaları):"
+              echo "$REJ_FILES"
+              exit 1
+            fi
+          fi
+
           # NoMount kaynak dosyalarını bul ve fs/ dizinine kopyala
           SRC_DIR=$(dirname "$PATCH_FILE")
           # Önce yamayla aynı dizindeki src klasörünü dene, yoksa tüm depoda ara
