@@ -164,7 +164,7 @@ jobs:
         shell: bash
         run: |
           cd $GITHUB_WORKSPACE/device_kernel
-          DEFCONFIG_FILE="arch/arm64/configs/exynos9820_defconfig
+          DEFCONFIG_FILE="arch/arm64/configs/exynos9820_defconfig"
           cat >> "$DEFCONFIG_FILE" << 'EOF'
 
           CONFIG_KALLSYMS=y
