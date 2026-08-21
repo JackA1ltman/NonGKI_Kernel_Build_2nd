@@ -115,7 +115,7 @@ jobs:
       - name: 🔗 Patch for no-kprobe
         uses: ./.github/workflows/patch-no-kprobe
 
-      - name: 🧩 Patch Kernel of NoMount (dev branch)
+      - name: 🧩 Patch Kernel of NoMount (main branch)
         if: env.NOMOUNT_ENABLE == 'true'
         shell: bash
         run: |
@@ -124,7 +124,7 @@ jobs:
 
           # Eski temp dizinini temizle
           rm -rf /tmp/nomount
-          git clone --depth=1 --branch dev https://github.com/maxsteeel/nomount.git /tmp/nomount || { echo "git clone başarısız"; exit 1; }
+          git clone --depth=1 https://github.com/maxsteeel/nomount.git /tmp/nomount || { echo "git clone başarısız"; exit 1; }
 
           # 4.14 için patch dosyasını bul
           PATCH_FILE=$(find /tmp/nomount -type f -name "*4.14*.patch" | head -n 1)
@@ -147,7 +147,7 @@ jobs:
           fi
 
           # Defconfig'e NoMount seçeneğini ekle
-          echo "CONFIG_NOMOUNT=y" >> arch/arm64/configs/exynos9820_defconfig
+          echo "CONFIG_NOMOUNT=y" >> arch/arm64/configs/${{ env.DEFCONFIG_NAME }}
 
           echo "[+] NoMount entegrasyonu tamamlandı."
           
@@ -169,6 +169,8 @@ jobs:
 
           CONFIG_KALLSYMS=y
           CONFIG_KALLSYMS_ALL=y
+          CONFIG_DEBUG_KERNEL=y
+          
           EOF
           echo "[+] Non-GKI configler eklendi."
 
