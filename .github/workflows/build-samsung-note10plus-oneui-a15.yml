@@ -62,7 +62,7 @@ env:
   SUSFS_FOLDER_FIXED: "note10_plus_exyons9850" # Fill in your patch prefix directory here. Leave it blank if there isn't one. -> your_folder
   SUSFS_PATCH_FIXED: "susfs_fixed" # Fill in your patches here. If there are multiple patches, please separate them with a comma. Leave it blank if there isn't one. -> patch1,patch2
 
-  REKERNEL_ENABLE: "true" # if u need Re:Kernel.
+  REKERNEL_ENABLE: "false" # if u need Re:Kernel.
   DROIDSPACES_ENABLE: "false" # if u need Droidspaces or LXC/Docker.
   NOMOUNT_ENABLE: "true" # if u need NoMount.
 
@@ -151,29 +151,8 @@ jobs:
 
           echo "[+] NoMount entegrasyonu tamamlandı."
           
-      - name: 🧩 Patch Kernel of Re:Kernel (from Patches/rekernel)
-        if: env.REKERNEL_ENABLE == 'true'
-        shell: bash
-        run: |
-          set -x
-          cd $GITHUB_WORKSPACE/device_kernel
-
-          echo "[+] Re-Kernel extra patch uygulanıyor..."
-          cp $GITHUB_WORKSPACE/Patches/Rekernel/rekernel_extra.patch ./
-          patch -p1 < rekernel_extra.patch || true
-
-          echo "[+] Re-Kernel Kconfig/Makefile entegrasyonu yapılıyor..."
-          cp $GITHUB_WORKSPACE/Patches/Rekernel/rekernel_patches.sh ./
-          chmod +x rekernel_patches.sh
-          ./rekernel_patches.sh
-
-          echo "[+] TRANSACTION çakışması düzeltiliyor..."
-          sed -i 's/\bTRANSACTION\b/REKERNEL_TRANSACTION/g' include/net/rekernel.h
-
-          echo "[+] CONFIG_REKERNEL defconfig'e ekleniyor..."
-          echo "CONFIG_REKERNEL=y" >> arch/arm64/configs/exynos9820_defconfig
-
-          echo "[+] Re-Kernel entegrasyonu tamamlandı."
+      - name: 🧰 Patch Kernel of Re:Kernel
+        uses: ./.github/workflows/patch-rekernel
           
       - name: 💿 Patch Kernel of Droidspaces
         uses: ./.github/workflows/patch-droidspaces
