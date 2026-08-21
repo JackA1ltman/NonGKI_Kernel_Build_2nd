@@ -147,7 +147,7 @@ jobs:
           fi
 
           # Defconfig'e NoMount seçeneğini ekle
-          echo "CONFIG_NOMOUNT=y" >> arch/arm64/configs/${{ env.exynos9820_defconfig }}
+          echo "CONFIG_NOMOUNT=y" >> arch/arm64/configs/exynos9820_defconfig
 
           echo "[+] NoMount entegrasyonu tamamlandı."
           
@@ -171,7 +171,7 @@ jobs:
           sed -i 's/\bTRANSACTION\b/REKERNEL_TRANSACTION/g' include/net/rekernel.h
 
           echo "[+] CONFIG_REKERNEL defconfig'e ekleniyor..."
-          echo "CONFIG_REKERNEL=y" >> arch/arm64/configs/${{ env.exynos9820_defconfig }}
+          echo "CONFIG_REKERNEL=y" >> arch/arm64/configs/exynos9820_defconfig
 
           echo "[+] Re-Kernel entegrasyonu tamamlandı."
           
@@ -185,7 +185,7 @@ jobs:
         shell: bash
         run: |
           cd $GITHUB_WORKSPACE/device_kernel
-          DEFCONFIG_FILE="arch/arm64/configs/${{ env.exynos9820_defconfig }}"
+          DEFCONFIG_FILE="arch/arm64/configs/exynos9820_defconfig
           cat >> "$DEFCONFIG_FILE" << 'EOF'
 
           CONFIG_KALLSYMS=y
