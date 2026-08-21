@@ -149,7 +149,7 @@ jobs:
           echo "CONFIG_NOMOUNT=y" >> arch/arm64/configs/${{ env.DEFCONFIG_NAME }}
           echo "[+] NoMount entegrasyonu tamamlandı."
           
-      - name: 🧩 Patch Kernel of Re:Kernel (extra + script)
+      - name: 🧩 Patch Kernel of Re:Kernel (from Patches/rekernel)
         if: env.REKERNEL_ENABLE == 'true'
         shell: bash
         run: |
@@ -157,11 +157,11 @@ jobs:
           cd $GITHUB_WORKSPACE/device_kernel
 
           echo "[+] Re-Kernel extra patch uygulanıyor..."
-          cp $GITHUB_WORKSPACE/Patches/Patch/rekernel_extra.patch ./
+          cp $GITHUB_WORKSPACE/Patches/rekernel/rekernel_extra.patch ./
           patch -p1 < rekernel_extra.patch || true
 
           echo "[+] Re-Kernel Kconfig/Makefile entegrasyonu yapılıyor..."
-          cp $GITHUB_WORKSPACE/Patches/Patch/rekernel_patches.sh ./
+          cp $GITHUB_WORKSPACE/Patches/rekernel/rekernel_patches.sh ./
           chmod +x rekernel_patches.sh
           ./rekernel_patches.sh
 
