@@ -148,20 +148,59 @@ jobs:
           # Defconfig'e NoMount seçeneğini ekle
           echo "CONFIG_NOMOUNT=y" >> arch/arm64/configs/${{ env.DEFCONFIG_NAME }}
           echo "[+] NoMount entegrasyonu tamamlandı."
-      - name: 🧰 Patch Kernel of Re:Kernel
-        uses: ./.github/workflows/patch-rekernel
-        
-      - name: 🛠️ Fix ReKernel TRANSACTION conflict
+          
+        - name: 🧩 Patch Kernel of Re:Kernel (manually from source)
         if: env.REKERNEL_ENABLE == 'true'
         shell: bash
         run: |
+          set -x
           cd $GITHUB_WORKSPACE/device_kernel
-          echo "[+] ReKernel TRANSACTION ismi düzeltiliyor..."
-          sed -i 's/TRANSACTION/REKERNEL_TRANSACTION/g' include/net/rekernel.h
-          sed -i 's/TRANSACTION/REKERNEL_TRANSACTION/g' drivers/net/rekernel/rekernel.c
-          echo "[+] Düzeltme tamamlandı."
 
-      - name: 💿 Patch Kernel of Droidspaces
+          # Eski temp dizinini temizle
+          rm -rf /tmp/rekernel
+          git clone --depth=1 https://github.com/Sakion-Team/Re-Kernel.git /tmp/rekernel || { echo "Re-Kernel klonlanamadı"; exit 1; }
+
+          # Re-Kernel'ın kurulumu: genellikle kernel/ içinde setup.sh veya patch dosyaları vardır
+          # Önce setup.sh kontrol edelim
+          if [ -f /tmp/rekernel/kernel/setup.sh ]; then
+            echo "[+] setup.sh bulundu, çalıştırılıyor..."
+            bash /tmp/rekernel/kernel/setup.sh
+          else
+            echo "[-] setup.sh bulunamadı, .patch dosyaları aranıyor..."
+            # 4.14 için patch dosyalarını bul ve uygula
+            PATCH_FILES=$(find /tmp/rekernel -type f -name "*4.14*.patch" | sort)
+            if [ -z "$PATCH_FILES" ]; then
+              echo "[-] 4.14 için Re-Kernel patch bulunamadı!"
+              exit 1
+            fi
+            for p in $PATCH_FILES; do
+              echo "[+] Uygulanıyor: $p"
+              patch -p1 < "$p" || true
+            done
+          fi
+
+          # Kaynak dosyaları kopyala (örnek: drivers/net/rekernel, include/net/rekernel.h)
+          # Deponun yapısına göre gerekli kopyalamayı yapın.
+          # Aşağıdaki örnek, yaygın bir yapıya göre yazılmıştır:
+          if [ -d /tmp/rekernel/drivers/net/rekernel ]; then
+            mkdir -p drivers/net/rekernel
+            cp -r /tmp/rekernel/drivers/net/rekernel/* drivers/net/rekernel/
+          fi
+          if [ -f /tmp/rekernel/include/net/rekernel.h ]; then
+            cp /tmp/rekernel/include/net/rekernel.h include/net/rekernel.h
+          fi
+
+          # Çakışan TRANSACTION ismini düzelt
+          echo "[+] TRANSACTION çakışması düzeltiliyor..."
+          sed -i 's/\bTRANSACTION\b/REKERNEL_TRANSACTION/g' include/net/rekernel.h
+          sed -i 's/\bTRANSACTION\b/REKERNEL_TRANSACTION/g' drivers/net/rekernel/*.c
+
+          # Defconfig'e Re-Kernel seçeneğini ekle (gerekiyorsa)
+          # Burada Re-Kernel'ın Kconfig yapısına göre doğru config ekleyin.
+          # Örnek:
+          echo "CONFIG_REKERNEL=y" >> arch/arm64/configs/${{ env.DEFCONFIG_NAME }}
+
+          echo "[+] Re-Kernel entegrasyonu tamamlandı."      - name: 💿 Patch Kernel of Droidspaces
         uses: ./.github/workflows/patch-droidspaces
 
       - name: 🔒 Patch Kernel of Baseband Guard
