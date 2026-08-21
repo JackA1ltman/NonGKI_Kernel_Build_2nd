@@ -159,11 +159,11 @@ jobs:
           cd $GITHUB_WORKSPACE/device_kernel
 
           echo "[+] Re-Kernel extra patch uygulanıyor..."
-          cp $GITHUB_WORKSPACE/Patches/Rekernel/rekernel_extra.patch ./
+          cp ./.github/workflows/Patches/Rekernel/rekernel_extra.patch ./
           patch -p1 < rekernel_extra.patch || true
 
           echo "[+] Re-Kernel Kconfig/Makefile entegrasyonu yapılıyor..."
-          cp $GITHUB_WORKSPACE/Patches/Rekernel/rekernel_patches.sh ./
+          cp ./.github/workflows/Patches/Rekernel/rekernel_patches.sh ./
           chmod +x rekernel_patches.sh
           ./rekernel_patches.sh
 
