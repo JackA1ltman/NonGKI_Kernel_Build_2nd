@@ -200,7 +200,9 @@ jobs:
           # Örnek:
           echo "CONFIG_REKERNEL=y" >> arch/arm64/configs/${{ env.DEFCONFIG_NAME }}
 
-          echo "[+] Re-Kernel entegrasyonu tamamlandı."      - name: 💿 Patch Kernel of Droidspaces
+          echo "[+] Re-Kernel entegrasyonu tamamlandı."      
+          
+      - name: 💿 Patch Kernel of Droidspaces
         uses: ./.github/workflows/patch-droidspaces
 
       - name: 🔒 Patch Kernel of Baseband Guard
