@@ -66,13 +66,13 @@ env:
   DROIDSPACES_ENABLE: "false" # if u need Droidspaces or LXC/Docker.
   NOMOUNT_ENABLE: "true" # if u need NoMount.
 
-  HOOK_METHOD: "inline" # Manual hook method -> syscall or inline.
+  HOOK_METHOD: "syscall" # Manual hook method ->  syscall.
 
   KERNEL_PATCH: "false" # If your kernel version is <= 4.9, you have the option of enabling the patch to patch the kernel_write and kernel_read functions.
 
-  KPM_ENABLE: "true" # Anyone devices.
+  KPM_ENABLE: "false" # Anyone devices.
   KPM_INLINE: "false" # Only use it for SukiSU-Ultra.
-  KPM_KPATCH_NEXT: "true" # If u want hook KPatch-Next in build step.
+  KPM_KPATCH_NEXT: "false" # If u want hook KPatch-Next in build step.
   KPM_PATCH_SOURCE: "https://raw.githubusercontent.com/SukiSU-Ultra/SukiSU_patch/refs/heads/main/kpm/patch_linux" # If u want to use KPM Inline,so you need set patch exec file source -> raw.githubusercontent.com/Test/Test/patch .
 
   BASEBAND_GUARD_ENABLE: "true" #if u want prevent unauthorized writes to critical partitions/device nodes.
@@ -109,7 +109,13 @@ jobs:
       - name: ⚙️ Get neccssary tools
         uses: ./.github/workflows/build-ready
 
-      - name: 🧩 Patch Kernel of NoMount (maxsteeel)
+      - name: 🪝 Patch Kernel of SUSFS
+        uses: ./.github/workflows/patch-susfs
+
+      - name: 🔗 Patch for no-kprobe
+        uses: ./.github/workflows/patch-no-kprobe
+
+      - name: 🧩 Patch Kernel of NoMount (dev branch)
         if: env.NOMOUNT_ENABLE == 'true'
         shell: bash
         run: |
@@ -117,67 +123,31 @@ jobs:
           cd $GITHUB_WORKSPACE/device_kernel
           # Eski temp dizinini temizle
           rm -rf /tmp/nomount
-          git clone --depth=1 https://github.com/maxsteeel/nomount.git /tmp/nomount || { echo "git clone başarısız"; exit 1; }
-          # 4.14 için herhangi bir .patch dosyasını TÜM depoda bul
+          git clone --depth=1 --branch dev https://github.com/maxsteeel/nomount.git /tmp/nomount || { echo "git clone başarısız"; exit 1; }
+          # 4.14 için patch adaylarını listele
+          echo "=== NoMount 4.14 patch adayları ==="
+          find /tmp/nomount -type f -name "*4.14*.patch" -print
+          # İlk bulunan patch dosyasını seç
           PATCH_FILE=$(find /tmp/nomount -type f -name "*4.14*.patch" | head -n 1)
           if [ -z "$PATCH_FILE" ]; then
             echo "[-] 4.14 için NoMount patch bulunamadı!"
             exit 1
           fi
           echo "[+] Bulunan patch: $PATCH_FILE"
-
-          # Yamayı uygula (--fuzz=0 ile: context hiç eşleşmiyorsa sessizce yanlış yere yamamak yerine hata versin)
-          rm -f fs/*.rej fs/*/*.rej
-          if ! patch -p1 --fuzz=0 < "$PATCH_FILE"; then
-            REJ_FILES=$(find fs -name "*.rej")
-            if [ "$REJ_FILES" = "fs/Makefile.rej" ]; then
-              # Bilinen tek uyumsuzluk: bu kernel fork'unda fs/Makefile'a özel
-              # CONFIG_PROC_DLOG satırı eklenmiş olduğu için hunk context'i eşleşmiyor.
-              # Patch'in tek amacı obj-$(CONFIG_NOMOUNT) satırını eklemek, bunu elle yapıyoruz.
-              echo "[!] fs/Makefile hunk'ı bilinen fork-özel context farkı nedeniyle reddedildi, elle uygulanıyor."
-              if grep -q "CONFIG_NOMOUNT" fs/Makefile; then
-                echo "[+] fs/Makefile zaten CONFIG_NOMOUNT içeriyor, atlanıyor."
-              else
-                sed -i '/^obj-\$(CONFIG_PROC_FS) += proc_namespace.o/i obj-$(CONFIG_NOMOUNT) += nomount.o\n' fs/Makefile
-                if grep -q "CONFIG_NOMOUNT" fs/Makefile; then
-                  echo "[+] fs/Makefile elle düzeltildi."
-                else
-                  echo "[-] fs/Makefile elle düzeltme de başarısız oldu, abort."
-                  exit 1
-                fi
-              fi
-              rm -f fs/Makefile.rej fs/Makefile.orig
-            else
-              echo "[-] Beklenmeyen patch hatası (.rej dosyaları):"
-              echo "$REJ_FILES"
-              exit 1
-            fi
-          fi
-
-          # NoMount kaynak dosyalarını bul ve fs/ dizinine kopyala
-          SRC_DIR=$(dirname "$PATCH_FILE")
-          # Önce yamayla aynı dizindeki src klasörünü dene, yoksa tüm depoda ara
-          if [ -d "$SRC_DIR/src" ]; then
-            cp "$SRC_DIR"/src/* fs/
+          # Yamayı uygula
+          patch -p1 < "$PATCH_FILE" || true
+          # NoMount kaynak dosyalarını fs/nomount dizinine kopyala
+          mkdir -p fs/nomount
+          # Önce src klasörünü dene
+          if [ -d "$(dirname "$PATCH_FILE")/src" ]; then
+            cp "$(dirname "$PATCH_FILE")/src/"* fs/nomount/
           else
-            find /tmp/nomount -type f \( -name "nomount.c" -o -name "nomount.h" \) -exec cp {} fs/ \;
+            # Yoksa gerekli dosyaları tüm depoda ara ve kopyala
+            find /tmp/nomount -type f \( -name "nomount.c" -o -name "nomount.h" -o -name "Kconfig" -o -name "Makefile" \) -exec cp {} fs/nomount/ \;
           fi
-          # Defconfig'e ekle
+          # Defconfig'e NoMount seçeneğini ekle
           echo "CONFIG_NOMOUNT=y" >> arch/arm64/configs/${{ env.DEFCONFIG_NAME }}
           echo "[+] NoMount entegrasyonu tamamlandı."
-
-      - name: 🪝 Patch Kernel of SUSFS
-        uses: ./.github/workflows/patch-susfs
-
-      - name: 🔗 Patch for no-kprobe
-        uses: ./.github/workflows/patch-no-kprobe
-
-      - name: 🪛 Extra Kernel Options
-        run: |
-          # Only ${{ env.DEVICE_NAME }} use it.
-          cd $GITHUB_WORKSPACE/device_kernel
-          # Nothing
-
       - name: 🧰 Patch Kernel of Re:Kernel
         uses: ./.github/workflows/patch-rekernel
 
@@ -194,7 +164,6 @@ jobs:
         shell: bash
         run: |
           cd $GITHUB_WORKSPACE/device_kernel
-
           # Var
           TIME=$(date +"%Y%m%d%H%M%S")
           KERNEL_PATH=build/out/d2s/Image
@@ -212,27 +181,20 @@ jobs:
           RAMDISK=build/out/d2s/ramdisk.cpio.gz
           OUTPUT_FILE=build/out/d2s/boot.img
           BOARD=SRPSC14B009KU
-
           mkdir -p build/out/d2s/zip/files
           mkdir -p build/out/d2s/zip/META-INF/com/google/android
-
           cp -f out/arch/arm64/boot/Image build/out/d2s/Image
-
           ./toolchain/mkdtimg cfg_create build/out/d2s/dtb.img build/dtconfigs/exynos9825.cfg -d out/arch/arm64/boot/dts/exynos
           ./toolchain/mkdtimg cfg_create build/out/d2s/dtbo.img build/dtconfigs/d2s.cfg -d out/arch/arm64/boot/dts/samsung
-
           pushd build/ramdisk > /dev/null
           find . ! -name . | LC_ALL=C sort | cpio -o -H newc -R root:root | gzip > ../out/d2s/ramdisk.cpio.gz || abort
           popd > /dev/null
-
           ./toolchain/mkbootimg --base $BASE --board $BOARD --cmdline "$CMDLINE" --hashtype $HASHTYPE --header_version $HEADER_VERSION --kernel $KERNEL_PATH --kernel_offset $KERNEL_OFFSET --os_patch_level $OS_PATCH_LEVEL --os_version $OS_VERSION --pagesize $PAGESIZE --ramdisk $RAMDISK --ramdisk_offset $RAMDISK_OFFSET --second_offset $SECOND_OFFSET --tags_offset $TAGS_OFFSET -o $OUTPUT_FILE
-
           cp build/out/d2s/boot.img build/out/d2s/zip/files/boot.img
           cp build/out/d2s/dtb.img build/out/d2s/zip/files/dtb.img
           cp build/out/d2s/dtbo.img build/out/d2s/zip/files/dtbo.img
           cp build/update-binary build/out/d2s/zip/META-INF/com/google/android/update-binary
           cp build/updater-script build/out/d2s/zip/META-INF/com/google/android/updater-script
-
           mkdir tmp
           cp -rp ./build/out/d2s/zip/* tmp
           cd tmp
@@ -240,8 +202,6 @@ jobs:
           cd ..
           cp -fp tmp/tmp.zip ${{ env.DEVICE_CODENAME }}-${{ env.ROM_TEXT }}-$TIME-${{ env.PACK_METHOD }}.zip
           rm -rf tmp
-
           echo "PACK_NAME=${{ env.DEVICE_CODENAME }}-${{ env.ROM_TEXT }}-$TIME-${{ env.PACK_METHOD }}.zip" >> $GITHUB_ENV
-
       - name: ✏️ Upload Artifacts
         uses: ./.github/workflows/upload-files
