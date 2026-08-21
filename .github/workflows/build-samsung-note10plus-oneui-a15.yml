@@ -149,7 +149,7 @@ jobs:
           echo "CONFIG_NOMOUNT=y" >> arch/arm64/configs/${{ env.DEFCONFIG_NAME }}
           echo "[+] NoMount entegrasyonu tamamlandı."
           
-        - name: 🧩 Patch Kernel of Re:Kernel (manually from source)
+      - name: 🧩 Patch Kernel of Re:Kernel (manually from source)
         if: env.REKERNEL_ENABLE == 'true'
         shell: bash
         run: |
