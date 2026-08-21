@@ -149,51 +149,26 @@ jobs:
           echo "CONFIG_NOMOUNT=y" >> arch/arm64/configs/${{ env.DEFCONFIG_NAME }}
           echo "[+] NoMount entegrasyonu tamamlandı."
           
-      - name: 🧩 Patch Kernel of Re:Kernel (manual copy)
+      - name: 🧩 Patch Kernel of Re:Kernel (extra + script)
         if: env.REKERNEL_ENABLE == 'true'
         shell: bash
         run: |
           set -x
           cd $GITHUB_WORKSPACE/device_kernel
 
-          rm -rf /tmp/rekernel
-          git clone --depth=1 https://github.com/Sakion-Team/Re-Kernel.git /tmp/rekernel || { echo "Re-Kernel klonlanamadı"; exit 1; }
+          echo "[+] Re-Kernel extra patch uygulanıyor..."
+          cp $GITHUB_WORKSPACE/Patches/Patch/rekernel_extra.patch ./
+          patch -p1 < rekernel_extra.patch || true
 
-          echo "=== Re-Kernel repo yapısı ==="
-          find /tmp/rekernel -maxdepth 3 -type f | head -50
+          echo "[+] Re-Kernel Kconfig/Makefile entegrasyonu yapılıyor..."
+          cp $GITHUB_WORKSPACE/Patches/Patch/rekernel_patches.sh ./
+          chmod +x rekernel_patches.sh
+          ./rekernel_patches.sh
 
-          # 1) Kaynak dosyaları kopyala
-          if [ -d /tmp/rekernel/kernel/drivers/net/rekernel ]; then
-            mkdir -p drivers/net/rekernel
-            cp -r /tmp/rekernel/kernel/drivers/net/rekernel/* drivers/net/rekernel/
-          elif [ -d /tmp/rekernel/drivers/net/rekernel ]; then
-            mkdir -p drivers/net/rekernel
-            cp -r /tmp/rekernel/drivers/net/rekernel/* drivers/net/rekernel/
-          fi
+          echo "[+] TRANSACTION çakışması düzeltiliyor..."
+          sed -i 's/\bTRANSACTION\b/REKERNEL_TRANSACTION/g' include/net/rekernel.h
 
-          # 2) Header dosyasını kopyala
-          if [ -f /tmp/rekernel/kernel/include/net/rekernel.h ]; then
-            cp /tmp/rekernel/kernel/include/net/rekernel.h include/net/rekernel.h
-          elif [ -f /tmp/rekernel/include/net/rekernel.h ]; then
-            cp /tmp/rekernel/include/net/rekernel.h include/net/rekernel.h
-          fi
-
-          # 3) Kconfig ve Makefile entegrasyonu
-          # Eğer Re-Kernel kendi Kconfig ve Makefile'ı getirmediyse, mevcut drivers/net/Kconfig ve Makefile'a ekleme yapın
-          # Örnek: drivers/net/Makefile içine 'obj-$(CONFIG_REKERNEL) += rekernel/' ekleyin
-          grep -q "rekernel" drivers/net/Makefile || echo 'obj-$(CONFIG_REKERNEL) += rekernel/' >> drivers/net/Makefile
-          # drivers/net/Kconfig içine 'source "drivers/net/rekernel/Kconfig"' ekleyin (varsa)
-          grep -q "rekernel/Kconfig" drivers/net/Kconfig || echo 'source "drivers/net/rekernel/Kconfig"' >> drivers/net/Kconfig
-
-          # 4) TRANSACTION çakışmasını düzelt
-          if [ -f include/net/rekernel.h ]; then
-            sed -i 's/\bTRANSACTION\b/REKERNEL_TRANSACTION/g' include/net/rekernel.h
-          fi
-          if [ -d drivers/net/rekernel ]; then
-            sed -i 's/\bTRANSACTION\b/REKERNEL_TRANSACTION/g' drivers/net/rekernel/*.c
-          fi
-
-          # 5) Defconfig'e Re-Kernel config ekle
+          echo "[+] CONFIG_REKERNEL defconfig'e ekleniyor..."
           echo "CONFIG_REKERNEL=y" >> arch/arm64/configs/${{ env.DEFCONFIG_NAME }}
 
           echo "[+] Re-Kernel entegrasyonu tamamlandı."
