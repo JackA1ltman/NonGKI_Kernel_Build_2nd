@@ -121,32 +121,34 @@ jobs:
         run: |
           set -x
           cd $GITHUB_WORKSPACE/device_kernel
+
           # Eski temp dizinini temizle
           rm -rf /tmp/nomount
           git clone --depth=1 --branch dev https://github.com/maxsteeel/nomount.git /tmp/nomount || { echo "git clone başarısız"; exit 1; }
-          # 4.14 için patch adaylarını listele
-          echo "=== NoMount 4.14 patch adayları ==="
-          find /tmp/nomount -type f -name "*4.14*.patch" -print
-          # İlk bulunan patch dosyasını seç
+
+          # 4.14 için patch dosyasını bul
           PATCH_FILE=$(find /tmp/nomount -type f -name "*4.14*.patch" | head -n 1)
           if [ -z "$PATCH_FILE" ]; then
             echo "[-] 4.14 için NoMount patch bulunamadı!"
             exit 1
           fi
           echo "[+] Bulunan patch: $PATCH_FILE"
+
           # Yamayı uygula
           patch -p1 < "$PATCH_FILE" || true
-          # NoMount kaynak dosyalarını fs/nomount dizinine kopyala
-          mkdir -p fs/nomount
-          # Önce src klasörünü dene
-          if [ -d "$(dirname "$PATCH_FILE")/src" ]; then
-            cp "$(dirname "$PATCH_FILE")/src/"* fs/nomount/
+
+          # NoMount kaynak dosyalarını doğrudan fs/ altına kopyala
+          # (src klasörü kernel/src altında bulunur)
+          if [ -d /tmp/nomount/kernel/src ]; then
+            cp /tmp/nomount/kernel/src/* fs/
           else
-            # Yoksa gerekli dosyaları tüm depoda ara ve kopyala
-            find /tmp/nomount -type f \( -name "nomount.c" -o -name "nomount.h" -o -name "Kconfig" -o -name "Makefile" \) -exec cp {} fs/nomount/ \;
+            # Bazı sürümlerde src doğrudan farklı konumda olabilir, ara ve kopyala
+            find /tmp/nomount -type f \( -name "nomount.c" -o -name "nomount.h" \) -exec cp {} fs/ \;
           fi
+
           # Defconfig'e NoMount seçeneğini ekle
-          echo "CONFIG_NOMOUNT=y" >> arch/arm64/configs/${{ env.DEFCONFIG_NAME }}
+          echo "CONFIG_NOMOUNT=y" >> arch/arm64/configs/${{ env.exynos9820_defconfig }}
+
           echo "[+] NoMount entegrasyonu tamamlandı."
           
       - name: 🧩 Patch Kernel of Re:Kernel (from Patches/rekernel)
@@ -169,7 +171,7 @@ jobs:
           sed -i 's/\bTRANSACTION\b/REKERNEL_TRANSACTION/g' include/net/rekernel.h
 
           echo "[+] CONFIG_REKERNEL defconfig'e ekleniyor..."
-          echo "CONFIG_REKERNEL=y" >> arch/arm64/configs/${{ env.DEFCONFIG_NAME }}
+          echo "CONFIG_REKERNEL=y" >> arch/arm64/configs/${{ env.exynos9820_defconfig }}
 
           echo "[+] Re-Kernel entegrasyonu tamamlandı."
           
@@ -183,7 +185,7 @@ jobs:
         shell: bash
         run: |
           cd $GITHUB_WORKSPACE/device_kernel
-          DEFCONFIG_FILE="arch/arm64/configs/${{ env.DEFCONFIG_NAME }}"
+          DEFCONFIG_FILE="arch/arm64/configs/${{ env.exynos9820_defconfig }}"
           cat >> "$DEFCONFIG_FILE" << 'EOF'
 
           CONFIG_KALLSYMS=y
