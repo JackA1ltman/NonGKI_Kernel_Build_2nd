@@ -68,7 +68,7 @@ env:
 
   HOOK_METHOD: "syscall" # Manual hook method ->  syscall.
 
-  KERNEL_PATCH: "false" # If your kernel version is <= 4.9, you have the option of enabling the patch to patch the kernel_write and kernel_read functions.
+  KERNEL_PATCH: "true" # If your kernel version is <= 4.9, you have the option of enabling the patch to patch the kernel_write and kernel_read functions.
 
   KPM_ENABLE: "true" # Anyone devices.
   KPM_INLINE: "false" # Only use it for SukiSU-Ultra.
@@ -114,6 +114,19 @@ jobs:
 
       - name: 🔗 Patch for no-kprobe
         uses: ./.github/workflows/patch-no-kprobe
+
+      - name: 🩹 Apply backport patches
+        if: env.KERNEL_PATCH == 'true'   # isterseniz bu koşulu kaldırabilirsiniz
+        shell: bash
+        run: |
+          cd $GITHUB_WORKSPACE/device_kernel
+
+          echo "[+] Backport script uygulanıyor..."
+          cp "$GITHUB_WORKSPACE/Patches/backport_patches.sh" ./
+          chmod +x backport_patches.sh
+          ./backport_patches.sh
+
+          echo "[+] Backport script tamamlandı."
 
       - name: 🧩 Patch Kernel of NoMount (dev branch)
         if: env.NOMOUNT_ENABLE == 'true'
