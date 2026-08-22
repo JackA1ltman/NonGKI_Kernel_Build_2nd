@@ -155,17 +155,6 @@ jobs:
           
           echo "[+] Backport script tamamlandı."
           
-      - name: 🩹 Apply kernel_read/write backport patch
-        shell: bash
-        run: |
-          cd $GITHUB_WORKSPACE/device_kernel
-
-          echo "[+] kernel_read/write backport patch uygulanıyor..."
-          # BURASI DA YEDEKTEN KOPYALANIYOR
-          cp "/tmp/Patches_Backup/Patch/backport_kernel_read_and_kernel_write_3.18.patch" ./
-          patch -p1 < backport_kernel_read_and_kernel_write_3.18.patch || true
-
-          echo "[+] Patch uygulandı."
           
       - name: 🩹 Remove module version check
         shell: bash
