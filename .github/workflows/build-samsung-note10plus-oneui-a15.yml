@@ -150,17 +150,6 @@ jobs:
 
           echo "[+] Modül sürüm kontrolü yaması uygulandı."
 
-      - name: 🩹 Apply automatic dtb/dtbo generation patch
-        shell: bash
-        run: |
-          cd $GITHUB_WORKSPACE/device_kernel
-
-          echo "[+] add_automatic_dtbo_generation.patch uygulanıyor..."
-          cp "$GITHUB_WORKSPACE/Patches/Patch/add_automatic_dtbo_generation.patch" ./
-          patch -p1 < add_automatic_dtbo_generation.patch || true
-
-          echo "[+] Yama uygulandı."
-
       - name: 🧩 Patch Kernel of NoMount (dev branch)
         if: env.NOMOUNT_ENABLE == 'true'
         shell: bash
@@ -227,13 +216,17 @@ jobs:
 
           EOF
           echo "[+] Configler eklendi."
-          
-      - name: 🧹 Clean kernel
+
+      - name: 🩹 Apply automatic dtb/dtbo generation patch
         shell: bash
         run: |
           cd $GITHUB_WORKSPACE/device_kernel
-          make clean
-          make mrproper
+
+          echo "[+] add_automatic_dtbo_generation.patch uygulanıyor..."
+          cp "$GITHUB_WORKSPACE/Patches/Patch/add_automatic_dtbo_generation.patch" ./
+          patch -p1 < add_automatic_dtbo_generation.patch || true
+
+          echo "[+] Yama uygulandı."
 
       - name: 🚀 Build Process
         uses: ./.github/workflows/build-process
@@ -260,7 +253,6 @@ jobs:
         shell: bash
         run: |
           cd $GITHUB_WORKSPACE/device_kernel
-
           IMAGE=out/arch/arm64/boot/Image
           PATCHED_IMAGE=out/arch/arm64/boot/Image.kp
 
@@ -269,11 +261,11 @@ jobs:
             exit 0
           fi
 
-          ./kptools -i "$IMAGE" -l || true
-          ./kptools -p -i "$IMAGE" -k ./kpimg -o "$PATCHED_IMAGE"
+          ./kptools -p -i "$IMAGE" -k ./kpimg -s "$KPATCH_SUPERKEY" -o "$PATCHED_IMAGE"
 
           echo "KPATCH_PATCHED=true" >> $GITHUB_ENV
           echo "[+] Kernel Image KPatch-Next ile yamalandı: $PATCHED_IMAGE"
+
 
       - name: 📝 Save build metadata
         if: env.KPM_ENABLE == 'true' && env.KPM_KPATCH_NEXT == 'true'
