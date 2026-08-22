@@ -150,6 +150,17 @@ jobs:
 
           echo "[+] Modül sürüm kontrolü yaması uygulandı."
 
+      - name: 🩹 Apply automatic dtb/dtbo generation patch
+        shell: bash
+        run: |
+          cd $GITHUB_WORKSPACE/device_kernel
+
+          echo "[+] add_automatic_dtbo_generation.patch uygulanıyor..."
+          cp "$GITHUB_WORKSPACE/Patches/Patch/add_automatic_dtbo_generation.patch" ./
+          patch -p1 < add_automatic_dtbo_generation.patch || true
+
+          echo "[+] Yama uygulandı."
+
       - name: 🧩 Patch Kernel of NoMount (dev branch)
         if: env.NOMOUNT_ENABLE == 'true'
         shell: bash
