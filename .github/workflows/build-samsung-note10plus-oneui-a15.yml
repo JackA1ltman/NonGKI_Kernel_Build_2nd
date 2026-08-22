@@ -1,11 +1,12 @@
+name: 🔍 List Patches directory
+shell: bash
+run: |
+ls -la $GITHUB_WORKSPACE/Patches/
+echo "---"
+find $GITHUB_WORKSPACE/Patches -maxdepth 2 -type f
+
 name: Build Samsung Note 10 Plus (OneUI A15)
-- name: 🔍 List Patches directory
-        shell: bash
-        run: |
-          ls -la $GITHUB_WORKSPACE/Patches/
-          echo "---"
-          find $GITHUB_WORKSPACE/Patches -maxdepth 2 -type f
-          
+
 on:
   workflow_call:
   workflow_dispatch:
