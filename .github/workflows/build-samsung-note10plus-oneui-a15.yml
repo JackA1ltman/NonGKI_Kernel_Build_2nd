@@ -62,7 +62,7 @@ env:
   SUSFS_FOLDER_FIXED: "note10_plus_exyons9850" # Fill in your patch prefix directory here. Leave it blank if there isn't one. -> your_folder
   SUSFS_PATCH_FIXED: "susfs_fixed" # Fill in your patches here. If there are multiple patches, please separate them with a comma. Leave it blank if there isn't one. -> patch1,patch2
 
-  REKERNEL_ENABLE: "false" # if u need Re:Kernel.
+  REKERNEL_ENABLE: "true" # if u need Re:Kernel.
   DROIDSPACES_ENABLE: "false" # if u need Droidspaces or LXC/Docker.
   NOMOUNT_ENABLE: "true" # if u need NoMount.
 
