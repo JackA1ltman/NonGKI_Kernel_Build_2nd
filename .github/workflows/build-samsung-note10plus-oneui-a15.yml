@@ -73,7 +73,7 @@ env:
   KPM_ENABLE: "true" # Anyone devices.
   KPM_INLINE: "false" # Only use it for SukiSU-Ultra.
   KPM_KPATCH_NEXT: "true" # If u want hook KPatch-Next in build step.
-  KPM_PATCH_SOURCE: "https://raw.githubusercontent.com/SukiSU-Ultra/SukiSU_patch/refs/heads/main/kpm/patch_linux" # If u want to use KPM Inline,so you need set patch exec file source -> raw.githubusercontent.com/Test/Test/patch .
+  KPM_PATCH_SOURCE: "" # If u want to use KPM Inline,so you need set patch exec file source -> raw.githubusercontent.com/Test/Test/patch .
 
   BASEBAND_GUARD_ENABLE: "true" #if u want prevent unauthorized writes to critical partitions/device nodes.
   BASEBAND_GUARD_BOOT: "true" #if u want to protect boot partition.
@@ -177,14 +177,6 @@ jobs:
       - name: 🚀 Build Process
         uses: ./.github/workflows/build-process
 
-      - name: 🔑 Generate KPatch superkey
-        if: env.KPM_ENABLE == 'true' && env.KPM_KPATCH_NEXT == 'true'
-        shell: bash
-        run: |
-          KPATCH_SUPERKEY=$(openssl rand -hex 16)
-          echo "KPATCH_SUPERKEY=$KPATCH_SUPERKEY" >> $GITHUB_ENV
-          echo "[+] Superkey generated (saved to build metadata)"
-
       - name: 🧷 Setup KPatch-Next tools
         if: env.KPM_ENABLE == 'true' && env.KPM_KPATCH_NEXT == 'true'
         shell: bash
@@ -217,7 +209,7 @@ jobs:
           fi
 
           ./kptools -i "$IMAGE" -l || true
-          ./kptools -p -i "$IMAGE" -k ./kpimg -s "$KPATCH_SUPERKEY" -o "$PATCHED_IMAGE"
+          ./kptools -p -i "$IMAGE" -k ./kpimg -o "$PATCHED_IMAGE"
 
           echo "KPATCH_PATCHED=true" >> $GITHUB_ENV
           echo "[+] Kernel Image KPatch-Next ile yamalandı: $PATCHED_IMAGE"
@@ -230,7 +222,6 @@ jobs:
           mkdir -p build/out/meta
           {
             echo "KPatch-Next Version: $KPATCH_VER"
-            echo "KPatch Superkey: $KPATCH_SUPERKEY"
           } > build/out/meta/build-info.txt
           echo "[+] build-info.txt oluşturuldu."
 
