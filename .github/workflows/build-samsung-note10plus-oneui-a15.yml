@@ -126,6 +126,9 @@ jobs:
         if: env.KERNEL_PATCH == 'true'
         shell: bash
         run: |
+          # 1. Dosyadaki olası Windows (CRLF) satır sonlarını Linux (LF) formatına çeviriyoruz:
+          sed -i 's/\r$//' $GITHUB_WORKSPACE/Patches/backport_patches.sh
+          
           cd $GITHUB_WORKSPACE/device_kernel
           echo "[+] Backport script uygulanıyor..."
           bash "$GITHUB_WORKSPACE/Patches/backport_patches.sh"
