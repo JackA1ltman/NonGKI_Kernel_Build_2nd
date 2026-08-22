@@ -102,6 +102,14 @@ jobs:
     steps:
       - name: ⏰ Checkout repository
         uses: actions/checkout@v6
+
+      - name: 🛡️ Backup Patches Directory
+        shell: bash
+        run: |
+          echo "[+] Patches klasörü güvenli bölgeye (/tmp/Patches_Backup) kopyalanıyor..."
+          cp -r $GITHUB_WORKSPACE/Patches /tmp/Patches_Backup
+          echo "[+] Yedekleme tamam. /tmp/Patches_Backup içeriği:"
+          ls -la /tmp/Patches_Backup
         
       - name: 🔍 List Patches directory
         shell: bash
@@ -128,41 +136,45 @@ jobs:
         run: |
           echo "GITHUB_WORKSPACE şu an neresi: $GITHUB_WORKSPACE"
           
-          # Hata almadan HEMEN ÖNCE ana dizinde ne var bir bakalım:
-          echo "Workspace içerikleri:"
-          ls -la $GITHUB_WORKSPACE
+          # HATA ALDIĞIMIZ KISIM BURASIYDI. ARTIK YEDEKTEN ÇALIŞTIRIYORUZ:
           
-          # Eğer dosya gerçekten yoksa işlemi durdur (logları okumayı kolaylaştırır)
-          if [ ! -f "$GITHUB_WORKSPACE/Patches/backport_patches.sh" ]; then
-            echo "HATA: backport_patches.sh bulunamadı! Bir önceki adım dosyaları silmiş olabilir."
+          # Eğer dosya yedekte de yoksa işlemi durdur (böyle bir şey olmamalı)
+          if [ ! -f "/tmp/Patches_Backup/backport_patches.sh" ]; then
+            echo "HATA: backport_patches.sh yedek klasöründe (/tmp) bile bulunamadı!"
             exit 1
           fi
 
           # 1. Dosyadaki olası Windows (CRLF) satır sonlarını Linux (LF) formatına çeviriyoruz:
-          sed -i 's/\r$//' $GITHUB_WORKSPACE/Patches/backport_patches.sh
+          sed -i 's/\r$//' /tmp/Patches_Backup/backport_patches.sh
           
           cd $GITHUB_WORKSPACE/device_kernel
           echo "[+] Backport script uygulanıyor..."
-          bash "$GITHUB_WORKSPACE/Patches/backport_patches.sh"
+          
+          # SCRIPTİ YEDEK KLASÖRÜNDEN ÇALIŞTIR:
+          bash "/tmp/Patches_Backup/backport_patches.sh"
+          
           echo "[+] Backport script tamamlandı."
+          
       - name: 🩹 Apply kernel_read/write backport patch
         shell: bash
         run: |
           cd $GITHUB_WORKSPACE/device_kernel
 
           echo "[+] kernel_read/write backport patch uygulanıyor..."
-          cp "$GITHUB_WORKSPACE/Patches/Patch/backport_kernel_read_and_kernel_write_3.18.patch" ./
+          # BURASI DA YEDEKTEN KOPYALANIYOR
+          cp "/tmp/Patches_Backup/Patch/backport_kernel_read_and_kernel_write_3.18.patch" ./
           patch -p1 < backport_kernel_read_and_kernel_write_3.18.patch || true
 
           echo "[+] Patch uygulandı."
-
+          
       - name: 🩹 Remove module version check
         shell: bash
         run: |
           cd $GITHUB_WORKSPACE/device_kernel
 
           echo "[+] remove_modversion_check.patch uygulanıyor..."
-          cp "$GITHUB_WORKSPACE/Patches/Patch/remove_modversion_check.patch" ./
+          # BURASI DA YEDEKTEN KOPYALANIYOR
+          cp "/tmp/Patches_Backup/Patch/remove_modversion_check.patch" ./
           patch -p1 < remove_modversion_check.patch || true
 
           echo "[+] Modül sürüm kontrolü yaması uygulandı."
@@ -240,7 +252,8 @@ jobs:
           cd $GITHUB_WORKSPACE/device_kernel
 
           echo "[+] add_automatic_dtbo_generation.patch uygulanıyor..."
-          cp "$GITHUB_WORKSPACE/Patches/Patch/add_automatic_dtbo_generation.patch" ./
+          # BURASI YEDEKTEN KOPYALANIYOR
+          cp "/tmp/Patches_Backup/Patch/add_automatic_dtbo_generation.patch" ./
           patch -p1 < add_automatic_dtbo_generation.patch || true
 
           echo "[+] Yama uygulandı."
