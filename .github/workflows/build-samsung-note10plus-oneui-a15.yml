@@ -139,6 +139,17 @@ jobs:
 
           echo "[+] Patch uygulandı."
 
+      - name: 🩹 Remove module version check
+        shell: bash
+        run: |
+          cd $GITHUB_WORKSPACE/device_kernel
+
+          echo "[+] remove_modversion_check.patch uygulanıyor..."
+          cp "$GITHUB_WORKSPACE/Patches/Patch/remove_modversion_check.patch" ./
+          patch -p1 < remove_modversion_check.patch || true
+
+          echo "[+] Modül sürüm kontrolü yaması uygulandı."
+
       - name: 🧩 Patch Kernel of NoMount (dev branch)
         if: env.NOMOUNT_ENABLE == 'true'
         shell: bash
