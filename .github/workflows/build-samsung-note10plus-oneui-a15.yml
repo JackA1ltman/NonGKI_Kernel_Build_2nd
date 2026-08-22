@@ -123,16 +123,12 @@ jobs:
         uses: ./.github/workflows/patch-no-kprobe
 
       - name: 🩹 Apply backport patches
-        if: env.KERNEL_PATCH == 'true'   # isterseniz bu koşulu kaldırabilirsiniz
+        if: env.KERNEL_PATCH == 'true'
         shell: bash
         run: |
           cd $GITHUB_WORKSPACE/device_kernel
-
           echo "[+] Backport script uygulanıyor..."
-          cp "$GITHUB_WORKSPACE/Patches/backport_patches.sh" ./
-          chmod +x backport_patches.sh
-          ./backport_patches.sh
-
+          bash "$GITHUB_WORKSPACE/Patches/backport_patches.sh"
           echo "[+] Backport script tamamlandı."
 
       - name: 🩹 Apply kernel_read/write backport patch
