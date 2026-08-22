@@ -126,6 +126,18 @@ jobs:
         if: env.KERNEL_PATCH == 'true'
         shell: bash
         run: |
+          echo "GITHUB_WORKSPACE şu an neresi: $GITHUB_WORKSPACE"
+          
+          # Hata almadan HEMEN ÖNCE ana dizinde ne var bir bakalım:
+          echo "Workspace içerikleri:"
+          ls -la $GITHUB_WORKSPACE
+          
+          # Eğer dosya gerçekten yoksa işlemi durdur (logları okumayı kolaylaştırır)
+          if [ ! -f "$GITHUB_WORKSPACE/Patches/backport_patches.sh" ]; then
+            echo "HATA: backport_patches.sh bulunamadı! Bir önceki adım dosyaları silmiş olabilir."
+            exit 1
+          fi
+
           # 1. Dosyadaki olası Windows (CRLF) satır sonlarını Linux (LF) formatına çeviriyoruz:
           sed -i 's/\r$//' $GITHUB_WORKSPACE/Patches/backport_patches.sh
           
@@ -133,7 +145,6 @@ jobs:
           echo "[+] Backport script uygulanıyor..."
           bash "$GITHUB_WORKSPACE/Patches/backport_patches.sh"
           echo "[+] Backport script tamamlandı."
-
       - name: 🩹 Apply kernel_read/write backport patch
         shell: bash
         run: |
