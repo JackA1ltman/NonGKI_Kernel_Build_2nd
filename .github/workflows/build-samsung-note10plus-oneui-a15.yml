@@ -121,34 +121,32 @@ jobs:
         run: |
           set -x
           cd $GITHUB_WORKSPACE/device_kernel
-
           # Eski temp dizinini temizle
           rm -rf /tmp/nomount
-          git clone --depth=1 -b dev https://github.com/maxsteeel/nomount.git /tmp/nomount || { echo "git clone başarısız"; exit 1; }
-
-          # 4.14 için patch dosyasını bul
+          git clone --depth=1 --branch dev https://github.com/maxsteeel/nomount.git /tmp/nomount || { echo "git clone başarısız"; exit 1; }
+          # 4.14 için patch adaylarını listele
+          echo "=== NoMount 4.14 patch adayları ==="
+          find /tmp/nomount -type f -name "*4.14*.patch" -print
+          # İlk bulunan patch dosyasını seç
           PATCH_FILE=$(find /tmp/nomount -type f -name "*4.14*.patch" | head -n 1)
           if [ -z "$PATCH_FILE" ]; then
             echo "[-] 4.14 için NoMount patch bulunamadı!"
             exit 1
           fi
           echo "[+] Bulunan patch: $PATCH_FILE"
-
           # Yamayı uygula
           patch -p1 < "$PATCH_FILE" || true
-
-          # NoMount kaynak dosyalarını doğrudan fs/ altına kopyala
-          # (src klasörü kernel/src altında bulunur)
-          if [ -d /tmp/nomount/kernel/src ]; then
-            cp /tmp/nomount/kernel/src/* fs/
+          # NoMount kaynak dosyalarını fs/nomount dizinine kopyala
+          mkdir -p fs/nomount
+          # Önce src klasörünü dene
+          if [ -d "$(dirname "$PATCH_FILE")/src" ]; then
+            cp "$(dirname "$PATCH_FILE")/src/"* fs/nomount/
           else
-            # Bazı sürümlerde src doğrudan farklı konumda olabilir, ara ve kopyala
-            find /tmp/nomount -type f \( -name "nomount.c" -o -name "nomount.h" \) -exec cp {} fs/ \;
+            # Yoksa gerekli dosyaları tüm depoda ara ve kopyala
+            find /tmp/nomount -type f \( -name "nomount.c" -o -name "nomount.h" -o -name "Kconfig" -o -name "Makefile" \) -exec cp {} fs/nomount/ \;
           fi
-
           # Defconfig'e NoMount seçeneğini ekle
           echo "CONFIG_NOMOUNT=y" >> arch/arm64/configs/${{ env.DEFCONFIG_NAME }}
-
           echo "[+] NoMount entegrasyonu tamamlandı."
           
       - name: 🧰 Patch Kernel of Re:Kernel
