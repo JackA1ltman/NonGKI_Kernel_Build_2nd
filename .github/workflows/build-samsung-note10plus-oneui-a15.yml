@@ -170,7 +170,6 @@ jobs:
           CONFIG_KALLSYMS=y
           CONFIG_KALLSYMS_ALL=y
           CONFIG_DEBUG_KERNEL=y
-          CONFIG_KPM=y
           
           EOF
           echo "[+] Non-GKI configler eklendi."
