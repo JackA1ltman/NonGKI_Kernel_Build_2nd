@@ -150,7 +150,15 @@ jobs:
           echo "[+] NoMount entegrasyonu tamamlandı."
           
       - name: 🧰 Patch Kernel of Re:Kernel
+        if: env.REKERNEL_ENABLE == 'true'
         uses: ./.github/workflows/patch-rekernel
+
+      - name: 🛠️ Fix Re-Kernel TRANSACTION conflict
+        if: env.REKERNEL_ENABLE == 'true'
+        shell: bash
+        run: |
+          cd $GITHUB_WORKSPACE/device_kernel
+          sed -i 's/\bTRANSACTION\b/REKERNEL_TRANSACTION/g' include/net/rekernel.h
           
       - name: 💿 Patch Kernel of Droidspaces
         uses: ./.github/workflows/patch-droidspaces
