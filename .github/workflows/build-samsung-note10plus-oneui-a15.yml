@@ -160,7 +160,7 @@ jobs:
       - name: 🔒 Patch Kernel of Baseband Guard
         uses: ./.github/workflows/patch-baseband-guard
         
-      - name: ➕ Add Non-GKI configs to defconfig
+     # - name: ➕ Add Non-GKI configs to defconfig
         shell: bash
         run: |
           cd $GITHUB_WORKSPACE/device_kernel
