@@ -1,3 +1,4 @@
+name: Build Samsung Note 10 Plus (OneUI A15)
 - name: 🔍 List Patches directory
         shell: bash
         run: |
@@ -5,8 +6,6 @@
           echo "---"
           find $GITHUB_WORKSPACE/Patches -maxdepth 2 -type f
           
-name: Build Samsung Note 10 Plus (OneUI A15)
-
 on:
   workflow_call:
   workflow_dispatch:
