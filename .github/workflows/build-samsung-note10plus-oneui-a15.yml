@@ -159,20 +159,20 @@ jobs:
 
       - name: 🔒 Patch Kernel of Baseband Guard
         uses: ./.github/workflows/patch-baseband-guard
-        
-     # - name: ➕ Add Non-GKI configs to defconfig
-        shell: bash
-        run: |
-          cd $GITHUB_WORKSPACE/device_kernel
-          DEFCONFIG_FILE="arch/arm64/configs/exynos9820_defconfig"
-          cat >> "$DEFCONFIG_FILE" << 'EOF'
-
-          CONFIG_KALLSYMS=y
-          CONFIG_KALLSYMS_ALL=y
-          CONFIG_DEBUG_KERNEL=y
           
-          EOF
-          echo "[+] Non-GKI configler eklendi."
+#     - name: ➕ Add Non-GKI configs to defconfig
+#         shell: bash
+#         run: |
+#           cd $GITHUB_WORKSPACE/device_kernel
+#           DEFCONFIG_FILE="arch/arm64/configs/exynos9820_defconfig"
+#           cat >> "$DEFCONFIG_FILE" << 'EOF'
+#
+#           CONFIG_KALLSYMS=y
+#           CONFIG_KALLSYMS_ALL=y
+#           CONFIG_DEBUG_KERNEL=y
+#
+#           EOF
+#           echo "[+] Non-GKI configler eklendi."
 
       - name: 🚀 Build Process
         uses: ./.github/workflows/build-process
