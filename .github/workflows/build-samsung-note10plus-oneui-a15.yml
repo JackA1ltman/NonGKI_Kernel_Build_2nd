@@ -131,121 +131,6 @@ jobs:
       - name: 🔗 Patch for no-kprobe
         uses: ./.github/workflows/patch-no-kprobe
       
-      - name: 🩹 Apply Custom SUSFS Memfd Patch (auto with sidex15 identity)
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          cd "$GITHUB_WORKSPACE/device_kernel" || { echo "device_kernel dizini yok"; exit 1; }
-
-          PATCH_SRC="/tmp/Patches_Backup/sus_memfd_custom.patch"
-          PATCH_LOCAL="sus_memfd_custom.patch"
-
-          if [ ! -f "$PATCH_SRC" ]; then
-            echo "ERROR: Patch file not found: $PATCH_SRC"
-            exit 1
-          fi
-
-          echo "[+] Kopyalanıyor..."
-          cp "$PATCH_SRC" "./$PATCH_LOCAL"
-
-          echo "[+] Satır sonu/format düzeltmesi..."
-          if ! command -v dos2unix >/dev/null 2>&1; then
-            sudo apt-get update -y
-            sudo apt-get install -y dos2unix
-          fi
-          dos2unix "$PATCH_LOCAL" || true
-
-          # 1) Önce git am ile dene (orijinal commit metadata korunur)
-          echo "[+] git am denenecek (sidex15 kimliğiyle)..."
-          if git -c user.name="sidex15" -c user.email="24408329+sidex15@users.noreply.github.com" am --3way < "$PATCH_LOCAL"; then
-            echo "[+] git am başarılı."
-            exit 0
-          else
-            echo "[!] git am başarısız veya patch mbox formatında değil."
-            git am --abort 2>/dev/null || true
-          fi
-
-          # 2) mbox başlıklarını temizle, sadece unified diff çıkar
-          echo "[+] Mbox başlıklarını temizleyip sadece unified diff çıkarılıyor..."
-          awk '/^--- a\//{p=1} p{print}' "$PATCH_LOCAL" > /tmp/onlydiff.patch || true
-
-          if [ ! -s /tmp/onlydiff.patch ]; then
-            echo "ERROR: Unified diff kısmı çıkarılamadı. Patch bozuk olabilir."
-            exit 1
-          fi
-
-          # 3) git apply ile dene
-          echo "[+] git apply --index ile kontrol ediliyor..."
-          if git apply --index --check /tmp/onlydiff.patch 2>/tmp/gitapply-check.log; then
-            git apply --index --whitespace=fix /tmp/onlydiff.patch
-            echo "[+] git apply ile uygulandı."
-            exit 0
-          else
-            echo "[!] git apply check başarısız. /tmp/gitapply-check.log'a bakın."
-          fi
-
-          # 4) Eğer git apply başarısızsa patch -p seviyelerini dry-run ile dene
-          echo "[+] patch -pN dry-run denemeleri..."
-          for p in 0 1 2 3; do
-            if patch --dry-run -p$p < /tmp/onlydiff.patch 2>/tmp/patch-dryrun.log; then
-              patch -p$p < /tmp/onlydiff.patch
-              echo "[+] patch -p$p ile uygulandı."
-              exit 0
-            else
-              echo "  - patch -p$p başarısız."
-            fi
-          done
-
-          # 5) Hedef dosyalar uyuşmuyorsa: otomatik yol eşleştirme dene
-          echo "[+] Patch içindeki hedef dosyalar repo içinde aranıyor ve otomatik eşleştirme deneniyor..."
-          mapfile -t targets < <(sed -n '1,400p' "$PATCH_LOCAL" | sed -n 's/^diff --git a\/\([^ ]*\) b\/.*/\1/p' | uniq)
-          TMPPATCH="/tmp/patch_rewritten.patch"
-          cp "$PATCH_LOCAL" "$TMPPATCH"
-
-          changed=0
-          for t in "${targets[@]}"; do
-            base="$(basename "$t")"
-            # repo içinde aynı basename'e sahip tek dosya var mı?
-            matches=( $(git ls-files | grep -F "/$base" || true) )
-            if [ "${#matches[@]}" -eq 1 ]; then
-              newpath="${matches[0]}"
-              echo "  - Eşleştirildi: $t -> $newpath"
-              # replace both a/... and b/...
-              sed -i -E "s|a/${t}|a/${newpath}|g; s|b/${t}|b/${newpath}|g" "$TMPPATCH"
-              changed=1
-            else
-              if [ "${#matches[@]}" -gt 1 ]; then
-                echo "  - Birden fazla eşleşme bulundu için atlandı: $t"
-              else
-                echo "  - Eşleşme yok: $t"
-              fi
-            fi
-          done
-
-          if [ "$changed" -eq 1 ]; then
-            echo "[+] Yeniden yazılmış patch ile git apply check denenecek..."
-            if git apply --index --check "$TMPPATCH" 2>/tmp/gitapply-check2.log; then
-              git apply --index --whitespace=fix "$TMPPATCH"
-              echo "[+] Otomatik eşleştirilmiş patch uygulandı."
-              exit 0
-            else
-              echo "[!] Otomatik eşleştirilmiş patch git apply check başarısız. /tmp/gitapply-check2.log'a bakın."
-            fi
-          else
-            echo "[!] Otomatik eşleştirme için uygun tekil eşleşme bulunamadı."
-          fi
-
-          # 6) Son çare: detaylı log bırak ve hata ile çık
-          echo "ERROR: Patch uygulanamadı."
-          echo "Aşağıdakileri kontrol edin:"
-          echo "- Patch mbox formatında mı? (git am ile uygulanmalı)"
-          echo "- Patch içindeki yollar (a/... b/...) repo yapınızla eşleşiyor mu?"
-          echo "- Hedef dosyalar repo'da mevcut mu? (git ls-files | grep -i susfs)"
-          echo "Dry-run log: /tmp/patch-dryrun.log"
-          echo "git apply check log: /tmp/gitapply-check.log"
-          echo "git apply check2 log: /tmp/gitapply-check2.log"
-          exit 1
           
       - name: 🧩 Patch Kernel of NoMount (dev branch, setup.sh)
         if: env.NOMOUNT_ENABLE == 'true'
@@ -295,6 +180,75 @@ jobs:
 
           EOF
           echo "[+] Configler eklendi."
+
+      - name: 🚀 Add BBRPlus TCP to Kernel
+        shell: bash
+        run: |
+          cd $GITHUB_WORKSPACE/device_kernel
+          
+          echo "[+] BBRPlus kaynak kodu indiriliyor..."
+          # UJX6N reposundan BBRPlus C kodunu ipv4 klasörüne indiriyoruz
+          wget -qO net/ipv4/tcp_bbrplus.c https://raw.githubusercontent.com/UJX6N/bbrplus/master/tcp_bbrplus.c || curl -sLo net/ipv4/tcp_bbrplus.c https://raw.githubusercontent.com/UJX6N/bbrplus/master/tcp_bbrplus.c
+          
+          # Dosya inmediyse yedek repodan çek
+          if [ ! -s net/ipv4/tcp_bbrplus.c ]; then
+              echo "[!] Ana linkten inemedi, alternatif kaynaktan çekiliyor..."
+              wget -qO net/ipv4/tcp_bbrplus.c https://raw.githubusercontent.com/dogday/bbrplus/master/tcp_bbrplus.c
+          fi
+          
+          echo "[+] Python ile Kconfig ve Makefile enjeksiyonu yapılıyor..."
+          cat << 'EOF' > inject_bbrplus.py
+          import os
+
+          # 1. Makefile'a bbrplus'ı derlemesi gerektiğini söyleyelim
+          mf = 'net/ipv4/Makefile'
+          try:
+              with open(mf, 'r') as f: m_data = f.read()
+              if 'tcp_bbrplus.o' not in m_data:
+                  # tcp_bbr satırını bulup altına bbrplus ekleyelim
+                  if 'obj-$(CONFIG_TCP_CONG_BBR)' in m_data:
+                      m_data = m_data.replace('obj-$(CONFIG_TCP_CONG_BBR) += tcp_bbr.o', 'obj-$(CONFIG_TCP_CONG_BBR) += tcp_bbr.o\nobj-$(CONFIG_TCP_CONG_BBRPLUS) += tcp_bbrplus.o')
+                  else:
+                      m_data += '\nobj-$(CONFIG_TCP_CONG_BBRPLUS) += tcp_bbrplus.o\n'
+                  with open(mf, 'w') as f: f.write(m_data)
+                  print("[+] net/ipv4/Makefile başarıyla güncellendi.")
+          except Exception as e: print(f"[!] Makefile hatası: {e}")
+
+          # 2. Kconfig menüsüne BBRPlus seçeneğini ekleyelim
+          kf = 'net/ipv4/Kconfig'
+          bbrplus_kconfig = """
+          config TCP_CONG_BBRPLUS
+          \ttristate "BBRPlus TCP congestion control"
+          \tdefault n
+          \thelp
+          \t  BBRPlus algorithm for network congestion control.
+          """
+          try:
+              with open(kf, 'r') as f: k_data = f.read()
+              if 'TCP_CONG_BBRPLUS' not in k_data:
+                  if 'config TCP_CONG_BBR\n' in k_data:
+                      k_data = k_data.replace('config TCP_CONG_BBR\n', bbrplus_kconfig + '\nconfig TCP_CONG_BBR\n')
+                  else:
+                      k_data += '\n' + bbrplus_kconfig + '\n'
+                  with open(kf, 'w') as f: f.write(k_data)
+                  print("[+] net/ipv4/Kconfig başarıyla güncellendi.")
+          except Exception as e: print(f"[!] Kconfig hatası: {e}")
+          EOF
+          
+          python3 inject_bbrplus.py
+          
+          echo "[+] Defconfig'e BBRPlus bayrakları ekleniyor..."
+          DEFCONFIG_FILE="arch/arm64/configs/exynos9820_defconfig"
+          
+          cat >> "$DEFCONFIG_FILE" << 'EOF'
+          
+          # BBRPlus Ayarları
+          CONFIG_TCP_CONG_BBRPLUS=y
+          CONFIG_DEFAULT_TCP_CONG="bbrplus"
+          
+          EOF
+          
+          echo "[+] BBRPlus entegrasyonu tamamen bitti!"
 
       - name: 🚀 Build Process
         uses: ./.github/workflows/build-process
