@@ -156,22 +156,56 @@ jobs:
           
           echo "[+] Backport script tamamlandı."
 
-      - name: 🩹 Apply Custom SUSFS Memfd Patch
+      - name: 🩹 Apply Custom SUSFS Memfd (Python Injection)
         shell: bash
         run: |
           cd $GITHUB_WORKSPACE/device_kernel
           
-          echo "[+] Özel SUSFS Memfd yaması kopyalanıyor..."
-          cp "/tmp/Patches_Backup/sus_memfd_custom.patch" ./
+          echo "[+] Yama betiği (Python) oluşturuluyor..."
+          cat << 'EOF' > inject_memfd.py
+          import os, re
+          def append_after(file_path, marker, text):
+              try:
+                  with open(file_path, 'r') as f: content = f.read()
+                  if marker in content and "CONFIG_KSU_SUSFS_SUS_MEMFD" not in content[content.find(marker):content.find(marker)+500]:
+                      content = content.replace(marker, marker + "\n" + text)
+                      with open(file_path, 'w') as f: f.write(content)
+                      print(f"[+] Kod eklendi: {file_path}")
+                  else:
+                      print(f"[*] Zaten guncel veya hedef bulunamadi: {file_path}")
+              except Exception as e: print(f"[!] Hata {file_path}: {e}")
+
+          # 1. fs/susfs.c
+          append_after('fs/susfs.c', '#endif // #ifdef CONFIG_KSU_SUSFS_SUS_MAP', 
+          '#ifdef CONFIG_KSU_SUSFS_SUS_MEMFD\nstatic DEFINE_MUTEX(susfs_mutex_lock_sus_memfd);\nstatic LIST_HEAD(LH_SUS_MEMFD);\n\nint susfs_add_sus_memfd(void __user **user_info) {\n\tstruct st_susfs_sus_memfd_list *cursor;\n\tstruct st_susfs_sus_memfd_list *new_list = NULL;\n\tstruct st_susfs_sus_memfd info = {0};\n\n\tif (copy_from_user(&info, (struct st_susfs_sus_memfd __user*)*user_info, sizeof(info))) {\n\t\tSUSFS_LOGE("failed copying from userspace\\n");\n\t\tinfo.err = -EFAULT;\n\t\tgoto out_copy_to_user;\n\t}\n\n\tmutex_lock(&susfs_mutex_lock_sus_memfd);\n\tlist_for_each_entry(cursor, &LH_SUS_MEMFD, list) {\n\t\tif (unlikely(!strcmp(info.target_pathname, cursor->info.target_pathname))) {\n\t\t\tSUSFS_LOGE("target_pathname: \'%s\' is already created in LH_SUS_MEMFD\\n", info.target_pathname);\n\t\t\tmutex_unlock(&susfs_mutex_lock_sus_memfd);\n\t\t\tinfo.err = -EEXIST;\n\t\t\tgoto out_copy_to_user;\n\t\t}\n\t}\n\tmutex_unlock(&susfs_mutex_lock_sus_memfd);\n\n\tnew_list = kzalloc(sizeof(struct st_susfs_sus_memfd_list), GFP_KERNEL);\n\tif (!new_list) {\n\t\tinfo.err = -ENOMEM;\n\t\tgoto out_copy_to_user;\n\t}\n\n\tmemcpy(&new_list->info, &info, sizeof(info));\n\n\tINIT_LIST_HEAD(&new_list->list);\n\tmutex_lock(&susfs_mutex_lock_sus_memfd);\n\tlist_add_tail(&new_list->list, &LH_SUS_MEMFD);\n\tmutex_unlock(&susfs_mutex_lock_sus_memfd);\n\tSUSFS_LOGI("target_pathname: \'%s\', is successfully added to LH_SUS_MEMFD\\n", new_list->info.target_pathname);\n\tinfo.err = 0;\nout_copy_to_user:\n\tif (copy_to_user(&((struct st_susfs_sus_memfd __user*)*user_info)->err, &info.err, sizeof(info.err))) {\n\t\tinfo.err = -EFAULT;\n\t}\n\tSUSFS_LOGI("CMD_SUSFS_ADD_SUS_MEMFD -> ret: %d\\n", info.err);\n\treturn info.err;\n}\n\nint susfs_sus_memfd(char *memfd_name) {\n\tstruct st_susfs_sus_memfd_list *cursor;\n\tint res = 0;\n\n\tmutex_lock(&susfs_mutex_lock_sus_memfd);\n\tlist_for_each_entry(cursor, &LH_SUS_MEMFD, list) {\n\t\tif (unlikely(!strcmp(memfd_name, cursor->info.target_pathname))) {\n\t\t\tSUSFS_LOGI("memfd_name: \'%s\' is found in LH_SUS_MEMFD, blocking memfd_create\\n", memfd_name);\n\t\t\tres = 1;\n\t\t\tbreak;\n\t\t}\n\t}\n\tmutex_unlock(&susfs_mutex_lock_sus_memfd);\n\treturn res;\n}\n#endif // #ifdef CONFIG_KSU_SUSFS_SUS_MEMFD')
+
+          append_after('fs/susfs.c', 'buf_ptr = info->enabled_features + copied_size;\n#endif',
+          '#ifdef CONFIG_KSU_SUSFS_SUS_MEMFD\n\tinfo->err = copy_config_to_buf("CONFIG_KSU_SUSFS_SUS_MEMFD\\n", buf_ptr, &copied_size, SUSFS_ENABLED_FEATURES_SIZE);\n\tif (info->err) goto out_copy_to_user;\n\tbuf_ptr = info->enabled_features + copied_size;\n#endif')
+
+          # 2. include/linux/susfs.h
+          append_after('include/linux/susfs.h', 'struct st_susfs_sus_map                 info;\n};\n#endif',
+          '\n/* sus_memfd */\n#ifdef CONFIG_KSU_SUSFS_SUS_MEMFD\nstruct st_susfs_sus_memfd {\n\tchar                    target_pathname[SUSFS_MAX_LEN_PATHNAME];\n\tint                     err;\n};\n\nstruct st_susfs_sus_memfd_list {\n\tstruct list_head                        list;\n\tstruct st_susfs_sus_memfd               info;\n};\n#endif')
+
+          append_after('include/linux/susfs.h', 'void susfs_add_sus_map(void __user **user_info);\n#endif',
+          '\n/* sus_memfd */\n#ifdef CONFIG_KSU_SUSFS_SUS_MEMFD\nint susfs_add_sus_memfd(void __user **user_info);\nint susfs_sus_memfd(char *memfd_name);\n#endif')
+
+          # 3. include/linux/susfs_def.h
+          append_after('include/linux/susfs_def.h', '#define CMD_SUSFS_ADD_SUS_MAP               0x60029', '#define CMD_SUSFS_ADD_SUS_MEMFD             0x60030')
+
+          # 4. mm/shmem.c
+          append_after('mm/shmem.c', '#include <linux/frontswap.h>', '#ifdef CONFIG_KSU_SUSFS\n#include <linux/susfs.h>\n#endif')
           
-          echo "[+] Yama formatı onarılıyor (Satır sonu ve boşluk düzeltmeleri)..."
-          sudo apt-get install -y dos2unix
-          dos2unix sus_memfd_custom.patch
+          try:
+              with open('mm/shmem.c', 'r') as f: content = f.read()
+              if 'susfs_sus_memfd' not in content:
+                  content = re.sub(r'(goto err_name;\n\s*\})', r'\1\n\n#ifdef CONFIG_KSU_SUSFS_SUS_MEMFD\n\tif (susfs_sus_memfd(name)) {\n\t\terror = -EFAULT;\n\t\tgoto err_name;\n\t}\n#endif\n', content)
+                  with open('mm/shmem.c', 'w') as f: f.write(content)
+                  print("[+] Eklendi: mm/shmem.c (memfd_create kancasi)")
+          except Exception as e: print(f"[!] Hata mm/shmem.c: {e}")
+          EOF
           
-          echo "-> Applying sus_memfd_custom.patch..."
-          patch -p1 --ignore-whitespace < sus_memfd_custom.patch || true
-          
-          echo "[+] Özel yama işlemi tamamlandı."
+          python3 inject_memfd.py
+          echo "[+] Ozel yama islemi (Python Enjeksiyonu) tamamlandi."
 
       - name: 🧩 Patch Kernel of NoMount (dev branch, setup.sh)
         if: env.NOMOUNT_ENABLE == 'true'
