@@ -156,7 +156,7 @@ jobs:
           
           echo "[+] Backport script tamamlandı."
 
-      - name: 🩹 Apply Custom SUSFS Memfd Patch (preserve commit metadata)
+      - name: 🩹 Apply Custom SUSFS Memfd Patch (robust)
         shell: bash
         run: |
           set -euo pipefail
@@ -169,16 +169,41 @@ jobs:
             echo "ERROR: Patch file not found: $PATCH"
             exit 1
           fi
+   
+          echo "[+] Patch bulundu: $PATCH"
+          cp "$PATCH" ./
+          PATCH_BASENAME="$(basename "$PATCH")"
 
-          echo "[+] Applying patch with git am (preserves commit metadata)..."
-          # Ensure git user is set for git am to work
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+    # 1) Önce git apply ile kontrol et (diff formatı ise index'e uygula)
+          if git apply --index --check "$PATCH_BASENAME" 2>/dev/null; then
+            echo "[+] Patch unified diff gibi görünüyor, git apply ile uygulanıyor..."
+            git apply --index --whitespace=fix "$PATCH_BASENAME"
+            echo "[+] git apply ile uygulandı."
+            exit 0
+          fi
 
-          # Apply the patch; fail the job if it doesn't apply cleanly
-          git am --3way < "$PATCH"
-          echo "[+] Patch applied successfully."
-          
+    # 2) Eğer git apply check başarısızsa, patch commit meta verisi içeriyor olabilir.
+    #    git am ile dene (commit metadata korunur). actions/checkout fetch-depth: 0 önerilir.
+          if git am --3way < "$PATCH_BASENAME"; then
+            echo "[+] git am ile commit metadata korunarak uygulandı."
+            exit 0
+          else
+            echo "[!] git am başarısız oldu veya patch mbox formatında değil."
+            git am --abort 2>/dev/null || true
+          fi
+
+    # 3) Son çare: patch -p1. strip seviyesi repo yapınıza göre değişebilir.
+          echo "[+] Son çare: patch -p1 ile uygulamayı deniyorum..."
+    # Önce dry-run ile kontrol et
+          if patch --dry-run -p1 < "$PATCH_BASENAME"; then
+            patch -p1 < "$PATCH_BASENAME"
+            echo "[+] patch -p1 ile uygulandı."
+            exit 0
+          else
+            echo "ERROR: Patch uygulanamadı. strip seviyesi veya patch formatını kontrol edin."
+            exit 1
+          fi
+
       - name: 🧩 Patch Kernel of NoMount (dev branch, setup.sh)
         if: env.NOMOUNT_ENABLE == 'true'
         shell: bash
