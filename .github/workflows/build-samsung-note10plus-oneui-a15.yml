@@ -131,118 +131,22 @@ jobs:
       - name: 🔗 Patch for no-kprobe
         uses: ./.github/workflows/patch-no-kprobe
       
-      - name: 🩹 Apply Custom SUSFS Memfd Patch (auto)
+      - name: 🩹 Apply Custom SUSFS Memfd Patch
         shell: bash
         run: |
-          set -euo pipefail
-
-          # Repo kökü
-          cd "$GITHUB_WORKSPACE" || exit 1
-
-          # Raw patch indir (GitHub commit .patch)
-          PATCH_URL="https://github.com/sidex15/android_kernel_lge_sm8150/commit/bc23096b9df4d76c43bfea9e217978ecc93b94d4.patch"
-          PATCH_LOCAL="/tmp/sus_memfd_custom.patch"
-          echo "[+] Downloading patch..."
-          curl -fsSL "$PATCH_URL" -o "$PATCH_LOCAL"
-
-          # Git kimliği (repo-local)
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-
-          # Hedef dosya yolunu kontrol et (patch içeriğine göre)
-          # Burada patch içindeki ilk diff hedefini çıkarıp kontrol ediyoruz:
-          TARGET=$(sed -n '1,200p' "$PATCH_LOCAL" | sed -n 's/^diff --git a\/\([^ ]*\) b\/.*/\1/p' | head -n1 || true)
-          if [ -n "$TARGET" ]; then
-            if [ ! -f "$TARGET" ]; then
-              echo "WARNING: Patch hedef dosya bulunamadı: $TARGET"
-              echo "Repo içeriğini ve patch yollarını kontrol edin."
-            else
-              echo "Found target file: $TARGET"
-            fi
-          else
-            echo "WARNING: Patch içinde hedef dosya tespit edilemedi."
-          fi
-
-          # 1) git apply check (unified diff ise)
-          if git apply --index --check "$PATCH_LOCAL" 2>/dev/null; then
-            echo "[+] git apply --index ile uygulanıyor..."
-            git apply --index --whitespace=fix "$PATCH_LOCAL"
-            echo "[+] git apply ile uygulandı."
-            exit 0
-          fi
-
-          # 2) git am (mbox formatı ise)
-          if git am --3way < "$PATCH_LOCAL"; then
-            echo "[+] git am ile commit metadata korunarak uygulandı."
-            exit 0
-          else
-            echo "[!] git am başarısız oldu veya patch bozuk."
-            git am --abort 2>/dev/null || true
-          fi
-
-          # 3) patch ile strip seviyelerini dene (dry-run)
-          for p in 0 1 2 3; do
-            echo "[+] Deniyor: patch --dry-run -p$p"
-            if patch --dry-run -p$p < "$PATCH_LOCAL" 2>/tmp/patch-dryrun.log; then
-              echo "[+] patch -p$p ile uygulanıyor..."
-              patch -p$p < "$PATCH_LOCAL"
-              echo "[+] patch -p$p ile uygulandı."
-              exit 0
-            else
-              echo "  - patch -p$p başarısız."
-            fi
-          done
-
-          # 4) Eğer hala uygulanmadıysa: mbox başlıklarını temizleyip sadece diff kısmını uygula
-          echo "[+] Mbox başlıklarını temizleyip sadece unified diff kısmını çıkarıyorum..."
-          awk '/^--- a\//{p=1} p{print}' "$PATCH_LOCAL" > /tmp/sus_memfd_onlydiff.patch || true
-
-          if [ -s /tmp/sus_memfd_onlydiff.patch ]; then
-            if git apply --index --check /tmp/sus_memfd_onlydiff.patch 2>/dev/null; then
-              git apply --index --whitespace=fix /tmp/sus_memfd_onlydiff.patch
-              echo "[+] Temizlenmiş diff git apply ile uygulandı."
-              exit 0
-            fi
-
-            for p in 0 1 2 3; do
-              if patch --dry-run -p$p < /tmp/sus_memfd_onlydiff.patch 2>/tmp/patch-dryrun2.log; then
-                patch -p$p < /tmp/sus_memfd_onlydiff.patch
-                echo "[+] Temizlenmiş diff patch -p$p ile uygulandı."
-                exit 0
-              fi
-            done
-          fi
-
-          echo "ERROR: Patch uygulanamadı. Olası nedenler:"
-          echo "- Patch hedef dosya repo içinde yok veya farklı bir yol kullanılıyor."
-          echo "- Patch dosyası bozulmuş (satır sonları/başlıklar)."
-          echo "- strip seviyesi yanlış; yukarıdaki -p0..-p3 denedim ama uymadı."
-          echo "Detaylı dry-run logları: /tmp/patch-dryrun.log ve /tmp/patch-dryrun2.log"
-          exit 1
-      - name: 🩹 Apply backport patches
-        if: env.KERNEL_PATCH == 'true'
-        shell: bash
-        run: |
-          echo "GITHUB_WORKSPACE şu an neresi: $GITHUB_WORKSPACE"
-          
-          # HATA ALDIĞIMIZ KISIM BURASIYDI. ARTIK YEDEKTEN ÇALIŞTIRIYORUZ:
-          
-          # Eğer dosya yedekte de yoksa işlemi durdur (böyle bir şey olmamalı)
-          if [ ! -f "/tmp/Patches_Backup/backport_patches.sh" ]; then
-            echo "HATA: backport_patches.sh yedek klasöründe (/tmp) bile bulunamadı!"
-            exit 1
-          fi
-
-          # 1. Dosyadaki olası Windows (CRLF) satır sonlarını Linux (LF) formatına çeviriyoruz:
-          sed -i 's/\r$//' /tmp/Patches_Backup/backport_patches.sh
-          
           cd $GITHUB_WORKSPACE/device_kernel
-          echo "[+] Backport script uygulanıyor..."
           
-          # SCRIPTİ YEDEK KLASÖRÜNDEN ÇALIŞTIR:
-          bash "/tmp/Patches_Backup/backport_patches.sh"
+          echo "[+] Özel SUSFS Memfd yaması kopyalanıyor..."
+          cp "/tmp/Patches_Backup/sus_memfd_custom.patch" ./
           
-          echo "[+] Backport script tamamlandı."
+          echo "[+] Yama formatı onarılıyor (Satır sonu ve boşluk düzeltmeleri)..."
+          sudo apt-get install -y dos2unix
+          dos2unix sus_memfd_custom.patch
+          
+          echo "-> Applying sus_memfd_custom.patch..."
+          patch -p1 --ignore-whitespace < sus_memfd_custom.patch || true
+          
+          echo "[+] Özel yama işlemi tamamlandı."
           
       - name: 🧩 Patch Kernel of NoMount (dev branch, setup.sh)
         if: env.NOMOUNT_ENABLE == 'true'
