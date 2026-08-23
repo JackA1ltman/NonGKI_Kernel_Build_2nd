@@ -155,7 +155,7 @@ jobs:
           bash "/tmp/Patches_Backup/backport_patches.sh"
           
           echo "[+] Backport script tamamlandı."
-
+          
       - name: 🩹 Apply Custom SUSFS Memfd Patch (robust)
         shell: bash
         run: |
@@ -169,7 +169,7 @@ jobs:
             echo "ERROR: Patch file not found: $PATCH"
             exit 1
           fi
-   
+
           echo "[+] Patch bulundu: $PATCH"
           cp "$PATCH" ./
           PATCH_BASENAME="$(basename "$PATCH")"
@@ -203,6 +203,7 @@ jobs:
             echo "ERROR: Patch uygulanamadı. strip seviyesi veya patch formatını kontrol edin."
             exit 1
           fi
+
 
       - name: 🧩 Patch Kernel of NoMount (dev branch, setup.sh)
         if: env.NOMOUNT_ENABLE == 'true'
