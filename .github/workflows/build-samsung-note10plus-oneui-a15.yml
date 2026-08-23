@@ -19,10 +19,10 @@ env:
   CLANG_BRANCH : ""
 
   GCC_GNU : false
-  GCC_64_SOURCE : "https://android.googlesource.com/platform/prebuilts/gcc/linux-x86/aarch64/aarch64-linux-android-4.9.git"
-  GCC_64_BRANCH : "android12L-release"
-  GCC_32_SOURCE : "https://android.googlesource.com/platform/prebuilts/gcc/linux-x86/arm/arm-linux-androideabi-4.9.git"
-  GCC_32_BRANCH : "android12L-release"
+  GCC_64_SOURCE : ""
+  GCC_64_BRANCH : ""
+  GCC_32_SOURCE : ""
+  GCC_32_BRANCH : ""
 
   DEFCONFIG_SOURCE: ""
   DEFCONFIG_NAME : "exynos9820_defconfig"
@@ -76,7 +76,7 @@ env:
   KPM_PATCH_SOURCE: "https://raw.githubusercontent.com/ShirkNeko/SukiSU_patch/refs/heads/main/kpm/patch_linux" # If u want to use KPM Inline,so you need set patch exec file source -> raw.githubusercontent.com/Test/Test/patch .
 
   BASEBAND_GUARD_ENABLE: "true" #if u want prevent unauthorized writes to critical partitions/device nodes.
-  BASEBAND_GUARD_BOOT: "true" #if u want to protect boot partition.
+  BASEBAND_GUARD_BOOT: "false" #if u want to protect boot partition.
 
   GENERATE_DTB: "false" # if u kernel need DTB , but cannot auto generate it. (Only Anykernel3).
   GENERATE_CHIP: "qcom" # only supported for qcom and mediatek.
@@ -173,7 +173,6 @@ jobs:
           DEFCONFIG_FILE="arch/arm64/configs/${{ env.DEFCONFIG_NAME }}"
           cat >> "$DEFCONFIG_FILE" << 'EOF'
           
-          CONFIG_KERNFS=y
           CONFIG_DEBUG_KERNEL=y
           CONFIG_KSU_SUSFS_SUS_MEMFD=y
           CONFIG_KALLSYMS=y
@@ -182,6 +181,13 @@ jobs:
 
           EOF
           echo "[+] Configler eklendi."
+
+      - name: 🧹 Clean kernel
+        shell: bash
+        run: |
+          cd $GITHUB_WORKSPACE/device_kernel
+          make clean
+          make mrproper
 
       - name: 🚀 Build Process
         uses: ./.github/workflows/build-process
