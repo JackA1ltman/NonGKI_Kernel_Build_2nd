@@ -162,11 +162,14 @@ jobs:
           cd $GITHUB_WORKSPACE/device_kernel
           
           echo "[+] Özel SUSFS Memfd yaması kopyalanıyor..."
-          # Eğer dosyan Patches klasörünün içindeyse ve bu klasörü /tmp/Patches_Backup olarak yedeklediysek:
           cp "/tmp/Patches_Backup/sus_memfd_custom.patch" ./
           
+          echo "[+] Yama formatı onarılıyor (Satır sonu ve boşluk düzeltmeleri)..."
+          sudo apt-get install -y dos2unix
+          dos2unix sus_memfd_custom.patch
+          
           echo "-> Applying sus_memfd_custom.patch..."
-          patch -p1 < sus_memfd_custom.patch || true
+          patch -p1 --ignore-whitespace < sus_memfd_custom.patch || true
           
           echo "[+] Özel yama işlemi tamamlandı."
 
