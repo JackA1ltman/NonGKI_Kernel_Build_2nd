@@ -210,95 +210,53 @@ jobs:
           EOF
           echo "[+] Configler eklendi."
 
-      - name: 🚀 Add BBRPlus TCP to Kernel (Full Integration)
+      - name: 🚀 Add BBRPlus TCP to Kernel (Fixed Export)
         shell: bash
         run: |
           cd $GITHUB_WORKSPACE/device_kernel
           
           echo "[+] BBRPlus kaynak kodu indiriliyor..."
           rm -f net/ipv4/tcp_bbrplus.c
-          
-          # Doğru kaynaktan (cx9208) BBRPlus C kodunu indir
           wget -qO net/ipv4/tcp_bbrplus.c https://raw.githubusercontent.com/cx9208/bbrplus/master/tcp_bbrplus.c || true
           
           if grep -q "404: Not Found" net/ipv4/tcp_bbrplus.c || [ ! -s net/ipv4/tcp_bbrplus.c ]; then
-              echo "[!] KRİTİK HATA: tcp_bbrplus.c kaynak koddan indirilemedi veya link geçersiz."
+              echo "[!] KRİTİK HATA: tcp_bbrplus.c kaynak koddan indirilemedi."
               exit 1
           fi
-          echo "[+] BBRPlus kaynak kodu başarıyla indirildi!"
           
-          echo "[+] tcp_bbrplus.c içine eksik sembol yaması uygulanıyor..."
-          # EĞER tcp_snd_wnd_test sembolü ana çekirdekte yoksa, BBRPlus'ın kendi içinde onu sahte olarak 
-          # tanımlaması için (veya dış referans olarak alması için) header ekliyoruz.
-          sed -i '1i #include <net/tcp.h>' net/ipv4/tcp_bbrplus.c
-          # Sembol eksikliğini gidermek için doğrudan bbrplus dosyasına bir wrapper ekleyelim (eğer yoksa bypass eder)
-          echo " " >> net/ipv4/tcp_bbrplus.c
-          echo "#ifndef tcp_snd_wnd_test" >> net/ipv4/tcp_bbrplus.c
-          echo "static inline bool tcp_snd_wnd_test(struct tcp_sock *tp, struct sk_buff *skb, unsigned int cur_mss) { return true; }" >> net/ipv4/tcp_bbrplus.c
-          echo "#endif" >> net/ipv4/tcp_bbrplus.c
+          echo "[+] BBRPlus için inet_connection_sock.h boyutları artırılıyor..."
+          sed -i 's/104 \/ sizeof(u64)/112 \/ sizeof(u64)/g' include/net/inet_connection_sock.h || true
+          sed -i 's/13 \* sizeof(u64)/14 \* sizeof(u64)/g' include/net/inet_connection_sock.h || true
           
-          echo "[+] Python ile Kconfig ve Makefile enjeksiyonu yapılıyor..."
-          cat << 'EOF' > inject_bbrplus_safe.py
-          import os, re
-
-          # MODİFİKASYON 1: include/net/inet_connection_sock.h (Size artırımı)
-          header_file = 'include/net/inet_connection_sock.h'
-          try:
-              with open(header_file, 'r') as f: h_data = f.read()
-              h_data = re.sub(r'(\d+)\s*/\s*sizeof\(u64\)', '112 / sizeof(u64)', h_data)
-              h_data = re.sub(r'\((\d+)\s*\*\s*sizeof\(u64\)\)', '(14 * sizeof(u64))', h_data)
-              with open(header_file, 'w') as f: f.write(h_data)
-              print(f"[+] {header_file} boyutları BBRPlus için artırıldı.")
-          except Exception as e: print(f"[!] HATA: {header_file} - {e}")
-
-          # MODİFİKASYON 2: Makefile (bbr yerine bbrplus o dosyası)
-          mf = 'net/ipv4/Makefile'
-          try:
-              with open(mf, 'r') as f: m_data = f.read()
-              if 'tcp_bbrplus.o' not in m_data:
-                  if 'obj-$(CONFIG_TCP_CONG_BBR)' in m_data:
-                      m_data = m_data.replace('obj-$(CONFIG_TCP_CONG_BBR) += tcp_bbr.o', 'obj-$(CONFIG_TCP_CONG_BBR) += tcp_bbr.o\nobj-$(CONFIG_TCP_CONG_BBRPLUS) += tcp_bbrplus.o')
-                  else:
-                      m_data += '\nobj-$(CONFIG_TCP_CONG_BBRPLUS) += tcp_bbrplus.o\n'
-                  with open(mf, 'w') as f: f.write(m_data)
-                  print("[+] net/ipv4/Makefile başarıyla güncellendi.")
-          except Exception as e: print(f"[!] Makefile hatası: {e}")
-
-          # MODİFİKASYON 3: Kconfig
-          kf = 'net/ipv4/Kconfig'
-          bbrplus_kconfig = """
-          config TCP_CONG_BBRPLUS
-          \ttristate "BBRPlus TCP congestion control"
-          \tdefault y
-          \thelp
-          \t  BBRPlus algorithm for network congestion control.
-          """
-          try:
-              with open(kf, 'r') as f: k_data = f.read()
-              if 'TCP_CONG_BBRPLUS' not in k_data:
-                  if 'config TCP_CONG_BBR\n' in k_data:
-                      k_data = k_data.replace('config TCP_CONG_BBR\n', bbrplus_kconfig + '\nconfig TCP_CONG_BBR\n')
-                  else:
-                      k_data += '\n' + bbrplus_kconfig + '\n'
-                  with open(kf, 'w') as f: f.write(k_data)
-                  print("[+] net/ipv4/Kconfig başarıyla güncellendi.")
-          except Exception as e: print(f"[!] Kconfig hatası: {e}")
-          EOF
+          echo "[+] tcp_snd_wnd_test sembol hatası kökten çözülüyor (tcp_output.c eklentisi)..."
+          # tcp_output.c dosyasının en altına fonksiyonu manuel olarak ekleyip EXPORT ediyoruz.
+          echo " " >> net/ipv4/tcp_output.c
+          echo "// BBRPlus Dummy Export Fix" >> net/ipv4/tcp_output.c
+          echo "#ifndef tcp_snd_wnd_test" >> net/ipv4/tcp_output.c
+          echo "bool tcp_snd_wnd_test(struct tcp_sock *tp, struct sk_buff *skb, unsigned int cur_mss);" >> net/ipv4/tcp_output.c
+          echo "EXPORT_SYMBOL(tcp_snd_wnd_test);" >> net/ipv4/tcp_output.c
+          echo "#endif" >> net/ipv4/tcp_output.c
           
-          python3 inject_bbrplus_safe.py
+          echo "[+] Makefile güncelleniyor..."
+          sed -i 's/obj-$(CONFIG_TCP_CONG_BBR) += tcp_bbr.o/obj-$(CONFIG_TCP_CONG_BBR) += tcp_bbr.o\nobj-$(CONFIG_TCP_CONG_BBRPLUS) += tcp_bbrplus.o/g' net/ipv4/Makefile || true
+          
+          echo "[+] Kconfig güncelleniyor..."
+          sed -i '/config TCP_CONG_BBR/i \
+          config TCP_CONG_BBRPLUS\n\
+          \ttristate "BBRPlus TCP congestion control"\n\
+          \tdefault y\n\
+          \thelp\n\
+          \t  BBRPlus algorithm for network congestion control.\n' net/ipv4/Kconfig || true
           
           echo "[+] Defconfig'e BBRPlus bayrakları ekleniyor..."
           DEFCONFIG_FILE="arch/arm64/configs/exynos9820_defconfig"
-          
           cat >> "$DEFCONFIG_FILE" << 'EOF'
           
-          # BBRPlus Ayarları
           CONFIG_TCP_CONG_BBRPLUS=y
           CONFIG_DEFAULT_TCP_CONG="bbrplus"
-          
           EOF
           
-          echo "[+] BBRPlus tam entegrasyonu başarıyla tamamlandı!"
+          echo "[+] BBRPlus entegrasyonu tamamlandı!"
 
       - name: ⚙️ Apply BBRPlus Config Tweaks (Disable Security & Debug)
         shell: bash
