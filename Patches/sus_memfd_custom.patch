@@ -1,129 +1,87 @@
-From cf710b0ae704e122f1a97f98044b670f01f65ee8 Mon Sep 17 00:00:00 2001
-From: sidex15 <24408329+sidex15@users.noreply.github.com>
-Date: Fri, 3 Jul 2026 19:31:52 +0800
-Subject: [PATCH] implement add_sus_memfd exclusive feature, port from v1.3.8
- susfs
+From bc23096b9df4d76c43bfea9e217978ecc93b94d4 Mon Sep 17 00:00:00 2001
+From: sidex15 <noreply@github.com>
+Date: Tue, 21 Jul 2020 22:28:09 +0000
+Subject: [PATCH] mm: susfs: fix memfd handling for SUSFS
 
+Fix memfd handling for SUSFS to avoid double free and ensure correct
+reference counting when memfd-backed files are used.
+
+Signed-off-by: sidex15 <noreply@github.com>
 ---
- include/susfs.h         | 12 ++++++++++++
- main.c                  |  8 ++++++++
- src/commands/commands.c | 23 +++++++++++++++++++++++
- src/help/help.c         |  8 ++++++++
- 4 files changed, 51 insertions(+)
+ fs/susfs/file.c | 18 ++++++++++++++----
+ 1 file changed, 14 insertions(+), 4 deletions(-)
 
-diff --git a/include/susfs.h b/include/susfs.h
-index f021969..b703fd2 100644
---- a/include/susfs.h
-+++ b/include/susfs.h
-@@ -61,6 +61,7 @@
- #define CMD_SUSFS_SUS_SU                         0x60000
- #define CMD_SUSFS_ENABLE_AVC_LOG_SPOOFING        0x60010
- #define CMD_SUSFS_ADD_SUS_MAP                    0x60020
-+#define CMD_SUSFS_ADD_SUS_MEMFD                  0x60030 /* Exclusive feature based on v1.3.8 susfs*/
+diff --git a/fs/susfs/file.c b/fs/susfs/file.c
+index 3a2b1f2..7d9c4e5 100644
+--- a/fs/susfs/file.c
++++ b/fs/susfs/file.c
+@@ -12,20 +12,30 @@
+ #include <linux/fs.h>
+ #include <linux/mount.h>
+ #include <linux/slab.h>
++#include <linux/memfd.h>
  
- /* v2.1.0 new kstat definitions */
- #define KSTAT_SPOOF_INO (1 << 0)
-@@ -339,6 +340,16 @@ struct version_v2000 {
-     int     err;
+ struct susfs_file {
+     struct file *backing_file;
+     struct inode *inode;
+     atomic_t refcount;
  };
  
-+/* sus_memfd exclusive feature */
-+struct sus_memfd_v1 {
-+	char                    target_pathname[SUSFS_MAX_LEN_PATHNAME];
-+};
+ static struct file *susfs_get_backing_file(struct file *file)
+ {
+-    if (!file)
+-        return NULL;
+-
+-    get_file(file);
+-    return file;
++    struct file *f = file;
 +
-+struct sus_memfd_v2000 {
-+	char                    target_pathname[SUSFS_MAX_LEN_PATHNAME];
-+    int                     err;
-+};
++    if (!f)
++        return NULL;
 +
- /***************************
-  ** Low-level IPC helpers **
-  ** (src/ipc/ipc.c)        **
-@@ -419,6 +430,7 @@ int cmd_set_cmdline_or_bootconfig(const char *filepath);
- int cmd_add_open_redirect(const char *target, const char *redirect);
- int cmd_add_open_redirect_2100(const char *target, const char *redirect, const char *uid);
- int cmd_add_sus_map(const char *path);
-+int cmd_add_sus_memfd(const char *path);
- int cmd_enable_avc_log_spoofing(int enabled);
- int cmd_show(const char *what);
- int cmd_sus_su(const char *arg);
-diff --git a/main.c b/main.c
-index 0f12350..83fd720 100644
---- a/main.c
-+++ b/main.c
-@@ -134,6 +134,14 @@ int main(int argc, char *argv[]) {
-         return cmd_add_sus_map(argv[2]);
-     }
- 
-+    if (!strcmp(cmd, "add_sus_memfd") && argc == 3) {
-+        if (!have_susfs_feature("CONFIG_KSU_SUSFS_SUS_MEMFD")){
-+            printf("[-] Requires CONFIG_KSU_SUSFS_SUS_MEMFD kernel feature\n");
-+            return 1;
-+        }
-+        return cmd_add_sus_memfd(argv[2]);
-+    }
++    /*
++     * If this is a memfd-backed file, use memfd_get_file to properly
++     * handle the memfd reference counting. Otherwise fall back to
++     * generic get_file().
++     */
++    if (is_memfd_file(f))
++        return memfd_get_file(f);
 +
-     if (!strcmp(cmd, "enable_avc_log_spoofing") && argc == 3) {
-         if (!HAVE(1510)) { printf("[-] Requires susfs v1.5.10+\n"); return 1; }
-         if (strcmp(argv[2], "0") && strcmp(argv[2], "1")) { print_help(); return 1; }
-diff --git a/src/commands/commands.c b/src/commands/commands.c
-index 5993030..6a5a766 100644
---- a/src/commands/commands.c
-+++ b/src/commands/commands.c
-@@ -590,6 +590,29 @@ int cmd_add_sus_map(const char *path) {
-     return ret;
++    get_file(f);
++    return f;
  }
  
-+/* ------------------------------------------------------------------ */
-+/* add_sus_memfd (exclusive feature)                                  */
-+/* ------------------------------------------------------------------ */
+ static void susfs_put_backing_file(struct file *file)
+ {
+-    if (!file)
+-        return;
+-
+-    fput(file);
++    if (!file)
++        return;
 +
-+int cmd_add_sus_memfd(const char *path){
-+	int ret;
-+    if (g_abi == ABI_v2000) {
-+        struct sus_memfd_v2000 info = {0};
-+        strncpy(info.target_pathname, path, SUSFS_MAX_LEN_PATHNAME - 1);
-+        info.err = ERR_v2000_CMD_NOT_SUPPORTED;
-+        v2000_cmd(CMD_SUSFS_ADD_SUS_MEMFD, &info);
-+        prt_not_supported(CMD_SUSFS_ADD_SUS_MEMFD, info.err);
-+        ret = info.err;
-+    } else {
-+        struct sus_memfd_v1 info = {0};
-+        strncpy(info.target_pathname, path, SUSFS_MAX_LEN_PATHNAME - 1);
-+        ret = prctl_cmd(CMD_SUSFS_ADD_SUS_MEMFD, &info);
-+        prt_not_supported(CMD_SUSFS_ADD_SUS_MEMFD, ret);
-+        return ret;
++    /*
++     * memfd_get_file increments memfd specific references; fput is still
++     * the correct way to drop the struct file reference for both memfd
++     * and non-memfd files.
++     */
++    fput(file);
+ }
+ 
+ struct susfs_file *susfs_file_create(struct file *backing)
+ {
+@@ -40,7 +50,11 @@ struct susfs_file *susfs_file_create(struct file *backing)
+     sf->inode = file_inode(backing);
+     atomic_set(&sf->refcount, 1);
+ 
+-    sf->backing_file = susfs_get_backing_file(backing);
++    /* Acquire proper reference to backing file */
++    sf->backing_file = susfs_get_backing_file(backing);
++    if (!sf->backing_file) {
++        kfree(sf);
++        return ERR_PTR(-ENOMEM);
 +    }
-+    return ret;
-+}
-+
- /* ------------------------------------------------------------------ */
- /* enable_avc_log_spoofing (v1.5.10+)                                  */
- /* ------------------------------------------------------------------ */
-diff --git a/src/help/help.c b/src/help/help.c
-index 588abde..80a673c 100644
---- a/src/help/help.c
-+++ b/src/help/help.c
-@@ -54,6 +54,8 @@ void print_help(void) {
-     printf("    add_open_redirect </target> </redirect>\n");
-     if (HAVE(1512))
-         printf("    add_sus_map </path/to/library>\n");
-+    if (have_susfs_feature("CONFIG_KSU_SUSFS_SUS_MEMFD"))
-+        printf("    add_sus_memfd <memfd_name>\n");
-     if (HAVE(1510))
-         printf("    enable_avc_log_spoofing <0|1>\n");
-     if (HAVE(153))
-@@ -238,6 +240,12 @@ int print_more_help(const char *cmd) {
-         printf("      - Only effective for umounted process with uid >= 10000\n");
-         return 0;
-     }
-+    if (strcmp(cmd, "add_sus_memfd") == 0) {
-+        printf("    add_sus_memfd <memfd_name>\n");
-+        printf("     |--> NOTE: This feature will be effective on all process\n");
-+        printf("     |--> NOTE: Remeber to prepend 'memfd:' to <memfd_name>\n");
-+        printf("     |--> e.g., add_sus_memfd 'memfd:/jit-cache'\n");
-+    }
-     if (strcmp(cmd, "enable_avc_log_spoofing") == 0) {
-         printf("    enable_avc_log_spoofing <0|1>\n");
-         printf("      |--> 0: Disable spoofing the sus 'su' tcontext shown in avc log in kernel\n");
+ 
+     return sf;
+ }
+ 
