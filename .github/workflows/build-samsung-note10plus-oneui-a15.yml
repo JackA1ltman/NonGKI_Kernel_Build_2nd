@@ -168,34 +168,35 @@ jobs:
           def append_after_literal(file_path, marker, text):
               try:
                   with open(file_path, 'r') as f: content = f.read()
-                  if marker in content and "CONFIG_KSU_SUSFS_SUS_MEMFD" not in content[content.find(marker):content.find(marker)+500]:
+                  if marker in content and "CONFIG_KSU_SUSFS_SUS_MEMFD" not in content:
                       content = content.replace(marker, marker + "\n" + text, 1)
                       with open(file_path, 'w') as f: f.write(content)
-                      print(f"[+] Kod eklendi (literal): {file_path}")
+                      print(f"[+] Kod eklendi: {file_path}")
+                  elif "CONFIG_KSU_SUSFS_SUS_MEMFD" in content:
+                      print(f"[*] Zaten guncel: {file_path}")
                   else:
-                      print(f"[*] Zaten guncel veya hedef bulunamadi (literal): {file_path}")
+                      print(f"[!] UYARI: marker bulunamadi -> {file_path} (marker: {marker[:50]!r}...)")
               except Exception as e:
                   print(f"[!] Hata {file_path}: {e}")
 
-          def append_after_regex(file_path, pattern, text, flags=re.S):
-              """Whitespace'e duyarsiz, regex ile marker arar ve hemen sonrasina ekler."""
+          def append_before_last(file_path, marker, text):
+              """Dosyadaki SON gecen marker'in HEMEN ONCESINE ekler (ornegin include guard #endif)."""
               try:
                   with open(file_path, 'r') as f: content = f.read()
                   if "CONFIG_KSU_SUSFS_SUS_MEMFD" in content:
                       print(f"[*] Zaten guncel: {file_path}")
                       return
-                  m = re.search(pattern, content, flags)
-                  if not m:
-                      print(f"[!] UYARI: regex marker bulunamadi -> {file_path} (pattern: {pattern[:60]}...)")
+                  idx = content.rfind(marker)
+                  if idx == -1:
+                      print(f"[!] UYARI: marker bulunamadi -> {file_path} (marker: {marker[:50]!r}...)")
                       return
-                  insert_pos = m.end()
-                  content = content[:insert_pos] + "\n" + text + content[insert_pos:]
+                  content = content[:idx] + text + "\n" + content[idx:]
                   with open(file_path, 'w') as f: f.write(content)
-                  print(f"[+] Kod eklendi (regex): {file_path}")
+                  print(f"[+] Kod eklendi: {file_path}")
               except Exception as e:
                   print(f"[!] Hata {file_path}: {e}")
 
-          # 1. fs/susfs.c  (literal marker genelde stabildir, aynen birak)
+          # 1. fs/susfs.c
           append_after_literal('fs/susfs.c', '#endif // #ifdef CONFIG_KSU_SUSFS_SUS_MAP',
           '''#ifdef CONFIG_KSU_SUSFS_SUS_MEMFD
           static DEFINE_MUTEX(susfs_mutex_lock_sus_memfd);
@@ -269,9 +270,8 @@ jobs:
           \tbuf_ptr = info->enabled_features + copied_size;
           #endif''')
 
-          # 2. include/linux/susfs.h  -> ARTIK REGEX, bosluk farkina duyarsiz
-          append_after_regex('include/linux/susfs.h',
-              r'struct\s+st_susfs_sus_map\s*\{.*?\}\s*;\s*\n\s*\}\s*;\s*\n#endif',
+          # 2. include/linux/susfs.h -> dosyanin KENDI include guard'inin (son #endif) hemen oncesine ekle
+          append_before_last('include/linux/susfs.h', '\n#endif',
           '''
           /* sus_memfd */
           #ifdef CONFIG_KSU_SUSFS_SUS_MEMFD
@@ -284,28 +284,35 @@ jobs:
           \tstruct list_head                        list;
           \tstruct st_susfs_sus_memfd               info;
           };
-          #endif''')
 
-          append_after_regex('include/linux/susfs.h',
-              r'void\s+susfs_add_sus_map\s*\(\s*void\s*__user\s*\*\*\s*user_info\s*\)\s*;\s*\n#endif',
-          '''
-          /* sus_memfd */
-          #ifdef CONFIG_KSU_SUSFS_SUS_MEMFD
           int susfs_add_sus_memfd(void __user **user_info);
           int susfs_sus_memfd(char *memfd_name);
           #endif''')
 
-          # 3. include/linux/susfs_def.h -> ARTIK REGEX, bosluk farkina duyarsiz
-          append_after_regex('include/linux/susfs_def.h',
-              r'#define\s+CMD_SUSFS_ADD_SUS_MAP\s+0x60029',
-              '#define CMD_SUSFS_ADD_SUS_MEMFD             0x60030')
+          # 3. include/linux/susfs_def.h -> dosyanin KENDI include guard'inin (son #endif) hemen oncesine ekle
+          append_before_last('include/linux/susfs_def.h', '\n#endif',
+              '\n#define CMD_SUSFS_ADD_SUS_MEMFD 0x555f1\n')
 
-          # 4. mm/shmem.c -> once include ekle (regex, bosluk farkina duyarsiz)
-          append_after_regex('mm/shmem.c',
-              r'#include\s*<linux/frontswap\.h>',
-              '#ifdef CONFIG_KSU_SUSFS\n#include <linux/susfs.h>\n#endif')
+          # 4. mm/shmem.c -> susfs.h include (frontswap.h yoksa fs.h sonrasina dene)
+          try:
+              with open('mm/shmem.c', 'r') as f: content = f.read()
+              if '#include <linux/susfs.h>' not in content:
+                  inserted = False
+                  for anchor in ['#include <linux/frontswap.h>', '#include <linux/fs.h>', '#include <linux/mm.h>']:
+                      if anchor in content:
+                          content = content.replace(anchor, anchor + '\n#ifdef CONFIG_KSU_SUSFS\n#include <linux/susfs.h>\n#endif', 1)
+                          with open('mm/shmem.c', 'w') as f: f.write(content)
+                          print(f"[+] Kod eklendi: mm/shmem.c (susfs.h include, anchor={anchor})")
+                          inserted = True
+                          break
+                  if not inserted:
+                      print("[!] UYARI: mm/shmem.c icin uygun include ankraji bulunamadi, susfs.h manuel eklenmeli olabilir.")
+              else:
+                  print("[*] Zaten guncel: mm/shmem.c (susfs.h include)")
+          except Exception as e:
+              print(f"[!] Hata mm/shmem.c (include): {e}")
 
-          # 5. mm/shmem.c -> memfd_create kancasi (ayni kalabilir, zaten calisiyordu)
+          # 5. mm/shmem.c -> memfd_create kancasi
           try:
               with open('mm/shmem.c', 'r') as f: content = f.read()
               if 'susfs_sus_memfd' not in content:
@@ -315,7 +322,7 @@ jobs:
               else:
                   print("[*] Zaten guncel: mm/shmem.c (memfd_create kancasi)")
           except Exception as e:
-              print(f"[!] Hata mm/shmem.c: {e}")
+              print(f"[!] Hata mm/shmem.c (kanca): {e}")
           EOF
 
           python3 inject_memfd.py
