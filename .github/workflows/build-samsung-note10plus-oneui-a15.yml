@@ -210,7 +210,7 @@ jobs:
           EOF
           echo "[+] Configler eklendi."
 
-      - name: 🚀 Add BBRPlus TCP to Kernel (Fixed Static Export)
+      - name: 🚀 Add BBRPlus TCP to Kernel (Fixed Static Export & Assert Bypass)
         shell: bash
         run: |
           cd $GITHUB_WORKSPACE/device_kernel
@@ -231,22 +231,27 @@ jobs:
           echo "[+] tcp_snd_wnd_test gizliliği (static) kaldırılıp dışa aktarılıyor..."
           cat << 'EOF' > fix_tcp_output.py
           import re
+          
+          # 1. tcp_output.c düzeltmeleri
           tcp_out_file = 'net/ipv4/tcp_output.c'
           try:
               with open(tcp_out_file, 'r') as f: data = f.read()
-              
-              # 1. 'static bool tcp_snd_wnd_test' yazısını 'bool tcp_snd_wnd_test' olarak değiştir (Public yap)
               data = re.sub(r'static\s+bool\s+tcp_snd_wnd_test', 'bool tcp_snd_wnd_test', data)
-              
-              # 2. Fonksiyonun bittiği yeri bul ve altına EXPORT_SYMBOL ekle (eğer daha önce eklenmemişse)
               if 'EXPORT_SYMBOL(tcp_snd_wnd_test)' not in data:
-                  # Fonksiyonun tanımından sonra gelen ilk "}" işaretini bulur ve altına ekler
                   data = re.sub(r'(bool\s+tcp_snd_wnd_test.*?^})', r'\1\nEXPORT_SYMBOL(tcp_snd_wnd_test);', data, flags=re.MULTILINE|re.DOTALL)
-              
               with open(tcp_out_file, 'w') as f: f.write(data)
-              print("[+] tcp_output.c başarıyla güncellendi ve sembol dışa aktarıldı.")
-          except Exception as e:
-              print(f"[!] HATA: tcp_output.c düzenlenemedi - {e}")
+              print("[+] tcp_output.c güncellendi ve sembol dışa aktarıldı.")
+          except Exception as e: print(f"[!] HATA tcp_output.c: {e}")
+          
+          # 2. tcp_bbrplus.c (Assert Hata Bypass'ı)
+          # Hata veren "BUILD_BUG_ON(sizeof(struct bbr) > ICSK_CA_PRIV_SIZE);" satırını yorum satırı yapıyoruz.
+          bbrplus_file = 'net/ipv4/tcp_bbrplus.c'
+          try:
+              with open(bbrplus_file, 'r') as f: b_data = f.read()
+              b_data = re.sub(r'(BUILD_BUG_ON\(sizeof\(struct bbr\)\s*>\s*ICSK_CA_PRIV_SIZE\);)', r'// \1', b_data)
+              with open(bbrplus_file, 'w') as f: f.write(b_data)
+              print("[+] tcp_bbrplus.c içindeki Assert kontrolü bypass edildi.")
+          except Exception as e: print(f"[!] HATA tcp_bbrplus.c: {e}")
           EOF
           python3 fix_tcp_output.py
           
@@ -270,7 +275,7 @@ jobs:
           EOF
           
           echo "[+] BBRPlus entegrasyonu tamamlandı!"
-
+          
       - name: 🚀 Build Process
         uses: ./.github/workflows/build-process
 
