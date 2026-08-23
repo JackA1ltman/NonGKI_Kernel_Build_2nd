@@ -210,7 +210,7 @@ jobs:
           EOF
           echo "[+] Configler eklendi."
 
-      - name: 🚀 Add BBRPlus TCP to Kernel (Fixed Export)
+      - name: 🚀 Add BBRPlus TCP to Kernel (Fixed Static Export)
         shell: bash
         run: |
           cd $GITHUB_WORKSPACE/device_kernel
@@ -228,14 +228,27 @@ jobs:
           sed -i 's/104 \/ sizeof(u64)/112 \/ sizeof(u64)/g' include/net/inet_connection_sock.h || true
           sed -i 's/13 \* sizeof(u64)/14 \* sizeof(u64)/g' include/net/inet_connection_sock.h || true
           
-          echo "[+] tcp_snd_wnd_test sembol hatası kökten çözülüyor (tcp_output.c eklentisi)..."
-          # tcp_output.c dosyasının en altına fonksiyonu manuel olarak ekleyip EXPORT ediyoruz.
-          echo " " >> net/ipv4/tcp_output.c
-          echo "// BBRPlus Dummy Export Fix" >> net/ipv4/tcp_output.c
-          echo "#ifndef tcp_snd_wnd_test" >> net/ipv4/tcp_output.c
-          echo "bool tcp_snd_wnd_test(struct tcp_sock *tp, struct sk_buff *skb, unsigned int cur_mss);" >> net/ipv4/tcp_output.c
-          echo "EXPORT_SYMBOL(tcp_snd_wnd_test);" >> net/ipv4/tcp_output.c
-          echo "#endif" >> net/ipv4/tcp_output.c
+          echo "[+] tcp_snd_wnd_test gizliliği (static) kaldırılıp dışa aktarılıyor..."
+          cat << 'EOF' > fix_tcp_output.py
+          import re
+          tcp_out_file = 'net/ipv4/tcp_output.c'
+          try:
+              with open(tcp_out_file, 'r') as f: data = f.read()
+              
+              # 1. 'static bool tcp_snd_wnd_test' yazısını 'bool tcp_snd_wnd_test' olarak değiştir (Public yap)
+              data = re.sub(r'static\s+bool\s+tcp_snd_wnd_test', 'bool tcp_snd_wnd_test', data)
+              
+              # 2. Fonksiyonun bittiği yeri bul ve altına EXPORT_SYMBOL ekle (eğer daha önce eklenmemişse)
+              if 'EXPORT_SYMBOL(tcp_snd_wnd_test)' not in data:
+                  # Fonksiyonun tanımından sonra gelen ilk "}" işaretini bulur ve altına ekler
+                  data = re.sub(r'(bool\s+tcp_snd_wnd_test.*?^})', r'\1\nEXPORT_SYMBOL(tcp_snd_wnd_test);', data, flags=re.MULTILINE|re.DOTALL)
+              
+              with open(tcp_out_file, 'w') as f: f.write(data)
+              print("[+] tcp_output.c başarıyla güncellendi ve sembol dışa aktarıldı.")
+          except Exception as e:
+              print(f"[!] HATA: tcp_output.c düzenlenemedi - {e}")
+          EOF
+          python3 fix_tcp_output.py
           
           echo "[+] Makefile güncelleniyor..."
           sed -i 's/obj-$(CONFIG_TCP_CONG_BBR) += tcp_bbr.o/obj-$(CONFIG_TCP_CONG_BBR) += tcp_bbr.o\nobj-$(CONFIG_TCP_CONG_BBRPLUS) += tcp_bbrplus.o/g' net/ipv4/Makefile || true
@@ -257,28 +270,6 @@ jobs:
           EOF
           
           echo "[+] BBRPlus entegrasyonu tamamlandı!"
-
-      - name: ⚙️ Apply BBRPlus Config Tweaks (Disable Security & Debug)
-        shell: bash
-        run: |
-          cd $GITHUB_WORKSPACE/device_kernel
-          
-          echo "[+] Kısıtlamalar ve gereksiz loglar kaldırılıyor..."
-          
-          # Hedef defconfig dosyamız
-          DEFCONFIG_FILE="arch/arm64/configs/exynos9820_defconfig"
-          
-          # Çekirdeğin kendi config düzenleme aracına yetki veriyoruz
-          chmod +x scripts/config
-          
-          # BBRPlus'ın istediği kilitleri kapatıyoruz
-          ./scripts/config --file $DEFCONFIG_FILE --disable SECURITY_LOCKDOWN_LSM
-          ./scripts/config --file $DEFCONFIG_FILE --disable DEBUG_INFO
-          ./scripts/config --file $DEFCONFIG_FILE --disable MODULE_SIG
-          
-          echo "[+] Güvenlik kilitleri ve hata ayıklayıcılar başarıyla kapatıldı!"
-          
-          echo "[+] BBRPlus entegrasyonu tamamen bitti!"
 
       - name: 🚀 Build Process
         uses: ./.github/workflows/build-process
