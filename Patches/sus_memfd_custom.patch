@@ -1,0 +1,160 @@
+diff --git a/fs/susfs.c b/fs/susfs.c
+index XXXXXXX..XXXXXXX 100644
+--- a/fs/susfs.c
++++ b/fs/susfs.c
+@@ -1167,6 +1167,52 @@ void susfs_add_sus_map(void __user **user_info) {
+ }
+ #endif // #ifdef CONFIG_KSU_SUSFS_SUS_MAP
+ 
++#ifdef CONFIG_KSU_SUSFS_SUS_MEMFD
++static DEFINE_MUTEX(susfs_mutex_lock_sus_memfd);
++static LIST_HEAD(LH_SUS_MEMFD);
++
++int susfs_add_sus_memfd(void __user **user_info) {
++	struct st_susfs_sus_memfd_list *cursor;
++	struct st_susfs_sus_memfd_list *new_list = NULL;
++	struct st_susfs_sus_memfd info = {0};
++
++	if (copy_from_user(&info, (struct st_susfs_sus_memfd __user*)*user_info, sizeof(info))) {
++		SUSFS_LOGE("failed copying from userspace\n");
++		info.err = -EFAULT;
++		goto out_copy_to_user;
++	}
++
++	mutex_lock(&susfs_mutex_lock_sus_memfd);
++	list_for_each_entry(cursor, &LH_SUS_MEMFD, list) {
++		if (unlikely(!strcmp(info.target_pathname, cursor->info.target_pathname))) {
++			SUSFS_LOGE("target_pathname: '%s' is already created in LH_SUS_MEMFD\n", info.target_pathname);
++			mutex_unlock(&susfs_mutex_lock_sus_memfd);
++			info.err = -EEXIST;
++			goto out_copy_to_user;
++		}
++	}
++	mutex_unlock(&susfs_mutex_lock_sus_memfd);
++
++	new_list = kzalloc(sizeof(struct st_susfs_sus_memfd_list), GFP_KERNEL);
++	if (!new_list) {
++		info.err = -ENOMEM;
++		goto out_copy_to_user;
++	}
++
++	memcpy(&new_list->info, &info, sizeof(info));
++
++	INIT_LIST_HEAD(&new_list->list);
++	mutex_lock(&susfs_mutex_lock_sus_memfd);
++	list_add_tail(&new_list->list, &LH_SUS_MEMFD);
++	mutex_unlock(&susfs_mutex_lock_sus_memfd);
++	SUSFS_LOGI("target_pathname: '%s', is successfully added to LH_SUS_MEMFD\n", new_list->info.target_pathname);
++	info.err = 0;
++out_copy_to_user:
++	if (copy_to_user(&((struct st_susfs_sus_memfd __user*)*user_info)->err, &info.err, sizeof(info.err))) {
++		info.err = -EFAULT;
++	}
++	SUSFS_LOGI("CMD_SUSFS_ADD_SUS_MEMFD -> ret: %d\n", info.err);
++	return info.err;
++}
++
++int susfs_sus_memfd(char *memfd_name) {
++	struct st_susfs_sus_memfd_list *cursor;
++	int res = 0;
++
++	mutex_lock(&susfs_mutex_lock_sus_memfd);
++	list_for_each_entry(cursor, &LH_SUS_MEMFD, list) {
++		if (unlikely(!strcmp(memfd_name, cursor->info.target_pathname))) {
++			SUSFS_LOGI("memfd_name: '%s' is found in LH_SUS_MEMFD, blocking memfd_create\n", memfd_name);
++			res = 1;
++			break;
++		}
++	}
++	mutex_unlock(&susfs_mutex_lock_sus_memfd);
++	return res;
++}
++#endif // #ifdef CONFIG_KSU_SUSFS_SUS_MEMFD
++
+ int susfs_init(void)
+ {
+ 	int err = 0;
+@@ -1500,6 +1546,12 @@ static int susfs_get_enabled_features(void __user **user_info) {
+ 	buf_ptr = info->enabled_features + copied_size;
+ #endif
+ 
++#ifdef CONFIG_KSU_SUSFS_SUS_MEMFD
++	info->err = copy_config_to_buf("CONFIG_KSU_SUSFS_SUS_MEMFD\n", buf_ptr, &copied_size, SUSFS_ENABLED_FEATURES_SIZE);
++	if (info->err) goto out_copy_to_user;
++	buf_ptr = info->enabled_features + copied_size;
++#endif
++
+ 	info->err = 0;
+ out_copy_to_user:
+diff --git a/include/linux/susfs.h b/include/linux/susfs.h
+index XXXXXXX..XXXXXXX 100644
+--- a/include/linux/susfs.h
++++ b/include/linux/susfs.h
+@@ -131,6 +131,16 @@ struct st_susfs_sus_map_list {
+ };
+ #endif
+ 
++/* sus_memfd */
++#ifdef CONFIG_KSU_SUSFS_SUS_MEMFD
++struct st_susfs_sus_memfd {
++	char                    target_pathname[SUSFS_MAX_LEN_PATHNAME];
++	int                     err;
++};
++
++struct st_susfs_sus_memfd_list {
++	struct list_head                        list;
++	struct st_susfs_sus_memfd               info;
++};
++#endif
++
+ extern int susfs_init(void);
+@@ -189,6 +199,11 @@ int susfs_sus_map(struct path *path, struct path *out_path);
+ void susfs_add_sus_map(void __user **user_info);
+ #endif
+ 
++/* sus_memfd */
++#ifdef CONFIG_KSU_SUSFS_SUS_MEMFD
++int susfs_add_sus_memfd(void __user **user_info);
++int susfs_sus_memfd(char *memfd_name);
++#endif
++
+ #endif // #ifndef _LINUX_SUSFS_H
+diff --git a/include/linux/susfs_def.h b/include/linux/susfs_def.h
+index XXXXXXX..XXXXXXX 100644
+--- a/include/linux/susfs_def.h
++++ b/include/linux/susfs_def.h
+@@ -27,5 +27,6 @@
+ #define CMD_SUSFS_ADD_SUS_SU                0x60027
+ #define CMD_SUSFS_ENABLE_LOG                0x60028
+ #define CMD_SUSFS_ADD_SUS_MAP               0x60029
++#define CMD_SUSFS_ADD_SUS_MEMFD             0x60030
+ 
+ #endif // #ifndef __SUSFS_DEF_H__
+diff --git a/mm/shmem.c b/mm/shmem.c
+index XXXXXXX..XXXXXXX 100644
+--- a/mm/shmem.c
++++ b/mm/shmem.c
+@@ -34,6 +34,9 @@
+ #include <linux/vfs.h>
+ #include <linux/hugetlb.h>
+ #include <linux/frontswap.h>
++#ifdef CONFIG_KSU_SUSFS
++#include <linux/susfs.h>
++#endif
+ 
+ #include <asm/tlbflush.h>
+ 
+@@ -3912,6 +3915,13 @@ SYSCALL_DEFINE2(memfd_create,
+ 		goto err_name;
+ 	}
+ 
++#ifdef CONFIG_KSU_SUSFS_SUS_MEMFD
++	if (susfs_sus_memfd(name)) {
++		error = -EFAULT;
++		goto err_name;
++	}
++#endif
++
+ 	file = shmem_file_setup(name, 0,
+ 				(flags & MFD_HUGETLB) ?
+ 				VM_NORESERVE : 0);
