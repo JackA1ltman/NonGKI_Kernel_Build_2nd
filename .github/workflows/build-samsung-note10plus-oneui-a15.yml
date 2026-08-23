@@ -130,36 +130,6 @@ jobs:
 
       - name: 🔗 Patch for no-kprobe
         uses: ./.github/workflows/patch-no-kprobe
-
-      - name: 🧠 Setup Low Memory Killer (LMK)
-        shell: bash
-        run: |
-          cd $GITHUB_WORKSPACE/device_kernel
-          
-          # Hangi LMK'yi kullanmak istiyorsan onu CHOSEN_LMK değişkenine yaz
-          # Seçenekler: "sultan", "sony", "legacy"
-          CHOSEN_LMK="sultan"
-          
-          echo "[+] LMK Yapılandırması Başlıyor..."
-          
-          if [ "$CHOSEN_LMK" == "sultan" ]; then
-              echo "[+] Simple LMK (SultanXDA) kullanılıyor (Varsayılan yapı)."
-              # Zaten kodda varsa ekstra işleme gerek yok
-              
-          elif [ "$CHOSEN_LMK" == "sony" ]; then
-              echo "[+] Sony TNG LMK yaması indiriliyor..."
-              # UYARI: Bu yama Exynos 4.14'te Hunk FAILED verebilir, hata verirse || true ile atlar
-              curl -sL https://github.com/sidex15/android_kernel_lge_sm8150/commit/5cf1cda9776ffe756d74b96fe49084c8220398ef.patch | patch -p1 --ignore-whitespace || echo "[!] Sony yaması uyumsuz, atlandı."
-              
-          elif [ "$CHOSEN_LMK" == "legacy" ]; then
-              echo "[+] Legacy Android LMK'ye dönülüyor..."
-              # Commit numarasını bulursa geri alır, bulamazsa hata vermeden devam eder
-              git revert 8d8b8759d0fa38d21519614ce6869bec5b1f2f6e --no-edit || echo "[!] Revert edilecek commit bulunamadı."
-              
-          else
-              echo "[!] Geçersiz LMK seçimi."
-          fi
-      
           
       - name: 🧩 Patch Kernel of NoMount (dev branch, setup.sh)
         if: env.NOMOUNT_ENABLE == 'true'
