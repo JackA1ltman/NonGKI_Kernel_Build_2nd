@@ -68,7 +68,7 @@ env:
 
   HOOK_METHOD: "syscall" # Manual hook method ->  syscall.
 
-  KERNEL_PATCH: "false" # If your kernel version is <= 4.9, you have the option of enabling the patch to patch the kernel_write and kernel_read functions.
+  KERNEL_PATCH: "true" # If your kernel version is <= 4.9, you have the option of enabling the patch to patch the kernel_write and kernel_read functions.
 
   KPM_ENABLE: "true" # Anyone devices.
   KPM_INLINE: "false" # Only use it for SukiSU-Ultra.
@@ -114,6 +114,31 @@ jobs:
 
       - name: 🔗 Patch for no-kprobe
         uses: ./.github/workflows/patch-no-kprobe
+
+      - name: 🩹 Apply backport patches
+        if: env.KERNEL_PATCH == 'true'
+        shell: bash
+        run: |
+          echo "GITHUB_WORKSPACE şu an neresi: $GITHUB_WORKSPACE"
+          
+          # HATA ALDIĞIMIZ KISIM BURASIYDI. ARTIK YEDEKTEN ÇALIŞTIRIYORUZ:
+          
+          # Eğer dosya yedekte de yoksa işlemi durdur (böyle bir şey olmamalı)
+          if [ ! -f "/tmp/Patches_Backup/backport_patches.sh" ]; then
+            echo "HATA: backport_patches.sh yedek klasöründe (/tmp) bile bulunamadı!"
+            exit 1
+          fi
+
+          # 1. Dosyadaki olası Windows (CRLF) satır sonlarını Linux (LF) formatına çeviriyoruz:
+          sed -i 's/\r$//' /tmp/Patches_Backup/backport_patches.sh
+          
+          cd $GITHUB_WORKSPACE/device_kernel
+          echo "[+] Backport script uygulanıyor..."
+          
+          # SCRIPTİ YEDEK KLASÖRÜNDEN ÇALIŞTIR:
+          bash "/tmp/Patches_Backup/backport_patches.sh"
+          
+          echo "[+] Backport script tamamlandı."
 
       - name: 🧩 Patch Kernel of NoMount (dev branch)
         if: env.NOMOUNT_ENABLE == 'true'
