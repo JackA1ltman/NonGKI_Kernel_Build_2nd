@@ -131,35 +131,38 @@ jobs:
       - name: 🔗 Patch for no-kprobe
         uses: ./.github/workflows/patch-no-kprobe
 
-      - name: 🩹 Apply Custom SUSFS Memfd Patch
+      - name: 🩹 Apply Custom SUSFS Memfd Patch (robust)
         shell: bash
         run: |
           set -euo pipefail
 
-          cd "$GITHUB_WORKSPACE/device_kernel"
+          # repo köküne gidin (device_kernel değilse repo root kullanın)
+          cd "$GITHUB_WORKSPACE/device_kernel" || cd "$GITHUB_WORKSPACE"
 
-          PATCH="/tmp/Patches_Backup/sus_memfd_custom.patch"
+          PATCH_SRC="/tmp/Patches_Backup/sus_memfd_custom.patch"
+          PATCH_LOCAL="sus_memfd_custom.patch"
 
-          if [ ! -f "$PATCH" ]; then
-            echo "ERROR: Patch file not found: $PATCH"
+          if [ ! -f "$PATCH_SRC" ]; then
+            echo "ERROR: Patch file not found: $PATCH_SRC"
             exit 1
           fi
 
-          echo "[+] Patch bulundu: $PATCH"
-          cp "$PATCH" ./
-          PATCH_BASENAME="$(basename "$PATCH")"
+          # Git kimliğini repo-local olarak ayarla (git am için gerekli)
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          # 1) Önce git apply ile kontrol et (diff formatı ise index'e uygula)
-          if git apply --index --check "$PATCH_BASENAME" 2>/dev/null; then
+          cp "$PATCH_SRC" "./$PATCH_LOCAL"
+
+          # 1) Önce git apply check
+          if git apply --index --check "$PATCH_LOCAL" 2>/dev/null; then
             echo "[+] Patch unified diff gibi görünüyor, git apply ile uygulanıyor..."
-            git apply --index --whitespace=fix "$PATCH_BASENAME"
+            git apply --index --whitespace=fix "$PATCH_LOCAL"
             echo "[+] git apply ile uygulandı."
             exit 0
           fi
 
-          # 2) Eğer git apply check başarısızsa, patch commit meta verisi içeriyor olabilir.
-          #    git am ile dene (commit metadata korunur). actions/checkout fetch-depth: 0 önerilir.
-          if git am --3way < "$PATCH_BASENAME"; then
+          # 2) git am ile dene (commit metadata korunur)
+          if git am --3way < "$PATCH_LOCAL"; then
             echo "[+] git am ile commit metadata korunarak uygulandı."
             exit 0
           else
@@ -167,17 +170,21 @@ jobs:
             git am --abort 2>/dev/null || true
           fi
 
-          # 3) Son çare: patch -p1. strip seviyesi repo yapınıza göre değişebilir.
+          # 3) Son çare: patch -p1 (önce dry-run)
           echo "[+] Son çare: patch -p1 ile uygulamayı deniyorum..."
-          # Önce dry-run ile kontrol et
-          if patch --dry-run -p1 < "$PATCH_BASENAME"; then
-            patch -p1 < "$PATCH_BASENAME"
+          if patch --dry-run -p1 < "$PATCH_LOCAL"; then
+            patch -p1 < "$PATCH_LOCAL"
             echo "[+] patch -p1 ile uygulandı."
             exit 0
-          else
-            echo "ERROR: Patch uygulanamadı. strip seviyesi veya patch formatını kontrol edin."
-            exit 1
           fi
+
+          # 4) Eğer hala uygulanmadıysa, olası nedenleri bildir
+          echo "ERROR: Patch uygulanamadı. Olası nedenler:"
+          echo "- Patch mbox formatında ve git am için kimlik ayarı eksikti."
+          echo "- patch -pN için yanlış strip seviyesi. Deneyin: -p0, -p1, -p2."
+          echo "- Hedef dosya repo içinde yok veya farklı bir yol kullanılıyor."
+          echo "Logları kontrol edin ve gerekirse patch'i manuel olarak inceleyin."
+          exit 1
 
       - name: 🩹 Apply backport patches
         if: env.KERNEL_PATCH == 'true'
