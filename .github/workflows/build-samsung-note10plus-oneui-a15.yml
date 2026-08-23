@@ -110,13 +110,6 @@ jobs:
           cp -r $GITHUB_WORKSPACE/Patches /tmp/Patches_Backup
           echo "[+] Yedekleme tamam. /tmp/Patches_Backup içeriği:"
           ls -la /tmp/Patches_Backup
-        
-      - name: 🔍 List Patches directory
-        shell: bash
-        run: |
-          ls -la $GITHUB_WORKSPACE/Patches/
-          echo "---"
-          find $GITHUB_WORKSPACE/Patches -maxdepth 2 -type f
 
       - name: ⌛️ Compilation environment preparation
         uses: ./.github/workflows/build-env
@@ -235,18 +228,6 @@ jobs:
 
           EOF
           echo "[+] Configler eklendi."
-
-      - name: 🩹 Apply automatic dtb/dtbo generation patch
-        shell: bash
-        run: |
-          cd $GITHUB_WORKSPACE/device_kernel
-
-          echo "[+] add_automatic_dtbo_generation.patch uygulanıyor..."
-          # BURASI YEDEKTEN KOPYALANIYOR
-          cp "/tmp/Patches_Backup/Patch/add_automatic_dtbo_generation.patch" ./
-          patch -p1 < add_automatic_dtbo_generation.patch || true
-
-          echo "[+] Yama uygulandı."
 
       - name: 🚀 Build Process
         uses: ./.github/workflows/build-process
