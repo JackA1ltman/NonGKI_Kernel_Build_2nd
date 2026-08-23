@@ -103,14 +103,6 @@ jobs:
       - name: ⏰ Checkout repository
         uses: actions/checkout@v6
 
-      - name: 🛡️ Backup Patches Directory
-        shell: bash
-        run: |
-          echo "[+] Patches klasörü güvenli bölgeye (/tmp/Patches_Backup) kopyalanıyor..."
-          cp -r $GITHUB_WORKSPACE/Patches /tmp/Patches_Backup
-          echo "[+] Yedekleme tamam. /tmp/Patches_Backup içeriği:"
-          ls -la /tmp/Patches_Backup
-
       - name: ⌛️ Compilation environment preparation
         uses: ./.github/workflows/build-env
 
@@ -122,18 +114,6 @@ jobs:
 
       - name: 🔗 Patch for no-kprobe
         uses: ./.github/workflows/patch-no-kprobe
-
-      - name: 🩹 Remove module version check
-        shell: bash
-        run: |
-          cd $GITHUB_WORKSPACE/device_kernel
-
-          echo "[+] remove_modversion_check.patch uygulanıyor..."
-          # BURASI DA YEDEKTEN KOPYALANIYOR
-          cp "/tmp/Patches_Backup/Patch/remove_modversion_check.patch" ./
-          patch -p1 < remove_modversion_check.patch || true
-
-          echo "[+] Modül sürüm kontrolü yaması uygulandı."
 
       - name: 🧩 Patch Kernel of NoMount (dev branch)
         if: env.NOMOUNT_ENABLE == 'true'
