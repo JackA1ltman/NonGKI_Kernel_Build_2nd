@@ -156,177 +156,28 @@ jobs:
           
           echo "[+] Backport script tamamlandı."
 
-      - name: 🩹 Apply Custom SUSFS Memfd (Python Injection)
+      - name: 🩹 Apply Custom SUSFS Memfd Patch (preserve commit metadata)
         shell: bash
         run: |
-          cd $GITHUB_WORKSPACE/device_kernel
+          set -euo pipefail
 
-          echo "[+] Yama betiği (Python) oluşturuluyor..."
-          cat << 'EOF' > inject_memfd.py
-          import os, re
+          cd "$GITHUB_WORKSPACE/device_kernel"
 
-          def append_after_literal(file_path, marker, text):
-              try:
-                  with open(file_path, 'r') as f: content = f.read()
-                  if marker in content and "CONFIG_KSU_SUSFS_SUS_MEMFD" not in content:
-                      content = content.replace(marker, marker + "\n" + text, 1)
-                      with open(file_path, 'w') as f: f.write(content)
-                      print(f"[+] Kod eklendi: {file_path}")
-                  elif "CONFIG_KSU_SUSFS_SUS_MEMFD" in content:
-                      print(f"[*] Zaten guncel: {file_path}")
-                  else:
-                      print(f"[!] UYARI: marker bulunamadi -> {file_path} (marker: {marker[:50]!r}...)")
-              except Exception as e:
-                  print(f"[!] Hata {file_path}: {e}")
+          PATCH="/tmp/Patches_Backup/sus_memfd_custom.patch"
 
-          def append_before_last(file_path, marker, text):
-              """Dosyadaki SON gecen marker'in HEMEN ONCESINE ekler (ornegin include guard #endif)."""
-              try:
-                  with open(file_path, 'r') as f: content = f.read()
-                  if "CONFIG_KSU_SUSFS_SUS_MEMFD" in content:
-                      print(f"[*] Zaten guncel: {file_path}")
-                      return
-                  idx = content.rfind(marker)
-                  if idx == -1:
-                      print(f"[!] UYARI: marker bulunamadi -> {file_path} (marker: {marker[:50]!r}...)")
-                      return
-                  content = content[:idx] + text + "\n" + content[idx:]
-                  with open(file_path, 'w') as f: f.write(content)
-                  print(f"[+] Kod eklendi: {file_path}")
-              except Exception as e:
-                  print(f"[!] Hata {file_path}: {e}")
+          if [ ! -f "$PATCH" ]; then
+            echo "ERROR: Patch file not found: $PATCH"
+            exit 1
+          fi
 
-          # 1. fs/susfs.c
-          append_after_literal('fs/susfs.c', '#endif // #ifdef CONFIG_KSU_SUSFS_SUS_MAP',
-          '''#ifdef CONFIG_KSU_SUSFS_SUS_MEMFD
-          static DEFINE_MUTEX(susfs_mutex_lock_sus_memfd);
-          static LIST_HEAD(LH_SUS_MEMFD);
+          echo "[+] Applying patch with git am (preserves commit metadata)..."
+          # Ensure git user is set for git am to work
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          int susfs_add_sus_memfd(void __user **user_info) {
-          \tstruct st_susfs_sus_memfd_list *cursor;
-          \tstruct st_susfs_sus_memfd_list *new_list = NULL;
-          \tstruct st_susfs_sus_memfd info = {0};
-
-          \tif (copy_from_user(&info, (struct st_susfs_sus_memfd __user*)*user_info, sizeof(info))) {
-          \t\tSUSFS_LOGE("failed copying from userspace\\n");
-          \t\tinfo.err = -EFAULT;
-          \t\tgoto out_copy_to_user;
-          \t}
-
-          \tmutex_lock(&susfs_mutex_lock_sus_memfd);
-          \tlist_for_each_entry(cursor, &LH_SUS_MEMFD, list) {
-          \t\tif (unlikely(!strcmp(info.target_pathname, cursor->info.target_pathname))) {
-          \t\t\tSUSFS_LOGE("target_pathname: '%s' is already created in LH_SUS_MEMFD\\n", info.target_pathname);
-          \t\t\tmutex_unlock(&susfs_mutex_lock_sus_memfd);
-          \t\t\tinfo.err = -EEXIST;
-          \t\t\tgoto out_copy_to_user;
-          \t\t}
-          \t}
-          \tmutex_unlock(&susfs_mutex_lock_sus_memfd);
-
-          \tnew_list = kzalloc(sizeof(struct st_susfs_sus_memfd_list), GFP_KERNEL);
-          \tif (!new_list) {
-          \t\tinfo.err = -ENOMEM;
-          \t\tgoto out_copy_to_user;
-          \t}
-
-          \tmemcpy(&new_list->info, &info, sizeof(info));
-
-          \tINIT_LIST_HEAD(&new_list->list);
-          \tmutex_lock(&susfs_mutex_lock_sus_memfd);
-          \tlist_add_tail(&new_list->list, &LH_SUS_MEMFD);
-          \tmutex_unlock(&susfs_mutex_lock_sus_memfd);
-          \tSUSFS_LOGI("target_pathname: '%s', is successfully added to LH_SUS_MEMFD\\n", new_list->info.target_pathname);
-          \tinfo.err = 0;
-          out_copy_to_user:
-          \tif (copy_to_user(&((struct st_susfs_sus_memfd __user*)*user_info)->err, &info.err, sizeof(info.err))) {
-          \t\tinfo.err = -EFAULT;
-          \t}
-          \tSUSFS_LOGI("CMD_SUSFS_ADD_SUS_MEMFD -> ret: %d\\n", info.err);
-          \treturn info.err;
-          }
-
-          int susfs_sus_memfd(char *memfd_name) {
-          \tstruct st_susfs_sus_memfd_list *cursor;
-          \tint res = 0;
-
-          \tmutex_lock(&susfs_mutex_lock_sus_memfd);
-          \tlist_for_each_entry(cursor, &LH_SUS_MEMFD, list) {
-          \t\tif (unlikely(!strcmp(memfd_name, cursor->info.target_pathname))) {
-          \t\t\tSUSFS_LOGI("memfd_name: '%s' is found in LH_SUS_MEMFD, blocking memfd_create\\n", memfd_name);
-          \t\t\tres = 1;
-          \t\t\tbreak;
-          \t\t}
-          \t}
-          \tmutex_unlock(&susfs_mutex_lock_sus_memfd);
-          \treturn res;
-          }
-          #endif // #ifdef CONFIG_KSU_SUSFS_SUS_MEMFD''')
-
-          append_after_literal('fs/susfs.c', 'buf_ptr = info->enabled_features + copied_size;\n#endif',
-          '''#ifdef CONFIG_KSU_SUSFS_SUS_MEMFD
-          \tinfo->err = copy_config_to_buf("CONFIG_KSU_SUSFS_SUS_MEMFD\\n", buf_ptr, &copied_size, SUSFS_ENABLED_FEATURES_SIZE);
-          \tif (info->err) goto out_copy_to_user;
-          \tbuf_ptr = info->enabled_features + copied_size;
-          #endif''')
-
-          # 2. include/linux/susfs.h -> dosyanin KENDI include guard'inin (son #endif) hemen oncesine ekle
-          append_before_last('include/linux/susfs.h', '\n#endif',
-          '''
-          /* sus_memfd */
-          #ifdef CONFIG_KSU_SUSFS_SUS_MEMFD
-          struct st_susfs_sus_memfd {
-          \tchar                    target_pathname[SUSFS_MAX_LEN_PATHNAME];
-          \tint                     err;
-          };
-
-          struct st_susfs_sus_memfd_list {
-          \tstruct list_head                        list;
-          \tstruct st_susfs_sus_memfd               info;
-          };
-
-          int susfs_add_sus_memfd(void __user **user_info);
-          int susfs_sus_memfd(char *memfd_name);
-          #endif''')
-
-          # 3. include/linux/susfs_def.h -> dosyanin KENDI include guard'inin (son #endif) hemen oncesine ekle
-          append_before_last('include/linux/susfs_def.h', '\n#endif',
-              '\n#define CMD_SUSFS_ADD_SUS_MEMFD 0x555f1\n')
-
-          # 4. mm/shmem.c -> susfs.h include (frontswap.h yoksa fs.h sonrasina dene)
-          try:
-              with open('mm/shmem.c', 'r') as f: content = f.read()
-              if '#include <linux/susfs.h>' not in content:
-                  inserted = False
-                  for anchor in ['#include <linux/frontswap.h>', '#include <linux/fs.h>', '#include <linux/mm.h>']:
-                      if anchor in content:
-                          content = content.replace(anchor, anchor + '\n#ifdef CONFIG_KSU_SUSFS\n#include <linux/susfs.h>\n#endif', 1)
-                          with open('mm/shmem.c', 'w') as f: f.write(content)
-                          print(f"[+] Kod eklendi: mm/shmem.c (susfs.h include, anchor={anchor})")
-                          inserted = True
-                          break
-                  if not inserted:
-                      print("[!] UYARI: mm/shmem.c icin uygun include ankraji bulunamadi, susfs.h manuel eklenmeli olabilir.")
-              else:
-                  print("[*] Zaten guncel: mm/shmem.c (susfs.h include)")
-          except Exception as e:
-              print(f"[!] Hata mm/shmem.c (include): {e}")
-
-          # 5. mm/shmem.c -> memfd_create kancasi
-          try:
-              with open('mm/shmem.c', 'r') as f: content = f.read()
-              if 'susfs_sus_memfd' not in content:
-                  content = re.sub(r'(goto err_name;\n\s*\})', r'\1\n\n#ifdef CONFIG_KSU_SUSFS_SUS_MEMFD\n\tif (susfs_sus_memfd(name)) {\n\t\terror = -EFAULT;\n\t\tgoto err_name;\n\t}\n#endif\n', content)
-                  with open('mm/shmem.c', 'w') as f: f.write(content)
-                  print("[+] Eklendi: mm/shmem.c (memfd_create kancasi)")
-              else:
-                  print("[*] Zaten guncel: mm/shmem.c (memfd_create kancasi)")
-          except Exception as e:
-              print(f"[!] Hata mm/shmem.c (kanca): {e}")
-          EOF
-
-          python3 inject_memfd.py
-          echo "[+] Ozel yama islemi (Python Enjeksiyonu) tamamlandi."
+          # Apply the patch; fail the job if it doesn't apply cleanly
+          git am --3way < "$PATCH"
+          echo "[+] Patch applied successfully."
           
       - name: 🧩 Patch Kernel of NoMount (dev branch, setup.sh)
         if: env.NOMOUNT_ENABLE == 'true'
