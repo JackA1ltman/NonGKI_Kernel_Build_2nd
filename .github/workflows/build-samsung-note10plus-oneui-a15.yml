@@ -147,6 +147,21 @@ jobs:
           bash "/tmp/Patches_Backup/backport_patches.sh"
           
           echo "[+] Backport script tamamlandı."
+
+      - name: 🩹 Apply set_memory_to_49_and_low patch
+        shell: bash
+        run: |
+          cd $GITHUB_WORKSPACE/device_kernel
+
+          echo "[+] set_memory_to_49_and_low.patch uygulanıyor..."
+          
+          # Yamayı güvenli yedek klasöründen çalışma alanına kopyala
+          cp "/tmp/Patches_Backup/Patch/set_memory_to_49_and_low.patch" ./
+          
+          # Yamayı uygula (olası bir reddedilme durumunda işlemi durdurmaması için || true ekliyoruz)
+          patch -p1 < set_memory_to_49_and_low.patch || true
+
+          echo "[+] set_memory yaması uygulandı."
           
           
       - name: 🩹 Remove module version check
