@@ -205,13 +205,6 @@ jobs:
           EOF
           echo "[+] Configler eklendi."
 
-      - name: 🧹 Clean kernel
-        shell: bash
-        run: |
-          cd $GITHUB_WORKSPACE/device_kernel
-          make clean
-          make mrproper
-
       - name: 🚀 Build Process
         uses: ./.github/workflows/build-process
 
