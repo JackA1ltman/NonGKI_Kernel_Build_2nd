@@ -131,22 +131,121 @@ jobs:
       - name: 🔗 Patch for no-kprobe
         uses: ./.github/workflows/patch-no-kprobe
       
-      - name: 🩹 Apply Custom SUSFS Memfd Patch
+      - name: 🩹 Apply Custom SUSFS Memfd Patch (auto with sidex15 identity)
         shell: bash
         run: |
-          cd $GITHUB_WORKSPACE/device_kernel
-          
-          echo "[+] Özel SUSFS Memfd yaması kopyalanıyor..."
-          cp "/tmp/Patches_Backup/sus_memfd_custom.patch" ./
-          
-          echo "[+] Yama formatı onarılıyor (Satır sonu ve boşluk düzeltmeleri)..."
-          sudo apt-get install -y dos2unix
-          dos2unix sus_memfd_custom.patch
-          
-          echo "-> Applying sus_memfd_custom.patch..."
-          patch -p1 --ignore-whitespace < sus_memfd_custom.patch || true
-          
-          echo "[+] Özel yama işlemi tamamlandı."
+          set -euo pipefail
+
+          cd "$GITHUB_WORKSPACE/device_kernel" || { echo "device_kernel dizini yok"; exit 1; }
+
+          PATCH_SRC="/tmp/Patches_Backup/sus_memfd_custom.patch"
+          PATCH_LOCAL="sus_memfd_custom.patch"
+
+          if [ ! -f "$PATCH_SRC" ]; then
+            echo "ERROR: Patch file not found: $PATCH_SRC"
+            exit 1
+          fi
+
+          echo "[+] Kopyalanıyor..."
+          cp "$PATCH_SRC" "./$PATCH_LOCAL"
+
+          echo "[+] Satır sonu/format düzeltmesi..."
+          if ! command -v dos2unix >/dev/null 2>&1; then
+            sudo apt-get update -y
+            sudo apt-get install -y dos2unix
+          fi
+          dos2unix "$PATCH_LOCAL" || true
+
+          # 1) Önce git am ile dene (orijinal commit metadata korunur)
+          echo "[+] git am denenecek (sidex15 kimliğiyle)..."
+          if git -c user.name="sidex15" -c user.email="24408329+sidex15@users.noreply.github.com" am --3way < "$PATCH_LOCAL"; then
+            echo "[+] git am başarılı."
+            exit 0
+          else
+            echo "[!] git am başarısız veya patch mbox formatında değil."
+            git am --abort 2>/dev/null || true
+          fi
+
+          # 2) mbox başlıklarını temizle, sadece unified diff çıkar
+          echo "[+] Mbox başlıklarını temizleyip sadece unified diff çıkarılıyor..."
+          awk '/^--- a\//{p=1} p{print}' "$PATCH_LOCAL" > /tmp/onlydiff.patch || true
+
+          if [ ! -s /tmp/onlydiff.patch ]; then
+            echo "ERROR: Unified diff kısmı çıkarılamadı. Patch bozuk olabilir."
+            exit 1
+          fi
+
+          # 3) git apply ile dene
+          echo "[+] git apply --index ile kontrol ediliyor..."
+          if git apply --index --check /tmp/onlydiff.patch 2>/tmp/gitapply-check.log; then
+            git apply --index --whitespace=fix /tmp/onlydiff.patch
+            echo "[+] git apply ile uygulandı."
+            exit 0
+          else
+            echo "[!] git apply check başarısız. /tmp/gitapply-check.log'a bakın."
+          fi
+
+          # 4) Eğer git apply başarısızsa patch -p seviyelerini dry-run ile dene
+          echo "[+] patch -pN dry-run denemeleri..."
+          for p in 0 1 2 3; do
+            if patch --dry-run -p$p < /tmp/onlydiff.patch 2>/tmp/patch-dryrun.log; then
+              patch -p$p < /tmp/onlydiff.patch
+              echo "[+] patch -p$p ile uygulandı."
+              exit 0
+            else
+              echo "  - patch -p$p başarısız."
+            fi
+          done
+
+          # 5) Hedef dosyalar uyuşmuyorsa: otomatik yol eşleştirme dene
+          echo "[+] Patch içindeki hedef dosyalar repo içinde aranıyor ve otomatik eşleştirme deneniyor..."
+          mapfile -t targets < <(sed -n '1,400p' "$PATCH_LOCAL" | sed -n 's/^diff --git a\/\([^ ]*\) b\/.*/\1/p' | uniq)
+          TMPPATCH="/tmp/patch_rewritten.patch"
+          cp "$PATCH_LOCAL" "$TMPPATCH"
+
+          changed=0
+          for t in "${targets[@]}"; do
+            base="$(basename "$t")"
+            # repo içinde aynı basename'e sahip tek dosya var mı?
+            matches=( $(git ls-files | grep -F "/$base" || true) )
+            if [ "${#matches[@]}" -eq 1 ]; then
+              newpath="${matches[0]}"
+              echo "  - Eşleştirildi: $t -> $newpath"
+              # replace both a/... and b/...
+              sed -i -E "s|a/${t}|a/${newpath}|g; s|b/${t}|b/${newpath}|g" "$TMPPATCH"
+              changed=1
+            else
+              if [ "${#matches[@]}" -gt 1 ]; then
+                echo "  - Birden fazla eşleşme bulundu için atlandı: $t"
+              else
+                echo "  - Eşleşme yok: $t"
+              fi
+            fi
+          done
+
+          if [ "$changed" -eq 1 ]; then
+            echo "[+] Yeniden yazılmış patch ile git apply check denenecek..."
+            if git apply --index --check "$TMPPATCH" 2>/tmp/gitapply-check2.log; then
+              git apply --index --whitespace=fix "$TMPPATCH"
+              echo "[+] Otomatik eşleştirilmiş patch uygulandı."
+              exit 0
+            else
+              echo "[!] Otomatik eşleştirilmiş patch git apply check başarısız. /tmp/gitapply-check2.log'a bakın."
+            fi
+          else
+            echo "[!] Otomatik eşleştirme için uygun tekil eşleşme bulunamadı."
+          fi
+
+          # 6) Son çare: detaylı log bırak ve hata ile çık
+          echo "ERROR: Patch uygulanamadı."
+          echo "Aşağıdakileri kontrol edin:"
+          echo "- Patch mbox formatında mı? (git am ile uygulanmalı)"
+          echo "- Patch içindeki yollar (a/... b/...) repo yapınızla eşleşiyor mu?"
+          echo "- Hedef dosyalar repo'da mevcut mu? (git ls-files | grep -i susfs)"
+          echo "Dry-run log: /tmp/patch-dryrun.log"
+          echo "git apply check log: /tmp/gitapply-check.log"
+          echo "git apply check2 log: /tmp/gitapply-check2.log"
+          exit 1
           
       - name: 🧩 Patch Kernel of NoMount (dev branch, setup.sh)
         if: env.NOMOUNT_ENABLE == 'true'
