@@ -272,6 +272,11 @@ jobs:
           
           CONFIG_TCP_CONG_BBRPLUS=y
           CONFIG_DEFAULT_TCP_CONG="bbrplus"
+
+          # FQ (Fair Queueing) Ayarı
+          CONFIG_NET_SCH_FQ=y
+          CONFIG_DEFAULT_NET_SCH="fq"
+          
           EOF
           
           echo "[+] BBRPlus entegrasyonu tamamlandı!"
