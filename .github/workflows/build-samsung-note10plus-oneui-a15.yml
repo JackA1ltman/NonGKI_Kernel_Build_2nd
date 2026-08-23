@@ -103,6 +103,22 @@ jobs:
       - name: ⏰ Checkout repository
         uses: actions/checkout@v6
 
+      - name: 🛡️ Backup Patches Directory
+        shell: bash
+        run: |
+          echo "[+] Patches klasörü güvenli bölgeye (/tmp/Patches_Backup) kopyalanıyor..."
+          cp -r $GITHUB_WORKSPACE/Patches /tmp/Patches_Backup
+          echo "[+] Yedekleme tamam. /tmp/Patches_Backup içeriği:"
+          ls -la /tmp/Patches_Backup
+      # ========================================
+
+      - name: 🔍 List Patches directory
+        shell: bash
+        run: |
+          ls -la $GITHUB_WORKSPACE/Patches/ || echo "Patches Workspace'de bulunamadı (Zaten yedekledik)"
+          echo "---"
+          find /tmp/Patches_Backup -maxdepth 2 -type f
+
       - name: ⌛️ Compilation environment preparation
         uses: ./.github/workflows/build-env
 
