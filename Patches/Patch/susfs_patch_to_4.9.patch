@@ -488,7 +488,7 @@ index e8537d4..61c2b95 100644
  	do_delayed_call(&done);
  	return res;
 diff --git a/fs/namespace.c b/fs/namespace.c
-index 5b253ad..7bdcfbe 100644
+index 5b253ad..a454562 100644
 --- a/fs/namespace.c
 +++ b/fs/namespace.c
 @@ -25,9 +25,20 @@
@@ -682,7 +682,26 @@ index 5b253ad..7bdcfbe 100644
  static struct mount *alloc_vfsmnt(const char *name)
  {
  	struct mount *mnt = kmem_cache_zalloc(mnt_cache, GFP_KERNEL);
-@@ -983,7 +1130,22 @@ vfs_kern_mount(struct file_system_type *type, int flags, const char *name, void
+@@ -647,6 +794,18 @@ struct mount *__lookup_mnt(struct vfsmount *mnt, struct dentry *dentry)
+ 	struct hlist_head *head = m_hash(mnt, dentry);
+ 	struct mount *p;
+ 
++#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
++	// - The hook here is needed as a temp solution to hide sus mnts for zygote_next
++	//   spawned process since it just inherits the init mount namespace, the solution
++	//   here is simply return the mount that is not sus.
++	if (susfs_is_current_proc_umounted_for_zygote_next()) {
++		hlist_for_each_entry_rcu(p, head, mnt_hash)
++			if (p->mnt_id < DEFAULT_KSU_MNT_ID && &p->mnt_parent->mnt == mnt && p->mnt_mountpoint == dentry)
++				return p;
++		return NULL;
++	}
++#endif // #ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
++
+ 	hlist_for_each_entry_rcu(p, head, mnt_hash)
+ 		if (&p->mnt_parent->mnt == mnt && p->mnt_mountpoint == dentry)
+ 			return p;
+@@ -983,7 +1142,22 @@ vfs_kern_mount(struct file_system_type *type, int flags, const char *name, void
  	if (!type)
  		return ERR_PTR(-ENODEV);
  
@@ -705,7 +724,7 @@ index 5b253ad..7bdcfbe 100644
  	if (!mnt)
  		return ERR_PTR(-ENOMEM);
  
-@@ -1038,7 +1200,40 @@ static struct mount *clone_mnt(struct mount *old, struct dentry *root,
+@@ -1038,7 +1212,40 @@ static struct mount *clone_mnt(struct mount *old, struct dentry *root,
  	struct mount *mnt;
  	int err;
  
@@ -746,7 +765,7 @@ index 5b253ad..7bdcfbe 100644
  	if (!mnt)
  		return ERR_PTR(-ENOMEM);
  
-@@ -1063,6 +1258,14 @@ static struct mount *clone_mnt(struct mount *old, struct dentry *root,
+@@ -1063,6 +1270,14 @@ static struct mount *clone_mnt(struct mount *old, struct dentry *root,
  
  	mnt->mnt.mnt_flags = old->mnt.mnt_flags;
  	mnt->mnt.mnt_flags &= ~(MNT_WRITE_HOLD|MNT_MARKED|MNT_INTERNAL);
@@ -761,7 +780,7 @@ index 5b253ad..7bdcfbe 100644
  	/* Don't allow unprivileged users to change mount flags */
  	if (flag & CL_UNPRIVILEGED) {
  		mnt->mnt.mnt_flags |= MNT_LOCK_ATIME;
-@@ -1090,6 +1293,7 @@ static struct mount *clone_mnt(struct mount *old, struct dentry *root,
+@@ -1090,6 +1305,7 @@ static struct mount *clone_mnt(struct mount *old, struct dentry *root,
  	mnt->mnt.mnt_root = dget(root);
  	mnt->mnt_mountpoint = mnt->mnt.mnt_root;
  	mnt->mnt_parent = mnt;
@@ -769,7 +788,7 @@ index 5b253ad..7bdcfbe 100644
  	lock_mount_hash();
  	list_add_tail(&mnt->mnt_instance, &sb->s_mounts);
  	unlock_mount_hash();
-@@ -1686,7 +1890,7 @@ out_unlock:
+@@ -1686,7 +1902,7 @@ out_unlock:
  	namespace_unlock();
  }
  
@@ -778,7 +797,7 @@ index 5b253ad..7bdcfbe 100644
   * Is the caller allowed to modify his namespace?
   */
  static inline bool may_mount(void)
-@@ -1871,6 +2075,7 @@ struct mount *copy_tree(struct mount *mnt, struct dentry *dentry,
+@@ -1871,6 +2087,7 @@ struct mount *copy_tree(struct mount *mnt, struct dentry *dentry,
  			q = clone_mnt(p, p->mnt.mnt_root, flag);
  			if (IS_ERR(q))
  				goto out;
@@ -786,7 +805,7 @@ index 5b253ad..7bdcfbe 100644
  			lock_mount_hash();
  			list_add_tail(&q->mnt_list, &res->mnt_list);
  			attach_mnt(q, parent, p->mnt_mp);
-@@ -2295,7 +2500,7 @@ static int do_loopback(struct path *path, const char *old_name,
+@@ -2295,7 +2512,7 @@ static int do_loopback(struct path *path, const char *old_name,
  
  	err = -EINVAL;
  	if (mnt_ns_loop(old_path.dentry))
@@ -795,7 +814,7 @@ index 5b253ad..7bdcfbe 100644
  
  	mp = lock_mount(path);
  	err = PTR_ERR(mp);
-@@ -3020,6 +3225,9 @@ struct mnt_namespace *copy_mnt_ns(unsigned long flags, struct mnt_namespace *ns,
+@@ -3020,6 +3237,9 @@ struct mnt_namespace *copy_mnt_ns(unsigned long flags, struct mnt_namespace *ns,
  	copy_flags = CL_COPY_UNBINDABLE | CL_EXPIRE;
  	if (user_ns != ns->user_ns)
  		copy_flags |= CL_SHARED_TO_SLAVE | CL_UNPRIVILEGED;
@@ -805,7 +824,7 @@ index 5b253ad..7bdcfbe 100644
  	new = copy_tree(old, old->mnt.mnt_root, copy_flags);
  	if (IS_ERR(new)) {
  		namespace_unlock();
-@@ -3596,3 +3804,35 @@ const struct proc_ns_operations mntns_operations = {
+@@ -3596,3 +3816,35 @@ const struct proc_ns_operations mntns_operations = {
  	.install	= mntns_install,
  	.owner		= mntns_owner,
  };
@@ -3586,10 +3605,10 @@ index 0000000..6ede629
 +#endif
 diff --git a/include/linux/susfs_def.h b/include/linux/susfs_def.h
 new file mode 100644
-index 0000000..fb50e74
+index 0000000..2ac778b
 --- /dev/null
 +++ b/include/linux/susfs_def.h
-@@ -0,0 +1,180 @@
+@@ -0,0 +1,210 @@
 +#ifndef KSU_SUSFS_DEF_H
 +#define KSU_SUSFS_DEF_H
 +
@@ -3662,6 +3681,8 @@ index 0000000..fb50e74
 + */
 + // thread_info->flags is unsigned long :D
 +#define TIF_PROC_UMOUNTED 33
++#define TIF_PROC_NO_SU 34
++#define TIF_PROC_UMOUNTED_FOR_ZYGOTE_NEXT 35
 +
 +#define AS_FLAGS_SUS_PATH 33
 +#define AS_FLAGS_SUS_MOUNT 34
@@ -3747,6 +3768,22 @@ index 0000000..fb50e74
 +	set_thread_flag(TIF_PROC_UMOUNTED);
 +}
 +
++static inline void susfs_clear_current_proc_umounted(void) {
++	clear_thread_flag(TIF_PROC_UMOUNTED);
++}
++
++static inline bool susfs_is_current_proc_umounted_for_zygote_next(void) {
++	return (likely(test_thread_flag(TIF_PROC_UMOUNTED_FOR_ZYGOTE_NEXT)));
++}
++
++static inline void susfs_set_current_proc_umounted_for_zygote_next(void) {
++	set_thread_flag(TIF_PROC_UMOUNTED_FOR_ZYGOTE_NEXT);
++}
++
++static inline void susfs_clear_current_proc_umounted_for_zygote_next(void) {
++	clear_thread_flag(TIF_PROC_UMOUNTED_FOR_ZYGOTE_NEXT);
++}
++
 +static inline bool susfs_is_current_proc_umounted_app(void) {
 +	return (likely(test_thread_flag(TIF_PROC_UMOUNTED)) &&
 +#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 12, 0)
@@ -3754,6 +3791,18 @@ index 0000000..fb50e74
 +#else
 +			current_uid().val >= 10000);
 +#endif
++}
++
++static inline bool susfs_is_current_proc_no_su(void) {
++	return (likely(test_thread_flag(TIF_PROC_NO_SU)));
++}
++
++static inline void susfs_set_current_proc_no_su(void) {
++	set_thread_flag(TIF_PROC_NO_SU);
++}
++
++static inline void susfs_clear_current_proc_no_su(void) {
++	clear_thread_flag(TIF_PROC_NO_SU);
 +}
 +
 +#define SUSFS_IS_INODE_SUS_MAP(inode) \
