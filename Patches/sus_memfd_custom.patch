@@ -1,160 +1,129 @@
-diff --git a/fs/susfs.c b/fs/susfs.c
-index XXXXXXX..XXXXXXX 100644
---- a/fs/susfs.c
-+++ b/fs/susfs.c
-@@ -1167,6 +1167,52 @@ void susfs_add_sus_map(void __user **user_info) {
- }
- #endif // #ifdef CONFIG_KSU_SUSFS_SUS_MAP
+From cf710b0ae704e122f1a97f98044b670f01f65ee8 Mon Sep 17 00:00:00 2001
+From: sidex15 <24408329+sidex15@users.noreply.github.com>
+Date: Fri, 3 Jul 2026 19:31:52 +0800
+Subject: [PATCH] implement add_sus_memfd exclusive feature, port from v1.3.8
+ susfs
+
+---
+ include/susfs.h         | 12 ++++++++++++
+ main.c                  |  8 ++++++++
+ src/commands/commands.c | 23 +++++++++++++++++++++++
+ src/help/help.c         |  8 ++++++++
+ 4 files changed, 51 insertions(+)
+
+diff --git a/include/susfs.h b/include/susfs.h
+index f021969..b703fd2 100644
+--- a/include/susfs.h
++++ b/include/susfs.h
+@@ -61,6 +61,7 @@
+ #define CMD_SUSFS_SUS_SU                         0x60000
+ #define CMD_SUSFS_ENABLE_AVC_LOG_SPOOFING        0x60010
+ #define CMD_SUSFS_ADD_SUS_MAP                    0x60020
++#define CMD_SUSFS_ADD_SUS_MEMFD                  0x60030 /* Exclusive feature based on v1.3.8 susfs*/
  
-+#ifdef CONFIG_KSU_SUSFS_SUS_MEMFD
-+static DEFINE_MUTEX(susfs_mutex_lock_sus_memfd);
-+static LIST_HEAD(LH_SUS_MEMFD);
-+
-+int susfs_add_sus_memfd(void __user **user_info) {
-+	struct st_susfs_sus_memfd_list *cursor;
-+	struct st_susfs_sus_memfd_list *new_list = NULL;
-+	struct st_susfs_sus_memfd info = {0};
-+
-+	if (copy_from_user(&info, (struct st_susfs_sus_memfd __user*)*user_info, sizeof(info))) {
-+		SUSFS_LOGE("failed copying from userspace\n");
-+		info.err = -EFAULT;
-+		goto out_copy_to_user;
-+	}
-+
-+	mutex_lock(&susfs_mutex_lock_sus_memfd);
-+	list_for_each_entry(cursor, &LH_SUS_MEMFD, list) {
-+		if (unlikely(!strcmp(info.target_pathname, cursor->info.target_pathname))) {
-+			SUSFS_LOGE("target_pathname: '%s' is already created in LH_SUS_MEMFD\n", info.target_pathname);
-+			mutex_unlock(&susfs_mutex_lock_sus_memfd);
-+			info.err = -EEXIST;
-+			goto out_copy_to_user;
-+		}
-+	}
-+	mutex_unlock(&susfs_mutex_lock_sus_memfd);
-+
-+	new_list = kzalloc(sizeof(struct st_susfs_sus_memfd_list), GFP_KERNEL);
-+	if (!new_list) {
-+		info.err = -ENOMEM;
-+		goto out_copy_to_user;
-+	}
-+
-+	memcpy(&new_list->info, &info, sizeof(info));
-+
-+	INIT_LIST_HEAD(&new_list->list);
-+	mutex_lock(&susfs_mutex_lock_sus_memfd);
-+	list_add_tail(&new_list->list, &LH_SUS_MEMFD);
-+	mutex_unlock(&susfs_mutex_lock_sus_memfd);
-+	SUSFS_LOGI("target_pathname: '%s', is successfully added to LH_SUS_MEMFD\n", new_list->info.target_pathname);
-+	info.err = 0;
-+out_copy_to_user:
-+	if (copy_to_user(&((struct st_susfs_sus_memfd __user*)*user_info)->err, &info.err, sizeof(info.err))) {
-+		info.err = -EFAULT;
-+	}
-+	SUSFS_LOGI("CMD_SUSFS_ADD_SUS_MEMFD -> ret: %d\n", info.err);
-+	return info.err;
-+}
-+
-+int susfs_sus_memfd(char *memfd_name) {
-+	struct st_susfs_sus_memfd_list *cursor;
-+	int res = 0;
-+
-+	mutex_lock(&susfs_mutex_lock_sus_memfd);
-+	list_for_each_entry(cursor, &LH_SUS_MEMFD, list) {
-+		if (unlikely(!strcmp(memfd_name, cursor->info.target_pathname))) {
-+			SUSFS_LOGI("memfd_name: '%s' is found in LH_SUS_MEMFD, blocking memfd_create\n", memfd_name);
-+			res = 1;
-+			break;
-+		}
-+	}
-+	mutex_unlock(&susfs_mutex_lock_sus_memfd);
-+	return res;
-+}
-+#endif // #ifdef CONFIG_KSU_SUSFS_SUS_MEMFD
-+
- int susfs_init(void)
- {
- 	int err = 0;
-@@ -1500,6 +1546,12 @@ static int susfs_get_enabled_features(void __user **user_info) {
- 	buf_ptr = info->enabled_features + copied_size;
- #endif
- 
-+#ifdef CONFIG_KSU_SUSFS_SUS_MEMFD
-+	info->err = copy_config_to_buf("CONFIG_KSU_SUSFS_SUS_MEMFD\n", buf_ptr, &copied_size, SUSFS_ENABLED_FEATURES_SIZE);
-+	if (info->err) goto out_copy_to_user;
-+	buf_ptr = info->enabled_features + copied_size;
-+#endif
-+
- 	info->err = 0;
- out_copy_to_user:
-diff --git a/include/linux/susfs.h b/include/linux/susfs.h
-index XXXXXXX..XXXXXXX 100644
---- a/include/linux/susfs.h
-+++ b/include/linux/susfs.h
-@@ -131,6 +131,16 @@ struct st_susfs_sus_map_list {
+ /* v2.1.0 new kstat definitions */
+ #define KSTAT_SPOOF_INO (1 << 0)
+@@ -339,6 +340,16 @@ struct version_v2000 {
+     int     err;
  };
- #endif
  
-+/* sus_memfd */
-+#ifdef CONFIG_KSU_SUSFS_SUS_MEMFD
-+struct st_susfs_sus_memfd {
++/* sus_memfd exclusive feature */
++struct sus_memfd_v1 {
 +	char                    target_pathname[SUSFS_MAX_LEN_PATHNAME];
-+	int                     err;
 +};
 +
-+struct st_susfs_sus_memfd_list {
-+	struct list_head                        list;
-+	struct st_susfs_sus_memfd               info;
++struct sus_memfd_v2000 {
++	char                    target_pathname[SUSFS_MAX_LEN_PATHNAME];
++    int                     err;
 +};
-+#endif
 +
- extern int susfs_init(void);
-@@ -189,6 +199,11 @@ int susfs_sus_map(struct path *path, struct path *out_path);
- void susfs_add_sus_map(void __user **user_info);
- #endif
+ /***************************
+  ** Low-level IPC helpers **
+  ** (src/ipc/ipc.c)        **
+@@ -419,6 +430,7 @@ int cmd_set_cmdline_or_bootconfig(const char *filepath);
+ int cmd_add_open_redirect(const char *target, const char *redirect);
+ int cmd_add_open_redirect_2100(const char *target, const char *redirect, const char *uid);
+ int cmd_add_sus_map(const char *path);
++int cmd_add_sus_memfd(const char *path);
+ int cmd_enable_avc_log_spoofing(int enabled);
+ int cmd_show(const char *what);
+ int cmd_sus_su(const char *arg);
+diff --git a/main.c b/main.c
+index 0f12350..83fd720 100644
+--- a/main.c
++++ b/main.c
+@@ -134,6 +134,14 @@ int main(int argc, char *argv[]) {
+         return cmd_add_sus_map(argv[2]);
+     }
  
-+/* sus_memfd */
-+#ifdef CONFIG_KSU_SUSFS_SUS_MEMFD
-+int susfs_add_sus_memfd(void __user **user_info);
-+int susfs_sus_memfd(char *memfd_name);
-+#endif
++    if (!strcmp(cmd, "add_sus_memfd") && argc == 3) {
++        if (!have_susfs_feature("CONFIG_KSU_SUSFS_SUS_MEMFD")){
++            printf("[-] Requires CONFIG_KSU_SUSFS_SUS_MEMFD kernel feature\n");
++            return 1;
++        }
++        return cmd_add_sus_memfd(argv[2]);
++    }
 +
- #endif // #ifndef _LINUX_SUSFS_H
-diff --git a/include/linux/susfs_def.h b/include/linux/susfs_def.h
-index XXXXXXX..XXXXXXX 100644
---- a/include/linux/susfs_def.h
-+++ b/include/linux/susfs_def.h
-@@ -27,5 +27,6 @@
- #define CMD_SUSFS_ADD_SUS_SU                0x60027
- #define CMD_SUSFS_ENABLE_LOG                0x60028
- #define CMD_SUSFS_ADD_SUS_MAP               0x60029
-+#define CMD_SUSFS_ADD_SUS_MEMFD             0x60030
+     if (!strcmp(cmd, "enable_avc_log_spoofing") && argc == 3) {
+         if (!HAVE(1510)) { printf("[-] Requires susfs v1.5.10+\n"); return 1; }
+         if (strcmp(argv[2], "0") && strcmp(argv[2], "1")) { print_help(); return 1; }
+diff --git a/src/commands/commands.c b/src/commands/commands.c
+index 5993030..6a5a766 100644
+--- a/src/commands/commands.c
++++ b/src/commands/commands.c
+@@ -590,6 +590,29 @@ int cmd_add_sus_map(const char *path) {
+     return ret;
+ }
  
- #endif // #ifndef __SUSFS_DEF_H__
-diff --git a/mm/shmem.c b/mm/shmem.c
-index XXXXXXX..XXXXXXX 100644
---- a/mm/shmem.c
-+++ b/mm/shmem.c
-@@ -34,6 +34,9 @@
- #include <linux/vfs.h>
- #include <linux/hugetlb.h>
- #include <linux/frontswap.h>
-+#ifdef CONFIG_KSU_SUSFS
-+#include <linux/susfs.h>
-+#endif
- 
- #include <asm/tlbflush.h>
- 
-@@ -3912,6 +3915,13 @@ SYSCALL_DEFINE2(memfd_create,
- 		goto err_name;
- 	}
- 
-+#ifdef CONFIG_KSU_SUSFS_SUS_MEMFD
-+	if (susfs_sus_memfd(name)) {
-+		error = -EFAULT;
-+		goto err_name;
-+	}
-+#endif
++/* ------------------------------------------------------------------ */
++/* add_sus_memfd (exclusive feature)                                  */
++/* ------------------------------------------------------------------ */
 +
- 	file = shmem_file_setup(name, 0,
- 				(flags & MFD_HUGETLB) ?
- 				VM_NORESERVE : 0);
++int cmd_add_sus_memfd(const char *path){
++	int ret;
++    if (g_abi == ABI_v2000) {
++        struct sus_memfd_v2000 info = {0};
++        strncpy(info.target_pathname, path, SUSFS_MAX_LEN_PATHNAME - 1);
++        info.err = ERR_v2000_CMD_NOT_SUPPORTED;
++        v2000_cmd(CMD_SUSFS_ADD_SUS_MEMFD, &info);
++        prt_not_supported(CMD_SUSFS_ADD_SUS_MEMFD, info.err);
++        ret = info.err;
++    } else {
++        struct sus_memfd_v1 info = {0};
++        strncpy(info.target_pathname, path, SUSFS_MAX_LEN_PATHNAME - 1);
++        ret = prctl_cmd(CMD_SUSFS_ADD_SUS_MEMFD, &info);
++        prt_not_supported(CMD_SUSFS_ADD_SUS_MEMFD, ret);
++        return ret;
++    }
++    return ret;
++}
++
+ /* ------------------------------------------------------------------ */
+ /* enable_avc_log_spoofing (v1.5.10+)                                  */
+ /* ------------------------------------------------------------------ */
+diff --git a/src/help/help.c b/src/help/help.c
+index 588abde..80a673c 100644
+--- a/src/help/help.c
++++ b/src/help/help.c
+@@ -54,6 +54,8 @@ void print_help(void) {
+     printf("    add_open_redirect </target> </redirect>\n");
+     if (HAVE(1512))
+         printf("    add_sus_map </path/to/library>\n");
++    if (have_susfs_feature("CONFIG_KSU_SUSFS_SUS_MEMFD"))
++        printf("    add_sus_memfd <memfd_name>\n");
+     if (HAVE(1510))
+         printf("    enable_avc_log_spoofing <0|1>\n");
+     if (HAVE(153))
+@@ -238,6 +240,12 @@ int print_more_help(const char *cmd) {
+         printf("      - Only effective for umounted process with uid >= 10000\n");
+         return 0;
+     }
++    if (strcmp(cmd, "add_sus_memfd") == 0) {
++        printf("    add_sus_memfd <memfd_name>\n");
++        printf("     |--> NOTE: This feature will be effective on all process\n");
++        printf("     |--> NOTE: Remeber to prepend 'memfd:' to <memfd_name>\n");
++        printf("     |--> e.g., add_sus_memfd 'memfd:/jit-cache'\n");
++    }
+     if (strcmp(cmd, "enable_avc_log_spoofing") == 0) {
+         printf("    enable_avc_log_spoofing <0|1>\n");
+         printf("      |--> 0: Disable spoofing the sus 'su' tcontext shown in avc log in kernel\n");
