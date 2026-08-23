@@ -156,29 +156,19 @@ jobs:
           
           echo "[+] Backport script tamamlandı."
 
-      - name: 🩹 Apply SUSFS Memfd & KSU patches
+      - name: 🩹 Apply Custom SUSFS Memfd Patch
         shell: bash
         run: |
           cd $GITHUB_WORKSPACE/device_kernel
-
-          echo "[+] SUSFS Memfd ve KSU yamaları kopyalanıyor..."
-          # Yamaları güvenli yedek klasöründen çalışma alanına kopyala
-          cp "/tmp/Patches_Backup/sus_memfd.patch" ./
-          cp "/tmp/Patches_Backup/sus_memfs_ksu_patch.patch" ./
-          cp "/tmp/Patches_Backup/susfs_bin_sus_memfd.patch" ./
-
-          echo "[+] Yamalar sırayla uygulanıyor..."
           
-          echo "-> Applying sus_memfd.patch..."
-          patch -p1 < sus_memfd.patch || true
-
-          echo "-> Applying sus_memfs_ksu_patch.patch..."
-          patch -p1 < sus_memfs_ksu_patch.patch || true
-
-          echo "-> Applying susfs_bin_sus_memfd.patch..."
-          patch -p1 < susfs_bin_sus_memfd.patch || true
-
-          echo "[+] SUSFS Memfd ve KSU yama işlemi tamamlandı."
+          echo "[+] Özel SUSFS Memfd yaması kopyalanıyor..."
+          # Eğer dosyan Patches klasörünün içindeyse ve bu klasörü /tmp/Patches_Backup olarak yedeklediysek:
+          cp "/tmp/Patches_Backup/sus_memfd_custom.patch" ./
+          
+          echo "-> Applying sus_memfd_custom.patch..."
+          patch -p1 < sus_memfd_custom.patch || true
+          
+          echo "[+] Özel yama işlemi tamamlandı."
 
       - name: 🧩 Patch Kernel of NoMount (dev branch, setup.sh)
         if: env.NOMOUNT_ENABLE == 'true'
