@@ -131,6 +131,54 @@ jobs:
       - name: 🔗 Patch for no-kprobe
         uses: ./.github/workflows/patch-no-kprobe
 
+      - name: 🩹 Apply Custom SUSFS Memfd Patch
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          cd "$GITHUB_WORKSPACE/device_kernel"
+
+          PATCH="/tmp/Patches_Backup/sus_memfd_custom.patch"
+
+          if [ ! -f "$PATCH" ]; then
+            echo "ERROR: Patch file not found: $PATCH"
+            exit 1
+          fi
+
+          echo "[+] Patch bulundu: $PATCH"
+          cp "$PATCH" ./
+          PATCH_BASENAME="$(basename "$PATCH")"
+
+          # 1) Önce git apply ile kontrol et (diff formatı ise index'e uygula)
+          if git apply --index --check "$PATCH_BASENAME" 2>/dev/null; then
+            echo "[+] Patch unified diff gibi görünüyor, git apply ile uygulanıyor..."
+            git apply --index --whitespace=fix "$PATCH_BASENAME"
+            echo "[+] git apply ile uygulandı."
+            exit 0
+          fi
+
+          # 2) Eğer git apply check başarısızsa, patch commit meta verisi içeriyor olabilir.
+          #    git am ile dene (commit metadata korunur). actions/checkout fetch-depth: 0 önerilir.
+          if git am --3way < "$PATCH_BASENAME"; then
+            echo "[+] git am ile commit metadata korunarak uygulandı."
+            exit 0
+          else
+            echo "[!] git am başarısız oldu veya patch mbox formatında değil."
+            git am --abort 2>/dev/null || true
+          fi
+
+          # 3) Son çare: patch -p1. strip seviyesi repo yapınıza göre değişebilir.
+          echo "[+] Son çare: patch -p1 ile uygulamayı deniyorum..."
+          # Önce dry-run ile kontrol et
+          if patch --dry-run -p1 < "$PATCH_BASENAME"; then
+            patch -p1 < "$PATCH_BASENAME"
+            echo "[+] patch -p1 ile uygulandı."
+            exit 0
+          else
+            echo "ERROR: Patch uygulanamadı. strip seviyesi veya patch formatını kontrol edin."
+            exit 1
+          fi
+
       - name: 🩹 Apply backport patches
         if: env.KERNEL_PATCH == 'true'
         shell: bash
@@ -156,53 +204,6 @@ jobs:
           
           echo "[+] Backport script tamamlandı."
           
-  - name: 🩹 Apply Custom SUSFS Memfd Patch (robust)
-  shell: bash
-  run: |
-    set -euo pipefail
-
-    cd "$GITHUB_WORKSPACE/device_kernel"
-
-    PATCH="/tmp/Patches_Backup/sus_memfd_custom.patch"
-
-    if [ ! -f "$PATCH" ]; then
-      echo "ERROR: Patch file not found: $PATCH"
-      exit 1
-    fi
-
-    echo "[+] Patch bulundu: $PATCH"
-    cp "$PATCH" ./
-    PATCH_BASENAME="$(basename "$PATCH")"
-
-    # 1) Önce git apply ile kontrol et (diff formatı ise index'e uygula)
-    if git apply --index --check "$PATCH_BASENAME" 2>/dev/null; then
-      echo "[+] Patch unified diff gibi görünüyor, git apply ile uygulanıyor..."
-      git apply --index --whitespace=fix "$PATCH_BASENAME"
-      echo "[+] git apply ile uygulandı."
-      exit 0
-    fi
-
-    # 2) Eğer git apply check başarısızsa, patch commit meta verisi içeriyor olabilir.
-    #    git am ile dene (commit metadata korunur). actions/checkout fetch-depth: 0 önerilir.
-    if git am --3way < "$PATCH_BASENAME"; then
-      echo "[+] git am ile commit metadata korunarak uygulandı."
-      exit 0
-    else
-      echo "[!] git am başarısız oldu veya patch mbox formatında değil."
-      git am --abort 2>/dev/null || true
-    fi
-
-    # 3) Son çare: patch -p1. strip seviyesi repo yapınıza göre değişebilir.
-    echo "[+] Son çare: patch -p1 ile uygulamayı deniyorum..."
-    # Önce dry-run ile kontrol et
-    if patch --dry-run -p1 < "$PATCH_BASENAME"; then
-      patch -p1 < "$PATCH_BASENAME"
-      echo "[+] patch -p1 ile uygulandı."
-      exit 0
-    else
-      echo "ERROR: Patch uygulanamadı. strip seviyesi veya patch formatını kontrol edin."
-      exit 1
-    fi
       - name: 🧩 Patch Kernel of NoMount (dev branch, setup.sh)
         if: env.NOMOUNT_ENABLE == 'true'
         shell: bash
