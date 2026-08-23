@@ -1,0 +1,155 @@
+diff --git a/mm/memfd.c b/mm/memfd.c
+index a73af8be9c28..6cf40798379e 100644
+--- a/mm/memfd.c
++++ b/mm/memfd.c
+@@ -20,6 +20,10 @@
+ #include <linux/memfd.h>
+ #include <uapi/linux/memfd.h>
+ 
++#ifdef CONFIG_KSU_SUSFS
++#include <linux/susfs.h>
++#endif
++
+ /*
+  * We need a tag: a new tag would expand every xa_node by 8 bytes,
+  * so reuse a tag which we firmly believe is never set or cleared on tmpfs
+@@ -306,6 +310,13 @@ SYSCALL_DEFINE2(memfd_create,
+ 		goto err_name;
+ 	}
+ 
++#ifdef CONFIG_KSU_SUSFS_SUS_MEMFD
++	if (susfs_sus_memfd(name)) {
++		error = -EFAULT;
++		goto err_name;
++	}
++#endif
++
+ 	fd = get_unused_fd_flags((flags & MFD_CLOEXEC) ? O_CLOEXEC : 0);
+ 	if (fd < 0) {
+ 		error = fd;
+diff --git a/fs/susfs.c b/fs/susfs.c
+index a73af8be9c28..6cf40798379e 100644
+--- a/fs/susfs.c
++++ b/fs/susfs.c
+@@ -32,10 +32,60 @@
+ #else
+ #define SUSFS_LOGI(fmt, ...) 
+ #define SUSFS_LOGE(fmt, ...) 
+ #endif
+ 
++#ifdef CONFIG_KSU_SUSFS_SUS_MEMFD
++static LIST_HEAD(LH_SUS_MEMFD);
++
++int susfs_add_sus_memfd(struct st_susfs_sus_memfd* __user user_info) {
++	struct st_susfs_sus_memfd_list *cursor, *temp;
++	struct st_susfs_sus_memfd_list *new_list = NULL;
++	struct st_susfs_sus_memfd info;
++
++	if (copy_from_user(&info, user_info, sizeof(struct st_susfs_sus_memfd))) {
++		SUSFS_LOGE("failed copying from userspace\n");
++		return 1;
++	}
++
++	list_for_each_entry_safe(cursor, temp, &LH_SUS_MEMFD, list) {
++		if (!strcmp(info.target_pathname, cursor->info.target_pathname)) {
++			SUSFS_LOGE("target_pathname: '%s' is already created in LH_SUS_MEMFD\n", info.target_pathname);
++			return 1;
++		}
++	}
++
++	new_list = kmalloc(sizeof(struct st_susfs_sus_memfd_list), GFP_KERNEL);
++	if (!new_list) {
++		SUSFS_LOGE("No enough memory\n");
++		return 1;
++	}
++
++	memcpy(&new_list->info, &info, sizeof(struct st_susfs_sus_memfd));
++
++	INIT_LIST_HEAD(&new_list->list);
++	spin_lock(&susfs_spin_lock);
++	list_add_tail(&new_list->list, &LH_SUS_MEMFD);
++	spin_unlock(&susfs_spin_lock);
++	SUSFS_LOGI("target_pathname: '%s', is successfully added to LH_SUS_MEMFD\n",
++				new_list->info.target_pathname);
++	return 0;
++}
++
++int susfs_sus_memfd(char *memfd_name) {
++	struct st_susfs_sus_memfd_list *cursor, *temp;
++
++	list_for_each_entry_safe(cursor, temp, &LH_SUS_MEMFD, list) {
++		if (!strcmp(memfd_name, cursor->info.target_pathname)) {
++			SUSFS_LOGI("prevent memfd_name: '%s' from being created\n", memfd_name);
++			return 1;
++		}
++	}
++    return 0;
++}
++
++#endif //#ifdef CONFIG_KSU_SUSFS_SUS_MEMFD
+ /* sus_path */
+ #ifdef CONFIG_KSU_SUSFS_SUS_PATH
+ static LIST_HEAD(LH_SUS_PATH_LOOP);
+ static LIST_HEAD(LH_SUS_PATH_ANDROID_DATA);
+ static LIST_HEAD(LH_SUS_PATH_SDCARD);
+diff --git a/include/linux/susfs.h b/include/linux/susfs.h
+index a73af8be9c28..6cf40798379e 100644
+--- a/include/linux/susfs.h
++++ b/include/linux/susfs.h
+@@ -132,10 +132,20 @@
+ struct st_sus_su {
+ 	int         mode;
+ };
+ #endif
+ 
++#ifdef CONFIG_KSU_SUSFS_SUS_MEMFD
++struct st_susfs_sus_memfd {
++	char                    target_pathname[SUSFS_MAX_LEN_MFD_NAME];
++};
++struct st_susfs_sus_memfd_list {
++	struct list_head                        list;
++	struct st_susfs_sus_memfd               info;
++};
++#endif
++
+ /***********************/
+ /* FORWARD DECLARATION */
+ /***********************/
+ /* sus_path */
+ #ifdef CONFIG_KSU_SUSFS_SUS_PATH
+@@ -191,10 +201,15 @@
+ #ifdef CONFIG_KSU_SUSFS_SUS_SU
+ int susfs_get_sus_su_working_mode(void);
+ int susfs_sus_su(struct st_sus_su* __user user_info);
+ #endif
+ 
++#ifdef CONFIG_KSU_SUSFS_SUS_MEMFD
++int susfs_add_sus_memfd(struct st_susfs_sus_memfd* __user user_info);
++int susfs_sus_memfd(char *memfd_name);
++#endif
++
+ int susfs_get_enabled_features(char __user* buf, size_t bufsize);
+ void susfs_set_avc_log_spoofing(bool enabled);
+ 
+ /* susfs_init */
+ void susfs_init(void);
+diff --git a/include/linux/susfs_def.h b/include/linux/susfs_def.h
+index a73af8be9c28..6cf40798379e 100644
+--- a/include/linux/susfs_def.h
++++ b/include/linux/susfs_def.h
+@@ -28,13 +28,15 @@
+ #define CMD_SUSFS_SHOW_VARIANT 0x555e3
+ #define CMD_SUSFS_SHOW_SUS_SU_WORKING_MODE 0x555e4
+ #define CMD_SUSFS_IS_SUS_SU_READY 0x555f0
+ #define CMD_SUSFS_SUS_SU 0x60000
+ #define CMD_SUSFS_ENABLE_AVC_LOG_SPOOFING 0x60010
++#define CMD_SUSFS_ADD_SUS_MEMFD 0x55563
+ 
+ #define SUSFS_MAX_LEN_PATHNAME 256 // 256 should address many paths already unless you are doing some strange experimental stuff, then set your own desired length
+ #define SUSFS_FAKE_CMDLINE_OR_BOOTCONFIG_SIZE 4096
++#define SUSFS_MAX_LEN_MFD_NAME 248
+ 
+ #define TRY_UMOUNT_DEFAULT 0 /* used by susfs_try_umount() */
+ #define TRY_UMOUNT_DETACH 1 /* used by susfs_try_umount() */
+ 
+ #define SUS_SU_DISABLED 0

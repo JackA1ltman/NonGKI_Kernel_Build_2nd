@@ -1,0 +1,55 @@
+diff --git a/159/gki/main.c b/159/gki/main.c
+index caec91f..e9b7608 100644
+--- a/159/gki/main.c
++++ b/159/gki/main.c
+@@ -43,8 +43,10 @@
+ #define CMD_SUSFS_IS_SUS_SU_READY 0x555f0
+ #define CMD_SUSFS_SUS_SU 0x60000
+ #define CMD_SUSFS_ENABLE_AVC_LOG_SPOOFING 0x60010
++#define CMD_SUSFS_ADD_SUS_MEMFD 0x55563
+ 
+ #define SUSFS_MAX_LEN_PATHNAME 256
++#define SUSFS_MAX_LEN_MFD_NAME 248
+ #define SUSFS_MAX_LEN_MOUNT_TYPE_NAME 32
+ 
+ #ifndef __NEW_UTS_LEN
+@@ -127,6 +129,11 @@ struct st_sus_su {
+ 	int                     mode;
+ };
+ 
++struct st_susfs_sus_memfd {
++	char                    target_pathname[SUSFS_MAX_LEN_MFD_NAME];
++};
++
++
+ /**********************
+  ** Define Functions **
+  **********************/
+@@ -326,6 +333,12 @@ static void print_help(void) {
+ 	log("      - It is set to '0' by default in kernel\n");
+ 	log("      - Enable this will sometimes make developers hard to identify the cause when they are debugging with some permission or selinux issue, so users are advised to disbale this when doing so.\n");
+ 	log("\n");
++	log("        add_sus_memfd <target_pathname>\n");
++	log("         |--> NOTE: This feature will be effective on all process\n");
++	log("         |--> NOTE: Remeber to prepend 'memfd:' to <memfd_name>\n");
++	log("         |--> e.g., add_sus_memfd 'memfd:/jit-cache'\n");
++	log("\n");
++
+ }
+ 
+ /*******************
+@@ -623,6 +636,14 @@ int main(int argc, char *argv[]) {
+ 		prctl(KERNEL_SU_OPTION, CMD_SUSFS_RUN_UMOUNT_FOR_CURRENT_MNT_NS, NULL, NULL, &error);
+ 		PRT_MSG_IF_OPERATION_NOT_SUPPORTED(error, CMD_SUSFS_RUN_UMOUNT_FOR_CURRENT_MNT_NS);
+ 		return error;
++	// add_sus_memfd
++	} else if (argc == 3 && !strcmp(argv[1], "add_sus_memfd")) {
++		struct st_susfs_sus_memfd info;
++	
++		memset(&info, 0, sizeof(struct st_susfs_sus_memfd));
++		strncpy(info.target_pathname, argv[2], SUSFS_MAX_LEN_MFD_NAME-1);
++		prctl(KERNEL_SU_OPTION, CMD_SUSFS_ADD_SUS_MEMFD, &info, NULL, &error);
++		return error;
+ 	// set_uname
+ 	} else if (argc == 4 && !strcmp(argv[1], "set_uname")) {
+ 		struct st_susfs_uname info;
