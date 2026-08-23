@@ -123,31 +123,6 @@ jobs:
       - name: 🔗 Patch for no-kprobe
         uses: ./.github/workflows/patch-no-kprobe
 
-      - name: 🩹 Apply backport patches
-        if: env.KERNEL_PATCH == 'true'
-        shell: bash
-        run: |
-          echo "GITHUB_WORKSPACE şu an neresi: $GITHUB_WORKSPACE"
-          
-          # HATA ALDIĞIMIZ KISIM BURASIYDI. ARTIK YEDEKTEN ÇALIŞTIRIYORUZ:
-          
-          # Eğer dosya yedekte de yoksa işlemi durdur (böyle bir şey olmamalı)
-          if [ ! -f "/tmp/Patches_Backup/backport_patches.sh" ]; then
-            echo "HATA: backport_patches.sh yedek klasöründe (/tmp) bile bulunamadı!"
-            exit 1
-          fi
-
-          # 1. Dosyadaki olası Windows (CRLF) satır sonlarını Linux (LF) formatına çeviriyoruz:
-          sed -i 's/\r$//' /tmp/Patches_Backup/backport_patches.sh
-          
-          cd $GITHUB_WORKSPACE/device_kernel
-          echo "[+] Backport script uygulanıyor..."
-          
-          # SCRIPTİ YEDEK KLASÖRÜNDEN ÇALIŞTIR:
-          bash "/tmp/Patches_Backup/backport_patches.sh"
-          
-          echo "[+] Backport script tamamlandı."
-          
       - name: 🩹 Remove module version check
         shell: bash
         run: |
@@ -231,20 +206,18 @@ jobs:
       - name: 🚀 Build Process
         uses: ./.github/workflows/build-process
 
+      
       - name: 🧷 Setup KPatch-Next tools
         if: env.KPM_ENABLE == 'true' && env.KPM_KPATCH_NEXT == 'true'
         shell: bash
         run: |
           cd $GITHUB_WORKSPACE/device_kernel
-
           KPATCH_VER=$(curl -s https://api.github.com/repos/KernelSU-Next/KPatch-Next/releases/latest | grep '"tag_name"' | cut -d'"' -f4)
           echo "[+] KPatch-Next version: $KPATCH_VER"
           echo "KPATCH_VER=$KPATCH_VER" >> $GITHUB_ENV
-
           curl -Lo kptools        https://github.com/KernelSU-Next/KPatch-Next/releases/download/${KPATCH_VER}/kptools-linux
           curl -Lo kpimg          https://github.com/KernelSU-Next/KPatch-Next/releases/download/${KPATCH_VER}/kpimg-linux
           curl -Lo kpatch-android https://github.com/KernelSU-Next/KPatch-Next/releases/download/${KPATCH_VER}/kpatch-android
-
           chmod +x kptools kpimg kpatch-android
           ./kptools --version || true
 
@@ -261,11 +234,10 @@ jobs:
             exit 0
           fi
 
-          ./kptools -p -i "$IMAGE" -k ./kpimg -s "$KPATCH_SUPERKEY" -o "$PATCHED_IMAGE"
-
+          ./kptools -i "$IMAGE" -l || true
+          ./kptools -p -i "$IMAGE" -k ./kpimg -o "$PATCHED_IMAGE"
           echo "KPATCH_PATCHED=true" >> $GITHUB_ENV
           echo "[+] Kernel Image KPatch-Next ile yamalandı: $PATCHED_IMAGE"
-
 
       - name: 📝 Save build metadata
         if: env.KPM_ENABLE == 'true' && env.KPM_KPATCH_NEXT == 'true'
@@ -277,7 +249,7 @@ jobs:
             echo "KPatch-Next Version: $KPATCH_VER"
           } > build/out/meta/build-info.txt
           echo "[+] build-info.txt oluşturuldu."
-
+          
       - name: ❗ Samsung Kernel Pack Process
         shell: bash
         run: |
