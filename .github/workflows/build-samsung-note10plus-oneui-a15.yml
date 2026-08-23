@@ -160,53 +160,167 @@ jobs:
         shell: bash
         run: |
           cd $GITHUB_WORKSPACE/device_kernel
-          
+
           echo "[+] Yama betiği (Python) oluşturuluyor..."
           cat << 'EOF' > inject_memfd.py
           import os, re
-          def append_after(file_path, marker, text):
+
+          def append_after_literal(file_path, marker, text):
               try:
                   with open(file_path, 'r') as f: content = f.read()
                   if marker in content and "CONFIG_KSU_SUSFS_SUS_MEMFD" not in content[content.find(marker):content.find(marker)+500]:
-                      content = content.replace(marker, marker + "\n" + text)
+                      content = content.replace(marker, marker + "\n" + text, 1)
                       with open(file_path, 'w') as f: f.write(content)
-                      print(f"[+] Kod eklendi: {file_path}")
+                      print(f"[+] Kod eklendi (literal): {file_path}")
                   else:
-                      print(f"[*] Zaten guncel veya hedef bulunamadi: {file_path}")
-              except Exception as e: print(f"[!] Hata {file_path}: {e}")
+                      print(f"[*] Zaten guncel veya hedef bulunamadi (literal): {file_path}")
+              except Exception as e:
+                  print(f"[!] Hata {file_path}: {e}")
 
-          # 1. fs/susfs.c
-          append_after('fs/susfs.c', '#endif // #ifdef CONFIG_KSU_SUSFS_SUS_MAP', 
-          '#ifdef CONFIG_KSU_SUSFS_SUS_MEMFD\nstatic DEFINE_MUTEX(susfs_mutex_lock_sus_memfd);\nstatic LIST_HEAD(LH_SUS_MEMFD);\n\nint susfs_add_sus_memfd(void __user **user_info) {\n\tstruct st_susfs_sus_memfd_list *cursor;\n\tstruct st_susfs_sus_memfd_list *new_list = NULL;\n\tstruct st_susfs_sus_memfd info = {0};\n\n\tif (copy_from_user(&info, (struct st_susfs_sus_memfd __user*)*user_info, sizeof(info))) {\n\t\tSUSFS_LOGE("failed copying from userspace\\n");\n\t\tinfo.err = -EFAULT;\n\t\tgoto out_copy_to_user;\n\t}\n\n\tmutex_lock(&susfs_mutex_lock_sus_memfd);\n\tlist_for_each_entry(cursor, &LH_SUS_MEMFD, list) {\n\t\tif (unlikely(!strcmp(info.target_pathname, cursor->info.target_pathname))) {\n\t\t\tSUSFS_LOGE("target_pathname: \'%s\' is already created in LH_SUS_MEMFD\\n", info.target_pathname);\n\t\t\tmutex_unlock(&susfs_mutex_lock_sus_memfd);\n\t\t\tinfo.err = -EEXIST;\n\t\t\tgoto out_copy_to_user;\n\t\t}\n\t}\n\tmutex_unlock(&susfs_mutex_lock_sus_memfd);\n\n\tnew_list = kzalloc(sizeof(struct st_susfs_sus_memfd_list), GFP_KERNEL);\n\tif (!new_list) {\n\t\tinfo.err = -ENOMEM;\n\t\tgoto out_copy_to_user;\n\t}\n\n\tmemcpy(&new_list->info, &info, sizeof(info));\n\n\tINIT_LIST_HEAD(&new_list->list);\n\tmutex_lock(&susfs_mutex_lock_sus_memfd);\n\tlist_add_tail(&new_list->list, &LH_SUS_MEMFD);\n\tmutex_unlock(&susfs_mutex_lock_sus_memfd);\n\tSUSFS_LOGI("target_pathname: \'%s\', is successfully added to LH_SUS_MEMFD\\n", new_list->info.target_pathname);\n\tinfo.err = 0;\nout_copy_to_user:\n\tif (copy_to_user(&((struct st_susfs_sus_memfd __user*)*user_info)->err, &info.err, sizeof(info.err))) {\n\t\tinfo.err = -EFAULT;\n\t}\n\tSUSFS_LOGI("CMD_SUSFS_ADD_SUS_MEMFD -> ret: %d\\n", info.err);\n\treturn info.err;\n}\n\nint susfs_sus_memfd(char *memfd_name) {\n\tstruct st_susfs_sus_memfd_list *cursor;\n\tint res = 0;\n\n\tmutex_lock(&susfs_mutex_lock_sus_memfd);\n\tlist_for_each_entry(cursor, &LH_SUS_MEMFD, list) {\n\t\tif (unlikely(!strcmp(memfd_name, cursor->info.target_pathname))) {\n\t\t\tSUSFS_LOGI("memfd_name: \'%s\' is found in LH_SUS_MEMFD, blocking memfd_create\\n", memfd_name);\n\t\t\tres = 1;\n\t\t\tbreak;\n\t\t}\n\t}\n\tmutex_unlock(&susfs_mutex_lock_sus_memfd);\n\treturn res;\n}\n#endif // #ifdef CONFIG_KSU_SUSFS_SUS_MEMFD')
+          def append_after_regex(file_path, pattern, text, flags=re.S):
+              """Whitespace'e duyarsiz, regex ile marker arar ve hemen sonrasina ekler."""
+              try:
+                  with open(file_path, 'r') as f: content = f.read()
+                  if "CONFIG_KSU_SUSFS_SUS_MEMFD" in content:
+                      print(f"[*] Zaten guncel: {file_path}")
+                      return
+                  m = re.search(pattern, content, flags)
+                  if not m:
+                      print(f"[!] UYARI: regex marker bulunamadi -> {file_path} (pattern: {pattern[:60]}...)")
+                      return
+                  insert_pos = m.end()
+                  content = content[:insert_pos] + "\n" + text + content[insert_pos:]
+                  with open(file_path, 'w') as f: f.write(content)
+                  print(f"[+] Kod eklendi (regex): {file_path}")
+              except Exception as e:
+                  print(f"[!] Hata {file_path}: {e}")
 
-          append_after('fs/susfs.c', 'buf_ptr = info->enabled_features + copied_size;\n#endif',
-          '#ifdef CONFIG_KSU_SUSFS_SUS_MEMFD\n\tinfo->err = copy_config_to_buf("CONFIG_KSU_SUSFS_SUS_MEMFD\\n", buf_ptr, &copied_size, SUSFS_ENABLED_FEATURES_SIZE);\n\tif (info->err) goto out_copy_to_user;\n\tbuf_ptr = info->enabled_features + copied_size;\n#endif')
+          # 1. fs/susfs.c  (literal marker genelde stabildir, aynen birak)
+          append_after_literal('fs/susfs.c', '#endif // #ifdef CONFIG_KSU_SUSFS_SUS_MAP',
+          '''#ifdef CONFIG_KSU_SUSFS_SUS_MEMFD
+          static DEFINE_MUTEX(susfs_mutex_lock_sus_memfd);
+          static LIST_HEAD(LH_SUS_MEMFD);
 
-          # 2. include/linux/susfs.h
-          append_after('include/linux/susfs.h', 'struct st_susfs_sus_map                 info;\n};\n#endif',
-          '\n/* sus_memfd */\n#ifdef CONFIG_KSU_SUSFS_SUS_MEMFD\nstruct st_susfs_sus_memfd {\n\tchar                    target_pathname[SUSFS_MAX_LEN_PATHNAME];\n\tint                     err;\n};\n\nstruct st_susfs_sus_memfd_list {\n\tstruct list_head                        list;\n\tstruct st_susfs_sus_memfd               info;\n};\n#endif')
+          int susfs_add_sus_memfd(void __user **user_info) {
+          \tstruct st_susfs_sus_memfd_list *cursor;
+          \tstruct st_susfs_sus_memfd_list *new_list = NULL;
+          \tstruct st_susfs_sus_memfd info = {0};
 
-          append_after('include/linux/susfs.h', 'void susfs_add_sus_map(void __user **user_info);\n#endif',
-          '\n/* sus_memfd */\n#ifdef CONFIG_KSU_SUSFS_SUS_MEMFD\nint susfs_add_sus_memfd(void __user **user_info);\nint susfs_sus_memfd(char *memfd_name);\n#endif')
+          \tif (copy_from_user(&info, (struct st_susfs_sus_memfd __user*)*user_info, sizeof(info))) {
+          \t\tSUSFS_LOGE("failed copying from userspace\\n");
+          \t\tinfo.err = -EFAULT;
+          \t\tgoto out_copy_to_user;
+          \t}
 
-          # 3. include/linux/susfs_def.h
-          append_after('include/linux/susfs_def.h', '#define CMD_SUSFS_ADD_SUS_MAP               0x60029', '#define CMD_SUSFS_ADD_SUS_MEMFD             0x60030')
+          \tmutex_lock(&susfs_mutex_lock_sus_memfd);
+          \tlist_for_each_entry(cursor, &LH_SUS_MEMFD, list) {
+          \t\tif (unlikely(!strcmp(info.target_pathname, cursor->info.target_pathname))) {
+          \t\t\tSUSFS_LOGE("target_pathname: '%s' is already created in LH_SUS_MEMFD\\n", info.target_pathname);
+          \t\t\tmutex_unlock(&susfs_mutex_lock_sus_memfd);
+          \t\t\tinfo.err = -EEXIST;
+          \t\t\tgoto out_copy_to_user;
+          \t\t}
+          \t}
+          \tmutex_unlock(&susfs_mutex_lock_sus_memfd);
 
-          # 4. mm/shmem.c
-          append_after('mm/shmem.c', '#include <linux/frontswap.h>', '#ifdef CONFIG_KSU_SUSFS\n#include <linux/susfs.h>\n#endif')
-          
+          \tnew_list = kzalloc(sizeof(struct st_susfs_sus_memfd_list), GFP_KERNEL);
+          \tif (!new_list) {
+          \t\tinfo.err = -ENOMEM;
+          \t\tgoto out_copy_to_user;
+          \t}
+
+          \tmemcpy(&new_list->info, &info, sizeof(info));
+
+          \tINIT_LIST_HEAD(&new_list->list);
+          \tmutex_lock(&susfs_mutex_lock_sus_memfd);
+          \tlist_add_tail(&new_list->list, &LH_SUS_MEMFD);
+          \tmutex_unlock(&susfs_mutex_lock_sus_memfd);
+          \tSUSFS_LOGI("target_pathname: '%s', is successfully added to LH_SUS_MEMFD\\n", new_list->info.target_pathname);
+          \tinfo.err = 0;
+          out_copy_to_user:
+          \tif (copy_to_user(&((struct st_susfs_sus_memfd __user*)*user_info)->err, &info.err, sizeof(info.err))) {
+          \t\tinfo.err = -EFAULT;
+          \t}
+          \tSUSFS_LOGI("CMD_SUSFS_ADD_SUS_MEMFD -> ret: %d\\n", info.err);
+          \treturn info.err;
+          }
+
+          int susfs_sus_memfd(char *memfd_name) {
+          \tstruct st_susfs_sus_memfd_list *cursor;
+          \tint res = 0;
+
+          \tmutex_lock(&susfs_mutex_lock_sus_memfd);
+          \tlist_for_each_entry(cursor, &LH_SUS_MEMFD, list) {
+          \t\tif (unlikely(!strcmp(memfd_name, cursor->info.target_pathname))) {
+          \t\t\tSUSFS_LOGI("memfd_name: '%s' is found in LH_SUS_MEMFD, blocking memfd_create\\n", memfd_name);
+          \t\t\tres = 1;
+          \t\t\tbreak;
+          \t\t}
+          \t}
+          \tmutex_unlock(&susfs_mutex_lock_sus_memfd);
+          \treturn res;
+          }
+          #endif // #ifdef CONFIG_KSU_SUSFS_SUS_MEMFD''')
+
+          append_after_literal('fs/susfs.c', 'buf_ptr = info->enabled_features + copied_size;\n#endif',
+          '''#ifdef CONFIG_KSU_SUSFS_SUS_MEMFD
+          \tinfo->err = copy_config_to_buf("CONFIG_KSU_SUSFS_SUS_MEMFD\\n", buf_ptr, &copied_size, SUSFS_ENABLED_FEATURES_SIZE);
+          \tif (info->err) goto out_copy_to_user;
+          \tbuf_ptr = info->enabled_features + copied_size;
+          #endif''')
+
+          # 2. include/linux/susfs.h  -> ARTIK REGEX, bosluk farkina duyarsiz
+          append_after_regex('include/linux/susfs.h',
+              r'struct\s+st_susfs_sus_map\s*\{.*?\}\s*;\s*\n\s*\}\s*;\s*\n#endif',
+          '''
+          /* sus_memfd */
+          #ifdef CONFIG_KSU_SUSFS_SUS_MEMFD
+          struct st_susfs_sus_memfd {
+          \tchar                    target_pathname[SUSFS_MAX_LEN_PATHNAME];
+          \tint                     err;
+          };
+
+          struct st_susfs_sus_memfd_list {
+          \tstruct list_head                        list;
+          \tstruct st_susfs_sus_memfd               info;
+          };
+          #endif''')
+
+          append_after_regex('include/linux/susfs.h',
+              r'void\s+susfs_add_sus_map\s*\(\s*void\s*__user\s*\*\*\s*user_info\s*\)\s*;\s*\n#endif',
+          '''
+          /* sus_memfd */
+          #ifdef CONFIG_KSU_SUSFS_SUS_MEMFD
+          int susfs_add_sus_memfd(void __user **user_info);
+          int susfs_sus_memfd(char *memfd_name);
+          #endif''')
+
+          # 3. include/linux/susfs_def.h -> ARTIK REGEX, bosluk farkina duyarsiz
+          append_after_regex('include/linux/susfs_def.h',
+              r'#define\s+CMD_SUSFS_ADD_SUS_MAP\s+0x60029',
+              '#define CMD_SUSFS_ADD_SUS_MEMFD             0x60030')
+
+          # 4. mm/shmem.c -> once include ekle (regex, bosluk farkina duyarsiz)
+          append_after_regex('mm/shmem.c',
+              r'#include\s*<linux/frontswap\.h>',
+              '#ifdef CONFIG_KSU_SUSFS\n#include <linux/susfs.h>\n#endif')
+
+          # 5. mm/shmem.c -> memfd_create kancasi (ayni kalabilir, zaten calisiyordu)
           try:
               with open('mm/shmem.c', 'r') as f: content = f.read()
               if 'susfs_sus_memfd' not in content:
                   content = re.sub(r'(goto err_name;\n\s*\})', r'\1\n\n#ifdef CONFIG_KSU_SUSFS_SUS_MEMFD\n\tif (susfs_sus_memfd(name)) {\n\t\terror = -EFAULT;\n\t\tgoto err_name;\n\t}\n#endif\n', content)
                   with open('mm/shmem.c', 'w') as f: f.write(content)
                   print("[+] Eklendi: mm/shmem.c (memfd_create kancasi)")
-          except Exception as e: print(f"[!] Hata mm/shmem.c: {e}")
+              else:
+                  print("[*] Zaten guncel: mm/shmem.c (memfd_create kancasi)")
+          except Exception as e:
+              print(f"[!] Hata mm/shmem.c: {e}")
           EOF
-          
+
           python3 inject_memfd.py
           echo "[+] Ozel yama islemi (Python Enjeksiyonu) tamamlandi."
-
+          
       - name: 🧩 Patch Kernel of NoMount (dev branch, setup.sh)
         if: env.NOMOUNT_ENABLE == 'true'
         shell: bash
