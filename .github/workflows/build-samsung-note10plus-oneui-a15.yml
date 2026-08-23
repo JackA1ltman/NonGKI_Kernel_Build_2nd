@@ -210,34 +210,55 @@ jobs:
           EOF
           echo "[+] Configler eklendi."
 
-      - name: 🚀 Add BBRPlus TCP to Kernel
+      - name: 🚀 Add BBRPlus TCP to Kernel (Full Integration)
         shell: bash
         run: |
           cd $GITHUB_WORKSPACE/device_kernel
           
-          echo "[+] BBRPlus kaynak kodu (cx9208 reposundan) indiriliyor..."
+          echo "[+] BBRPlus kaynak kodu indiriliyor..."
           rm -f net/ipv4/tcp_bbrplus.c
           
-          # Doğru ve resmi kaynaktan C kodunu indiriyoruz
+          # Doğru kaynaktan (cx9208) BBRPlus C kodunu indir
           wget -qO net/ipv4/tcp_bbrplus.c https://raw.githubusercontent.com/cx9208/bbrplus/master/tcp_bbrplus.c || true
           
-          # Güvenlik kontrolü: Dosya boşsa veya 404 hata mesajı içeriyorsa derlemeyi durdur
           if grep -q "404: Not Found" net/ipv4/tcp_bbrplus.c || [ ! -s net/ipv4/tcp_bbrplus.c ]; then
               echo "[!] KRİTİK HATA: tcp_bbrplus.c kaynak koddan indirilemedi veya link geçersiz."
               exit 1
           fi
-          
           echo "[+] BBRPlus kaynak kodu başarıyla indirildi!"
           
-          echo "[+] Python ile Kconfig ve Makefile enjeksiyonu yapılıyor..."
-          cat << 'EOF' > inject_bbrplus.py
-          import os
+          echo "[+] Python ile BBRPlus Kernel Modifikasyonları Yapılıyor (dog250 yönergeleri)..."
+          cat << 'EOF' > inject_bbrplus_full.py
+          import os, re
 
-          # 1. Makefile Düzenlemesi
+          # MODİFİKASYON 1: include/net/inet_connection_sock.h (Size artırımı)
+          header_file = 'include/net/inet_connection_sock.h'
+          try:
+              with open(header_file, 'r') as f: h_data = f.read()
+              # 104 -> 112 ve 13 -> 14 değişimi
+              h_data = re.sub(r'(\d+)\s*/\s*sizeof\(u64\)', '112 / sizeof(u64)', h_data)
+              h_data = re.sub(r'\((\d+)\s*\*\s*sizeof\(u64\)\)', '(14 * sizeof(u64))', h_data)
+              with open(header_file, 'w') as f: f.write(h_data)
+              print(f"[+] {header_file} boyutları BBRPlus için artırıldı.")
+          except Exception as e: print(f"[!] HATA: {header_file} - {e}")
+
+          # MODİFİKASYON 2: net/ipv4/tcp_output.c (EXPORT_SYMBOL ekleme)
+          tcp_out_file = 'net/ipv4/tcp_output.c'
+          try:
+              with open(tcp_out_file, 'r') as f: t_data = f.read()
+              if 'EXPORT_SYMBOL(tcp_snd_wnd_test)' not in t_data:
+                  # tcp_snd_wnd_test fonksiyonunun bittiği yeri (süslü parantezi) bul ve altına ekle
+                  t_data = re.sub(r'(bool tcp_snd_wnd_test.*?^})', r'\1\nEXPORT_SYMBOL(tcp_snd_wnd_test);', t_data, flags=re.MULTILINE|re.DOTALL)
+                  with open(tcp_out_file, 'w') as f: f.write(t_data)
+                  print(f"[+] {tcp_out_file} içerisine tcp_snd_wnd_test sembolü dışarı aktarıldı.")
+          except Exception as e: print(f"[!] HATA: {tcp_out_file} - {e}")
+
+          # MODİFİKASYON 3: Makefile (bbr yerine bbrplus o dosyası)
           mf = 'net/ipv4/Makefile'
           try:
               with open(mf, 'r') as f: m_data = f.read()
               if 'tcp_bbrplus.o' not in m_data:
+                  # Orijinal BBR satırını, BBRPlus satırıyla ve kendi değişkeniyle değiştirelim
                   if 'obj-$(CONFIG_TCP_CONG_BBR)' in m_data:
                       m_data = m_data.replace('obj-$(CONFIG_TCP_CONG_BBR) += tcp_bbr.o', 'obj-$(CONFIG_TCP_CONG_BBR) += tcp_bbr.o\nobj-$(CONFIG_TCP_CONG_BBRPLUS) += tcp_bbrplus.o')
                   else:
@@ -246,12 +267,12 @@ jobs:
                   print("[+] net/ipv4/Makefile başarıyla güncellendi.")
           except Exception as e: print(f"[!] Makefile hatası: {e}")
 
-          # 2. Kconfig Düzenlemesi
+          # MODİFİKASYON 4: Kconfig
           kf = 'net/ipv4/Kconfig'
           bbrplus_kconfig = """
           config TCP_CONG_BBRPLUS
           \ttristate "BBRPlus TCP congestion control"
-          \tdefault n
+          \tdefault y
           \thelp
           \t  BBRPlus algorithm for network congestion control.
           """
@@ -267,7 +288,7 @@ jobs:
           except Exception as e: print(f"[!] Kconfig hatası: {e}")
           EOF
           
-          python3 inject_bbrplus.py
+          python3 inject_bbrplus_full.py
           
           echo "[+] Defconfig'e BBRPlus bayrakları ekleniyor..."
           DEFCONFIG_FILE="arch/arm64/configs/exynos9820_defconfig"
@@ -279,6 +300,8 @@ jobs:
           CONFIG_DEFAULT_TCP_CONG="bbrplus"
           
           EOF
+          
+          echo "[+] BBRPlus tam entegrasyonu başarıyla tamamlandı!"
 
       - name: ⚙️ Apply BBRPlus Config Tweaks (Disable Security & Debug)
         shell: bash
