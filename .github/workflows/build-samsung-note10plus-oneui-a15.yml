@@ -215,26 +215,29 @@ jobs:
         run: |
           cd $GITHUB_WORKSPACE/device_kernel
           
-          echo "[+] BBRPlus kaynak kodu indiriliyor..."
-          # UJX6N reposundan BBRPlus C kodunu ipv4 klasörüne indiriyoruz
-          wget -qO net/ipv4/tcp_bbrplus.c https://raw.githubusercontent.com/UJX6N/bbrplus/master/tcp_bbrplus.c || curl -sLo net/ipv4/tcp_bbrplus.c https://raw.githubusercontent.com/UJX6N/bbrplus/master/tcp_bbrplus.c
+          echo "[+] BBRPlus kaynak kodu (cx9208 reposundan) indiriliyor..."
+          rm -f net/ipv4/tcp_bbrplus.c
           
-          # Dosya inmediyse yedek repodan çek
-          if [ ! -s net/ipv4/tcp_bbrplus.c ]; then
-              echo "[!] Ana linkten inemedi, alternatif kaynaktan çekiliyor..."
-              wget -qO net/ipv4/tcp_bbrplus.c https://raw.githubusercontent.com/dogday/bbrplus/master/tcp_bbrplus.c
+          # Doğru ve resmi kaynaktan C kodunu indiriyoruz
+          wget -qO net/ipv4/tcp_bbrplus.c https://raw.githubusercontent.com/cx9208/bbrplus/master/tcp_bbrplus.c || true
+          
+          # Güvenlik kontrolü: Dosya boşsa veya 404 hata mesajı içeriyorsa derlemeyi durdur
+          if grep -q "404: Not Found" net/ipv4/tcp_bbrplus.c || [ ! -s net/ipv4/tcp_bbrplus.c ]; then
+              echo "[!] KRİTİK HATA: tcp_bbrplus.c kaynak koddan indirilemedi veya link geçersiz."
+              exit 1
           fi
+          
+          echo "[+] BBRPlus kaynak kodu başarıyla indirildi!"
           
           echo "[+] Python ile Kconfig ve Makefile enjeksiyonu yapılıyor..."
           cat << 'EOF' > inject_bbrplus.py
           import os
 
-          # 1. Makefile'a bbrplus'ı derlemesi gerektiğini söyleyelim
+          # 1. Makefile Düzenlemesi
           mf = 'net/ipv4/Makefile'
           try:
               with open(mf, 'r') as f: m_data = f.read()
               if 'tcp_bbrplus.o' not in m_data:
-                  # tcp_bbr satırını bulup altına bbrplus ekleyelim
                   if 'obj-$(CONFIG_TCP_CONG_BBR)' in m_data:
                       m_data = m_data.replace('obj-$(CONFIG_TCP_CONG_BBR) += tcp_bbr.o', 'obj-$(CONFIG_TCP_CONG_BBR) += tcp_bbr.o\nobj-$(CONFIG_TCP_CONG_BBRPLUS) += tcp_bbrplus.o')
                   else:
@@ -243,7 +246,7 @@ jobs:
                   print("[+] net/ipv4/Makefile başarıyla güncellendi.")
           except Exception as e: print(f"[!] Makefile hatası: {e}")
 
-          # 2. Kconfig menüsüne BBRPlus seçeneğini ekleyelim
+          # 2. Kconfig Düzenlemesi
           kf = 'net/ipv4/Kconfig'
           bbrplus_kconfig = """
           config TCP_CONG_BBRPLUS
@@ -276,6 +279,26 @@ jobs:
           CONFIG_DEFAULT_TCP_CONG="bbrplus"
           
           EOF
+
+      - name: ⚙️ Apply BBRPlus Config Tweaks (Disable Security & Debug)
+        shell: bash
+        run: |
+          cd $GITHUB_WORKSPACE/device_kernel
+          
+          echo "[+] Kısıtlamalar ve gereksiz loglar kaldırılıyor..."
+          
+          # Hedef defconfig dosyamız
+          DEFCONFIG_FILE="arch/arm64/configs/exynos9820_defconfig"
+          
+          # Çekirdeğin kendi config düzenleme aracına yetki veriyoruz
+          chmod +x scripts/config
+          
+          # BBRPlus'ın istediği kilitleri kapatıyoruz
+          ./scripts/config --file $DEFCONFIG_FILE --disable SECURITY_LOCKDOWN_LSM
+          ./scripts/config --file $DEFCONFIG_FILE --disable DEBUG_INFO
+          ./scripts/config --file $DEFCONFIG_FILE --disable MODULE_SIG
+          
+          echo "[+] Güvenlik kilitleri ve hata ayıklayıcılar başarıyla kapatıldı!"
           
           echo "[+] BBRPlus entegrasyonu tamamen bitti!"
 
