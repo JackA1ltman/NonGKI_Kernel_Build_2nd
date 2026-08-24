@@ -149,34 +149,6 @@ jobs:
           
           echo "[+] SuSFS memfd desteği çekirdeğe başarıyla işlendi!"
 
-      - name: 🚀 Add VPNHide Support (Kernel 4.14)
-        shell: bash
-        run: |
-          cd $GITHUB_WORKSPACE/device_kernel
-          
-          echo "[+] VPNHide kaynak kodları indiriliyor..."
-          git clone https://github.com/soranerai/vpnhide_next_backend /tmp/vpnhide
-          
-          echo "[+] VPNHide yaması 4.14 çekirdeğine uygulanıyor (4.19 baz alınarak)..."
-          # Repoda 4.14 özel dosyası olmadığı için ağ mimarisi en yakın olan 4.19 yamasını (legacy) kullanıyoruz.
-          cp /tmp/vpnhide/kpatch/versions/upstream-4.19/legacy.patch ./
-          
-          # Ufak satır kaymalarında işlemin iptal olmaması için || true ekliyoruz
-          patch -p1 < legacy.patch || true
-          
-          echo "[+] Güvenlik ve başlık (header) dosyaları kernel içine kopyalanıyor..."
-          cp /tmp/vpnhide/kpatch/include/linux/* ./include/linux/
-          mkdir -p ./security/vpnhide
-          cp /tmp/vpnhide/kpatch/security/vpnhide/* ./security/vpnhide
-          
-          echo "[+] Defconfig ayarlanıyor..."
-          DEFCONFIG_FILE="arch/arm64/configs/exynos9820_defconfig"
-          
-          # VPNHide'ı aktif eden bayrağı kendi cihazımızın ayarlarına yazıyoruz
-          echo "CONFIG_VPNHIDE=y" >> "$DEFCONFIG_FILE"
-          
-          echo "[+] VPNHide entegrasyonu başarıyla tamamlandı!"
-          
       - name: 🧩 Patch Kernel of NoMount (master branch, setup.sh)
         if: env.NOMOUNT_ENABLE == 'true'
         shell: bash
