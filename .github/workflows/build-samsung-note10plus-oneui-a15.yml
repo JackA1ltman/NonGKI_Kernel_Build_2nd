@@ -180,7 +180,7 @@ jobs:
           EOF
           echo "[+] Configler eklendi."
 
-      - name: 🚀 Add BBRPlus TCP to Kernel (Fixed Static Export & Assert Bypass)
+      - name: 🚀 Add BBRPlus, FQ-CoDel & TCP-LP to Kernel
         shell: bash
         run: |
           cd $GITHUB_WORKSPACE/device_kernel
@@ -214,7 +214,6 @@ jobs:
           except Exception as e: print(f"[!] HATA tcp_output.c: {e}")
           
           # 2. tcp_bbrplus.c (Assert Hata Bypass'ı)
-          # Hata veren "BUILD_BUG_ON(sizeof(struct bbr) > ICSK_CA_PRIV_SIZE);" satırını yorum satırı yapıyoruz.
           bbrplus_file = 'net/ipv4/tcp_bbrplus.c'
           try:
               with open(bbrplus_file, 'r') as f: b_data = f.read()
@@ -236,20 +235,27 @@ jobs:
           \thelp\n\
           \t  BBRPlus algorithm for network congestion control.\n' net/ipv4/Kconfig || true
           
-          echo "[+] Defconfig'e BBRPlus bayrakları ekleniyor..."
+          echo "[+] Defconfig'e BBRPlus, FQ-CoDel ve TCP-LP bayrakları ekleniyor..."
           DEFCONFIG_FILE="arch/arm64/configs/exynos9820_defconfig"
           cat >> "$DEFCONFIG_FILE" << 'EOF'
           
+          # BBRPlus (Aktif ve Varsayılan)
           CONFIG_TCP_CONG_BBRPLUS=y
           CONFIG_DEFAULT_TCP_CONG="bbrplus"
-
-          # FQ (Fair Queueing) Ayarı
-          CONFIG_NET_SCH_FQ=y
-          CONFIG_DEFAULT_NET_SCH="fq"
+          
+          # TCP-LP (Arka plan için kernele gömülü - varsayılan yapılmadı)
+          CONFIG_TCP_CONG_LP=y
+          
+          # FQ-CoDel (Aktif ve Varsayılan Kuyruk Yöneticisi)
+          CONFIG_NET_SCH_FQ_CODEL=y
+          CONFIG_DEFAULT_FQ_CODEL=y
+          CONFIG_DEFAULT_NET_SCH="fq_codel"
+          CONFIG_NETFILTER_XT_TARGET_TTL=y
+          CONFIG_NETFILTER_XT_TARGET_HL=y
           
           EOF
           
-          echo "[+] BBRPlus entegrasyonu tamamlandı!"
+          echo "[+] Ağ optimizasyonları başarıyla tamamlandı!"
           
       - name: 🚀 Build Process
         uses: ./.github/workflows/build-process
