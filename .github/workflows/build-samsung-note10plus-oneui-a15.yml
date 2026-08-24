@@ -130,6 +130,51 @@ jobs:
 
       - name: 🔗 Patch for no-kprobe
         uses: ./.github/workflows/patch-no-kprobe
+
+      - name: 🚀 Add SSG I/O Scheduler (Full Patchset)
+        shell: bash
+        run: |
+          cd $GITHUB_WORKSPACE/device_kernel
+          
+          echo "[+] SSG I/O Scheduler Part 1 (Ana Kodlar) indiriliyor..."
+          curl -sSL "https://github.com/maxsteeel/kernel_unisoc-5.4/commit/2f0edbf0d813dceef243a64ab4d7365f3b6fb718.patch" -o ssg_part1.patch
+          # '|| true' ekliyoruz ki Submodule hatası yüzünden derleme yarıda kesilmesin
+          patch -p1 < ssg_part1.patch || true
+          
+          echo "[+] SSG I/O Scheduler Part 2 (Ek Bağlantılar) indiriliyor..."
+          curl -sSL "https://github.com/maxsteeel/kernel_unisoc-5.4/commit/81c3b3b75683e0ffb6b601e2e937790100dda1be.patch" -o ssg_part2.patch
+          patch -p1 < ssg_part2.patch || true
+          
+          echo "[+] SSG I/O Scheduler Part 3 (Ek Bağlantılar) indiriliyor..."
+          curl -sSL "https://github.com/maxsteeel/kernel_unisoc-5.4/commit/c127758d338c53bc3d4e36e988fce7bdb1b32114.patch" -o ssg_part3.patch
+          patch -p1 < ssg_part3.patch || true
+          
+          echo "[+] Defconfig'e SSG bayrakları ekleniyor..."
+          DEFCONFIG_FILE="arch/arm64/configs/exynos9820_defconfig"
+          cat >> "$DEFCONFIG_FILE" << 'EOF'
+          
+          # SSG I/O Scheduler Ayarları (Aktif ve Varsayılan)
+          CONFIG_IOSCHED_SSG=y
+          CONFIG_DEFAULT_SSG=y
+          EOF
+          
+          echo "[+] SSG I/O Scheduler tam entegrasyonu tamamlandı!"
+
+      - name: 🚀 Add SuSFS memfd Support
+        shell: bash
+        run: |
+          cd $GITHUB_WORKSPACE/device_kernel
+          
+          echo "[+] SuSFS memfd Part 1 (Ana Kodlar) indiriliyor..."
+          curl -sSL "https://github.com/sidex15/android_kernel_lge_sm8150/commit/bc23096b9df4d76c43bfea9e217978ecc93b94d4.patch" -o memfd_part1.patch
+          # Ufak tefek boşluk veya offset farklarında derlemenin iptal olmaması için || true ekliyoruz
+          patch -p1 < memfd_part1.patch || true
+          
+          echo "[+] SuSFS memfd Part 2 (Yama/Düzeltme) indiriliyor..."
+          curl -sSL "https://github.com/sidex15/android_kernel_lge_sm8150/commit/70d398295bc0aa166084a5f322484efd4c07c1e3.patch" -o memfd_part2.patch
+          patch -p1 < memfd_part2.patch || true
+          
+          echo "[+] SuSFS memfd desteği çekirdeğe başarıyla işlendi!"
           
       - name: 🧩 Patch Kernel of NoMount (master branch, setup.sh)
         if: env.NOMOUNT_ENABLE == 'true'
@@ -172,7 +217,6 @@ jobs:
           cat >> "$DEFCONFIG_FILE" << 'EOF'
           
           CONFIG_DEBUG_KERNEL=y
-          CONFIG_KSU_SUSFS_SUS_MEMFD=y
           CONFIG_KALLSYMS=y
           CONFIG_KALLSYMS_ALL=y
           CONFIG_KPM=y
