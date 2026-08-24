@@ -131,21 +131,21 @@ jobs:
       - name: 🔗 Patch for no-kprobe
         uses: ./.github/workflows/patch-no-kprobe
           
-      - name: 🧩 Patch Kernel of NoMount (dev branch, setup.sh)
+      - name: 🧩 Patch Kernel of NoMount (master branch, setup.sh)
         if: env.NOMOUNT_ENABLE == 'true'
         shell: bash
         run: |
           set -x
           cd $GITHUB_WORKSPACE/device_kernel
 
-          # Resmi setup.sh script'ini çek ve çalıştır (kernel entegrasyonunu kendisi hallediyor)
-          curl -sSL https://raw.githubusercontent.com/maxsteeel/nomount/dev/kernel/setup.sh -o /tmp/nomount_setup.sh
+          # Resmi setup.sh script'ini master branch'ten çek ve çalıştır
+          curl -sSL https://raw.githubusercontent.com/maxsteeel/nomount/master/kernel/setup.sh -o /tmp/nomount_setup.sh
           chmod +x /tmp/nomount_setup.sh
           sh /tmp/nomount_setup.sh
 
           # Defconfig'e NoMount seçeneğini ekle
           echo "CONFIG_NOMOUNT=y" >> arch/arm64/configs/${{ env.DEFCONFIG_NAME }}
-          echo "[+] NoMount entegrasyonu tamamlandı (setup.sh ile)."
+          echo "[+] NoMount entegrasyonu tamamlandı (setup.sh master branch ile)."
           
       - name: 🧰 Patch Kernel of Re:Kernel
         if: env.REKERNEL_ENABLE == 'true'
