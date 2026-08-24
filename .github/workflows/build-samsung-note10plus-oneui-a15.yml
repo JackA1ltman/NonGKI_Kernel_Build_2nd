@@ -190,6 +190,9 @@ jobs:
           
           echo "[+] Config parametreleri ayarlanıyor..."
           
+          # Hatanın çözümü: scripts/config dosyasına çalıştırma izni veriyoruz
+          chmod +x scripts/config
+          
           # Mevcut ayarları silip / değiştirip yenilerini ekler
           ./scripts/config --file "$DEFCONFIG_FILE" \
             -e DEBUG_KERNEL \
@@ -203,6 +206,7 @@ jobs:
             -d SECURITY_KPTR_RESTRICT
 
           echo "[+] Configler başarıyla işlendi."
+          
       - name: 🚀 Add BBRPlus, FQ-CoDel & TCP-LP to Kernel
         shell: bash
         run: |
