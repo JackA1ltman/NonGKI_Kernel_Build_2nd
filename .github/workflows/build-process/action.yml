@@ -1,4 +1,4 @@
-name: 'Execute the compilation process.'
+ame: 'Execute the compilation process.'
 
 runs:
   using: 'composite'
@@ -352,7 +352,6 @@ runs:
 
               ;;
           esac
-
 
       - name: Upload Build Error Files
         if: ${{ failure() && env.BUILD_DEBUGGER == 'true' }}
