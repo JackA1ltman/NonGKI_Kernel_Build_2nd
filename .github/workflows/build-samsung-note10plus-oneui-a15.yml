@@ -199,14 +199,7 @@ jobs:
           -e KALLSYMS \
           -e KALLSYMS_ALL \
           -e KPM \
-          -d LTO_CLANG \
-          -d LTO \
-          -d THINLTO \
-          -e LTO_NONE \
           -d SECURITY_KPTR_RESTRICT \
-          -d CFI_CLANG \
-          -d CFI_PERMISSIVE \
-          -d CFI_CLANG_SHADOW
 
           echo "[+] Configler başarıyla işlendi."
           
