@@ -47,58 +47,12 @@ runs:
           }
 
           # Detect SuSFS is used to enable the SuSFS inline hook
-          if [[ ${{ env.SUSFS_ENABLE }} == "true" ]]; then
+          if [[ ${{ env.SUSFS_ENABLE }} == "true" ]] && { [[ "${{ env.KERNELSU_SOURCE }}" == *ReSukiSU* ]] || [[ "${{ env.KERNELSU_AUTO_FORK }}" == "resukisu" ]]; }; then
             # Core
             cp /tmp/Patches/susfs_inline_hook_patches.sh ./
             bash susfs_inline_hook_patches.sh ./
 
             echo "[+] executed SuSFS inline hook successfully."
-
-            if [[ ${{ env.FIRST_VERSION }} -le 4 ]] && [[ ${{ env.SECOND_VERSION }} -le 9 ]]; then
-                cp /tmp/Patches/backport_patches.sh ./
-
-                bash backport_patches.sh
-
-                if grep -q "kernel_read" "fs/read_write.c"; then
-                    echo ">>>>>>>>>>>>>>>Backport Patch<<<<<<<<<<<<<<<<"
-                    echo ">                                           <"
-                    echo "Your kernel is already backported, skipping"
-                    echo ">                                           <"
-                    echo ">>>>>>>>>>>>>>>>>>>>>><<<<<<<<<<<<<<<<<<<<<<<"
-                elif [[ "${{ env.KERNEL_PATCH }}" == "true" ]]; then
-                    if [[ ${{ env.FIRST_VERSION }} -lt 4 ]] && [[ ${{ env.SECOND_VERSION }} -lt 18 ]]; then
-                        echo "[-] Could not support ARMV7A kernel(Kernel Version < 3.18)."
-
-                        false
-                    elif [[ ${{ env.FIRST_VERSION }} == 3 ]] && [[ ${{ env.SECOND_VERSION }} == 18 ]]; then
-                        cp /tmp/Patches/Patch/backport_kernel_read_and_kernel_write_3.18.patch ./
-
-                        patch -p1 < backport_kernel_read_and_kernel_write_3.18.patch || true
-
-                        echo "[+] Patched kernel_write and kernel_read."
-                    elif [[ ${{ env.FIRST_VERSION }} == 4 ]] && [[ ${{ env.SECOND_VERSION }} == 4 ]]; then
-                        cp /tmp/Patches/Patch/backport_kernel_read_and_kernel_write_4.4.patch ./
-
-                        patch -p1 < backport_kernel_read_and_kernel_write_4.4.patch || true
-
-                        echo "[+] Patched kernel_write and kernel_read."
-                    elif [[ ${{ env.FIRST_VERSION }} == 4 ]] && [[ ${{ env.SECOND_VERSION }} == 9 ]]; then
-                        cp /tmp/Patches/Patch/backport_kernel_read_and_kernel_write_4.9.patch ./
-
-                        patch -p1 < backport_kernel_read_and_kernel_write_4.9.patch || true
-
-                        echo "[+] Patched kernel_write and kernel_read."
-                    fi
-                    REJ_FOUND
-                fi
-
-                echo "[+] executed backport patch (contain kernel_read and kernel_write patch) successfully."
-            else
-                cp /tmp/Patches/backport_patches.sh ./
-                bash backport_patches.sh
-
-                echo "executed backport patch successfully."
-            fi
 
           # Check syscall hook
           elif [[ ${{ env.HOOK_METHOD }} == "syscall" ]]; then
@@ -108,56 +62,64 @@ runs:
 
             echo "[+] executed syscall hook successfully."
 
-            if [[ ${{ env.FIRST_VERSION }} -le 4 ]] && [[ ${{ env.SECOND_VERSION }} -le 9 ]]; then
-                cp /tmp/Patches/backport_patches.sh ./
+          elif [[ ${{ env.HOOK_METHOD }} == "tamper" ]]; then
+            echo "CONFIG_KSU_TAMPER_SYSCALL_TABLE=y" >> ./arch/${{ env.KERNEL_ARCH }}/configs/${{ env.DEFCONFIG_NAME }}
+            echo "[+] applied CONFIG_KSU_TAMPER_SYSCALL_TABLE."
 
-                bash backport_patches.sh
-
-                if grep -q "kernel_read" "fs/read_write.c"; then
-                    echo ">>>>>>>>>>>>>>>Backport Patch<<<<<<<<<<<<<<<<"
-                    echo ">                                           <"
-                    echo "Your kernel is already backported, skipping"
-                    echo ">                                           <"
-                    echo ">>>>>>>>>>>>>>>>>>>>>><<<<<<<<<<<<<<<<<<<<<<<"
-                elif [[ "${{ env.KERNEL_PATCH }}" == "true" ]]; then
-                    if [[ ${{ env.FIRST_VERSION }} -lt 4 ]] && [[ ${{ env.SECOND_VERSION }} -lt 18 ]]; then
-                        echo "[-] Could not support ARMV7A kernel(Kernel Version < 3.18)."
-
-                        false
-                    elif [[ ${{ env.FIRST_VERSION }} == 3 ]] && [[ ${{ env.SECOND_VERSION }} == 18 ]]; then
-                        cp /tmp/Patches/Patch/backport_kernel_read_and_kernel_write_3.18.patch ./
-
-                        patch -p1 < backport_kernel_read_and_kernel_write_3.18.patch || true
-
-                        echo "[+] Patched kernel_write and kernel_read."
-                    elif [[ ${{ env.FIRST_VERSION }} == 4 ]] && [[ ${{ env.SECOND_VERSION }} == 4 ]]; then
-                        cp /tmp/Patches/Patch/backport_kernel_read_and_kernel_write_4.4.patch ./
-
-                        patch -p1 < backport_kernel_read_and_kernel_write_4.4.patch || true
-
-                        echo "[+] Patched kernel_write and kernel_read."
-                    elif [[ ${{ env.FIRST_VERSION }} == 4 ]] && [[ ${{ env.SECOND_VERSION }} == 9 ]]; then
-                        cp /tmp/Patches/Patch/backport_kernel_read_and_kernel_write_4.9.patch ./
-
-                        patch -p1 < backport_kernel_read_and_kernel_write_4.9.patch || true
-
-                        echo "[+] Patched kernel_write and kernel_read."
-                    fi
-                    REJ_FOUND
-                fi
-
-                echo "[+] executed backport patch (contain kernel_read and kernel_write patch) successfully."
-            else
-                cp /tmp/Patches/backport_patches.sh ./
-                bash backport_patches.sh
-
-                echo "executed backport patch successfully."
-            fi
+          elif [[ ${{ env.HOOK_METHOD }} == "branchlink" ]]; then
+            echo "CONFIG_KSU_HACK_ARM64_BRANCH_LINK=y" >> ./arch/${{ env.KERNEL_ARCH }}/configs/${{ env.DEFCONFIG_NAME }}
+            echo "[+] applied CONFIG_KSU_HACK_ARM64_BRANCH_LINK."
 
           else
             echo "[-] please input a vaild option!"
             false
 
+          fi
+
+          if [[ ${{ env.FIRST_VERSION }} -le 4 ]] && [[ ${{ env.SECOND_VERSION }} -le 9 ]]; then
+            cp /tmp/Patches/backport_patches.sh ./
+
+            bash backport_patches.sh
+
+            if grep -q "kernel_read" "fs/read_write.c"; then
+                echo ">>>>>>>>>>>>>>>Backport Patch<<<<<<<<<<<<<<<<"
+                echo ">                                           <"
+                echo "Your kernel is already backported, skipping"
+                echo ">                                           <"
+                echo ">>>>>>>>>>>>>>>>>>>>>><<<<<<<<<<<<<<<<<<<<<<<"
+            elif [[ "${{ env.KERNEL_PATCH }}" == "true" ]]; then
+                if [[ ${{ env.FIRST_VERSION }} -lt 4 ]] && [[ ${{ env.SECOND_VERSION }} -lt 18 ]]; then
+                    echo "[-] Could not support ARMV7A kernel(Kernel Version < 3.18)."
+
+                    false
+                elif [[ ${{ env.FIRST_VERSION }} == 3 ]] && [[ ${{ env.SECOND_VERSION }} == 18 ]]; then
+                    cp /tmp/Patches/Patch/backport_kernel_read_and_kernel_write_3.18.patch ./
+
+                    patch -p1 < backport_kernel_read_and_kernel_write_3.18.patch || true
+
+                    echo "[+] Patched kernel_write and kernel_read."
+                elif [[ ${{ env.FIRST_VERSION }} == 4 ]] && [[ ${{ env.SECOND_VERSION }} == 4 ]]; then
+                    cp /tmp/Patches/Patch/backport_kernel_read_and_kernel_write_4.4.patch ./
+
+                    patch -p1 < backport_kernel_read_and_kernel_write_4.4.patch || true
+
+                    echo "[+] Patched kernel_write and kernel_read."
+                elif [[ ${{ env.FIRST_VERSION }} == 4 ]] && [[ ${{ env.SECOND_VERSION }} == 9 ]]; then
+                    cp /tmp/Patches/Patch/backport_kernel_read_and_kernel_write_4.9.patch ./
+
+                    patch -p1 < backport_kernel_read_and_kernel_write_4.9.patch || true
+
+                    echo "[+] Patched kernel_write and kernel_read."
+                fi
+                REJ_FOUND
+            fi
+
+            echo "[+] executed backport patch (contain kernel_read and kernel_write patch) successfully."
+          else
+            cp /tmp/Patches/backport_patches.sh ./
+            bash backport_patches.sh
+
+            echo "executed backport patch successfully."
           fi
 
           # Check for static state in partial functions
