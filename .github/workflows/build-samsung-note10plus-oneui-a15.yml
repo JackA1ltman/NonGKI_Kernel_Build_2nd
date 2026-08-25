@@ -318,55 +318,12 @@ jobs:
 
       - name: 🚀 Build Process
         uses: ./.github/workflows/build-process
-
-      
-      - name: 🧷 Setup KPatch-Next tools
-        if: env.KPM_ENABLE == 'true' && env.KPM_KPATCH_NEXT == 'true'
-        shell: bash
-        run: |
-          cd $GITHUB_WORKSPACE/device_kernel
-          KPATCH_VER=$(curl -s https://api.github.com/repos/KernelSU-Next/KPatch-Next/releases/latest | grep '"tag_name"' | cut -d'"' -f4)
-          echo "[+] KPatch-Next version: $KPATCH_VER"
-          echo "KPATCH_VER=$KPATCH_VER" >> $GITHUB_ENV
-          curl -Lo kptools        https://github.com/KernelSU-Next/KPatch-Next/releases/download/${KPATCH_VER}/kptools-linux
-          curl -Lo kpimg          https://github.com/KernelSU-Next/KPatch-Next/releases/download/${KPATCH_VER}/kpimg-linux
-          curl -Lo kpatch-android https://github.com/KernelSU-Next/KPatch-Next/releases/download/${KPATCH_VER}/kpatch-android
-          chmod +x kptools kpimg kpatch-android
-          ./kptools --version || true
-
-      - name: 🩹 Patch Kernel Image with KPatch-Next
-        if: env.KPM_ENABLE == 'true' && env.KPM_KPATCH_NEXT== 'true'
-        shell: bash
-        run: |
-          cd $GITHUB_WORKSPACE/device_kernel
-          IMAGE=out/arch/arm64/boot/Image
-          PATCHED_IMAGE=out/arch/arm64/boot/Image.kp
-
-          if [ ! -f "$IMAGE" ]; then
-            echo "[-] Kernel Image bulunamadı ($IMAGE), KPatch adımı atlanıyor."
-            exit 0
-          fi
-
-          ./kptools -i "$IMAGE" -l || true
-          ./kptools -p -i "$IMAGE" -k ./kpimg -o "$PATCHED_IMAGE"
-          echo "KPATCH_PATCHED=true" >> $GITHUB_ENV
-          echo "[+] Kernel Image KPatch-Next ile yamalandı: $PATCHED_IMAGE"
-
-      - name: 📝 Save build metadata
-        if: env.KPM_ENABLE == 'true' && env.KPM_KPATCH_NEXT == 'true'
-        shell: bash
-        run: |
-          cd $GITHUB_WORKSPACE/device_kernel
-          mkdir -p build/out/meta
-          {
-            echo "KPatch-Next Version: $KPATCH_VER"
-          } > build/out/meta/build-info.txt
-          echo "[+] build-info.txt oluşturuldu."
           
       - name: ❗ Samsung Kernel Pack Process
         shell: bash
         run: |
           cd $GITHUB_WORKSPACE/device_kernel
+
           # Var
           TIME=$(date +"%Y%m%d%H%M%S")
           KERNEL_PATH=build/out/d2s/Image
@@ -384,39 +341,26 @@ jobs:
           RAMDISK=build/out/d2s/ramdisk.cpio.gz
           OUTPUT_FILE=build/out/d2s/boot.img
           BOARD=SRPSC14B009KU
+
           mkdir -p build/out/d2s/zip/files
           mkdir -p build/out/d2s/zip/META-INF/com/google/android
 
-          # KPatch-Next ile yamalanmış Image varsa onu kullan, yoksa orijinal Image'i kullan
-          if [ "${{ env.KPM_ENABLE }}" == "true" ] && [ "${{ env.KPM_KPATCH_NEXT }}" == "true" ] && [ -f out/arch/arm64/boot/Image.kp ]; then
-            cp -f out/arch/arm64/boot/Image.kp build/out/d2s/Image
-            echo "[+] KPatch-Next ile yamalanmış kernel image kullanılıyor."
-          else
-            cp -f out/arch/arm64/boot/Image build/out/d2s/Image
-          fi
+          cp -f out/arch/arm64/boot/Image build/out/d2s/Image
 
           ./toolchain/mkdtimg cfg_create build/out/d2s/dtb.img build/dtconfigs/exynos9825.cfg -d out/arch/arm64/boot/dts/exynos
           ./toolchain/mkdtimg cfg_create build/out/d2s/dtbo.img build/dtconfigs/d2s.cfg -d out/arch/arm64/boot/dts/samsung
+
           pushd build/ramdisk > /dev/null
           find . ! -name . | LC_ALL=C sort | cpio -o -H newc -R root:root | gzip > ../out/d2s/ramdisk.cpio.gz || abort
           popd > /dev/null
+
           ./toolchain/mkbootimg --base $BASE --board $BOARD --cmdline "$CMDLINE" --hashtype $HASHTYPE --header_version $HEADER_VERSION --kernel $KERNEL_PATH --kernel_offset $KERNEL_OFFSET --os_patch_level $OS_PATCH_LEVEL --os_version $OS_VERSION --pagesize $PAGESIZE --ramdisk $RAMDISK --ramdisk_offset $RAMDISK_OFFSET --second_offset $SECOND_OFFSET --tags_offset $TAGS_OFFSET -o $OUTPUT_FILE
+
           cp build/out/d2s/boot.img build/out/d2s/zip/files/boot.img
           cp build/out/d2s/dtb.img build/out/d2s/zip/files/dtb.img
           cp build/out/d2s/dtbo.img build/out/d2s/zip/files/dtbo.img
           cp build/update-binary build/out/d2s/zip/META-INF/com/google/android/update-binary
           cp build/updater-script build/out/d2s/zip/META-INF/com/google/android/updater-script
-
-          # KPatch-Next kullanıldıysa kpatch-android aracını da pakete ekle
-          if [ "${{ env.KPM_ENABLE }}" == "true" ] && [ "${{ env.KPM_KPATCH_NEXT }}" == "true" ] && [ -f kpatch-android ]; then
-            cp kpatch-android build/out/d2s/zip/files/kpatch-android
-          fi
-
-          # KPatch-Next build metadata dosyasını zip'in köküne ekle
-          if [ -f build/out/meta/build-info.txt ]; then
-            cp build/out/meta/build-info.txt build/out/d2s/zip/build-info.txt
-            echo "[+] build-info.txt zip paketine eklendi."
-          fi
 
           mkdir tmp
           cp -rp ./build/out/d2s/zip/* tmp
@@ -425,6 +369,7 @@ jobs:
           cd ..
           cp -fp tmp/tmp.zip ${{ env.DEVICE_CODENAME }}-${{ env.ROM_TEXT }}-$TIME-${{ env.PACK_METHOD }}.zip
           rm -rf tmp
+
           echo "PACK_NAME=${{ env.DEVICE_CODENAME }}-${{ env.ROM_TEXT }}-$TIME-${{ env.PACK_METHOD }}.zip" >> $GITHUB_ENV
 
       - name: ✏️ Upload Artifacts
