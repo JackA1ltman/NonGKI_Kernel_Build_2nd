@@ -149,17 +149,18 @@ jobs:
           
           echo "[+] SuSFS memfd desteği çekirdeğe başarıyla işlendi!"
 
-      - name: 🚀 Apply Patch Sus Umount
+      - name: 🚀 Add cyberc3dr Commit
         shell: bash
         run: |
           cd $GITHUB_WORKSPACE/device_kernel
           
-          echo "[+] Patch dosyası indiriliyor..."
-          curl -sSL "https://github.com/cyberc3dr/nGKI_Kernel_Build/commit/72c1aacf600525ce3cb3e77ee9e9c8b05d67e0eb.patch" -o ngki_patch.patch
-          patch -p1 < ngki_patch.patch || true
+          echo "[+] cyberc3dr yaması indiriliyor..."
+          curl -sSL "https://github.com/cyberc3dr/nGKI_Kernel_Build/commit/72c1aacf600525ce3cb3e77ee9e9c8b05d67e0eb.patch" -o cyber_patch.patch
           
-          echo "[+] Defconfig'e gerekli config bayrağı ekleniyor..."
-          DEFCONFIG_FILE="arch/arm64/configs/exynos9820_defconfig"
+          echo "[+] Yama kernel'e uygulanıyor..."
+          patch -p1 < cyber_patch.patch || true
+          
+          echo "[+] Yama işlemi tamamlandı!"
           
           # Bu commit'in gerektirdiği config satırını ekleyin (örnek olarak SuSFS memfd)
           echo "CONFIG_KSU_SUSFS_TRY_UMOUNT=y" >> "$DEFCONFIG_FILE"
