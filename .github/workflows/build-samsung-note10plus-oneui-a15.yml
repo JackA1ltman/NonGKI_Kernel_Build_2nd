@@ -132,33 +132,6 @@ jobs:
       - name: 🔗 Patch for no-kprobe
         uses: ./.github/workflows/patch-no-kprobe
 
-      - name: 🚀 Fix faccessat (Prevent Inlining for KernelSU)
-        shell: bash
-        run: |
-          cd $GITHUB_WORKSPACE/device_kernel
-          
-          echo "[+] Clang 19 optimizasyonu atlatılıyor: do_faccessat 'noinline' yapılıyor..."
-          
-          cat << 'EOF' > fix_faccessat.py
-          import re
-          file_path = 'fs/open.c'
-          try:
-              with open(file_path, 'r') as f: data = f.read()
-              
-              # Eğer zaten noinline değilse, derleyiciyi durduracak etiketi ekle
-              if 'noinline long do_faccessat' not in data and 'noinline int do_faccessat' not in data:
-                  # "long do_faccessat(" veya "static long do_faccessat(" bul ve noinline ekle
-                  data = re.sub(r'(static\s+)?(long|int)\s+do_faccessat\(', r'\1noinline \2 do_faccessat(', data)
-                  with open(file_path, 'w') as f: f.write(data)
-                  print("[+] BAŞARILI: do_faccessat fonksiyonu artık RAM'de gizlenmeyecek!")
-              else:
-                  print("[-] Zaten noinline yapılmış, müdahaleye gerek yok.")
-          except Exception as e:
-              print(f"[X] KRİTİK HATA: {e}")
-          EOF
-          
-          python3 fix_faccessat.py
-        
       - name: 🚀 Add SuSFS memfd Support
         shell: bash
         run: |
