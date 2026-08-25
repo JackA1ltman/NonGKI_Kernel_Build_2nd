@@ -155,12 +155,23 @@ jobs:
         run: |
           cd $GITHUB_WORKSPACE/device_kernel
           
-          echo "[+] backport_patches.sh scripti güvenli yedekten (/tmp/Patches_Backup) çekiliyor..."
+          echo "[+] backport_patches.sh scripti aranıyor..."
           
-          # Yedeklenen klasörden scripti kernel ana dizinine kopyala
-          cp /tmp/Patches_Backup/backport_patches.sh ./
+          # 1. DİNAMİK ARAMA: Klasör iç içe geçmiş olsa bile dosyayı bulur
+          SCRIPT_PATH=$(find /tmp/Patches_Backup -name "backport_patches.sh" | head -n 1)
           
-          # Dosyaya çalıştırma yetkisi ver (Erişim engeli hatasını önlemek için)
+          if [ -z "$SCRIPT_PATH" ]; then
+              echo "[-] KRİTİK HATA: backport_patches.sh hiçbir yedek klasöründe bulunamadı!"
+              exit 1
+          fi
+          
+          # Dosyayı kernel dizinine kopyala
+          cp "$SCRIPT_PATH" ./
+          
+          # 2. CRLF DÜZELTMESİ (Görünmez Windows ^M karakterlerini siler)
+          sed -i 's/\r$//' backport_patches.sh
+          
+          # Çalıştırma yetkisi ver
           chmod +x backport_patches.sh
           
           echo "[+] Script çalıştırılıyor..."
