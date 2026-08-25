@@ -204,22 +204,13 @@ jobs:
         run: |
           cd $GITHUB_WORKSPACE/device_kernel
           DEFCONFIG_FILE="arch/arm64/configs/${{ env.DEFCONFIG_NAME }}"
+          cat >> "$DEFCONFIG_FILE" << 'EOF'
           
-          echo "[+] Config parametreleri ayarlanıyor..."
-          chmod +x scripts/config
-          
-          # Debug ve Kallsyms ayarlarını güvenli şekilde ekliyoruz
-          ./scripts/config --file "$DEFCONFIG_FILE" \
-            -e KALLSYMS \
-            -d KALLSYMS_ALL \
-            -e KPM \
-            -d SECURITY_KPTR_RESTRICT \
-            -e DEBUG_KERNEL \
-            -e KSU_SUSFS_SUS_MEMFD \
-            -e KSU_SUSFS_TRY_UMOUNT \
-            -e BUILD_DEBUGGER 
-
-          echo "[+] Configler başarıyla işlendi."
+          CONFIG_DEBUG_KERNEL=y
+          CONFIG_KSU_SUSFS_SUS_MEMFD=y
+          CONFIG_KALLSYMS=y
+          CONFIG_KALLSYMS_ALL=y
+          CONFIG_KPM=y
           
       - name: 🚀 Add BBRPlus, FQ-CoDel & TCP-LP to Kernel
         shell: bash
