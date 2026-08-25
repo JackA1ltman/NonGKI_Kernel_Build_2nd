@@ -197,9 +197,6 @@ jobs:
           
       - name: 💿 Patch Kernel of Droidspaces
         uses: ./.github/workflows/patch-droidspaces
-
-      - name: 🔒 Patch Kernel of Baseband Guard
-        uses: ./.github/workflows/patch-baseband-guard
            
       - name: ➕ Add Non-GKI configs to defconfig
         shell: bash
@@ -290,6 +287,9 @@ jobs:
           EOF
           
           echo "[+] Ağ optimizasyonları başarıyla tamamlandı!"
+
+      - name: 🔒 Patch Kernel of Baseband Guard
+        uses: ./.github/workflows/patch-baseband-guard
 
       - name: 🚀 Build Process
         uses: ./.github/workflows/build-process
