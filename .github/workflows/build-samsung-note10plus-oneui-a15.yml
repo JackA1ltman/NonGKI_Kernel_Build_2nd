@@ -162,8 +162,8 @@ jobs:
           
           echo "[+] Yama işlemi tamamlandı!"
           
-          # Bu commit'in gerektirdiği config satırını ekleyin (örnek olarak SuSFS memfd)
-          echo "CONFIG_KSU_SUSFS_TRY_UMOUNT=y" >> "$DEFCONFIG_FILE"
+          # HATA VEREN YERİN DÜZELTİLMESİ: Senin en üstte tanımladığın global değişkenleri (env) çağırıyoruz
+          echo "CONFIG_KSU_SUSFS_TRY_UMOUNT=y" >> ./arch/${{ env.KERNEL_ARCH }}/configs/${{ env.DEFCONFIG_NAME }}
           
           echo "[+] Patch başarıyla uygulandı ve config eklendi!"
           
