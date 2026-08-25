@@ -149,23 +149,6 @@ jobs:
           
           echo "[+] SuSFS memfd desteği çekirdeğe başarıyla işlendi!"
 
-      - name: 🚀 Add cyberc3dr Commit
-        shell: bash
-        run: |
-          cd $GITHUB_WORKSPACE/device_kernel
-          
-          echo "[+] cyberc3dr yaması indiriliyor..."
-          curl -sSL "https://github.com/cyberc3dr/nGKI_Kernel_Build/commit/72c1aacf600525ce3cb3e77ee9e9c8b05d67e0eb.patch" -o cyber_patch.patch
-          
-          echo "[+] Yama kernel'e uygulanıyor..."
-          patch -p1 < cyber_patch.patch || true
-          
-          echo "[+] Yama işlemi tamamlandı!"
-          
-          # HATA VEREN YERİN DÜZELTİLMESİ: Senin en üstte tanımladığın global değişkenleri (env) çağırıyoruz
-          echo "CONFIG_KSU_SUSFS_TRY_UMOUNT=y" >> ./arch/${{ env.KERNEL_ARCH }}/configs/${{ env.DEFCONFIG_NAME }}
-          
-          echo "[+] Patch başarıyla uygulandı ve config eklendi!"
           
       - name: 🧩 Patch Kernel of NoMount (master branch, setup.sh)
         if: env.NOMOUNT_ENABLE == 'true'
