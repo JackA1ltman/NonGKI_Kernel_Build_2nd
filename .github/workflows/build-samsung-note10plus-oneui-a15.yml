@@ -69,7 +69,7 @@ env:
 
   HOOK_METHOD: "branchlink" # Manual hook method ->  syscall.
 
-  KERNEL_PATCH: "true" # If your kernel version is <= 4.9, you have the option of enabling the patch to patch the kernel_write and kernel_read functions.
+  KERNEL_PATCH: "false" # If your kernel version is <= 4.9, you have the option of enabling the patch to patch the kernel_write and kernel_read functions.
 
   KPM_ENABLE: "true" # Anyone devices. 
   KPM_INLINE: "false" # Only use it for SukiSU-Ultra.
