@@ -113,7 +113,11 @@ for i in "${patch_files[@]}"; do
         if grep -q "unistd" "fs/stat.c" && ! grep -q "susfs_def.h" "fs/stat.c"; then
             sed -i '/#include <asm\/unistd.h>/a\#ifdef CONFIG_KSU_SUSFS\n#include <linux\/susfs_def.h>\n#endif' fs/stat.c
         elif ! grep -q "susfs_def.h" "fs/stat.c"; then
-            sed -i '/#include <asm\/uaccess.h>/i #ifdef CONFIG_KSU_SUSFS\n#include <linux\/susfs_def.h>\n#endif' fs/stat.c
+            if grep -q "vmalloc.h" "fs/stat.c"; then
+                sed -i '/#include <linux\/vmalloc.h>/a\#ifdef CONFIG_KSU_SUSFS\n#include <linux\/susfs_def.h>\n#endif' fs/stat.c
+            else
+                sed -i '/#include <asm\/uaccess.h>/i #ifdef CONFIG_KSU_SUSFS\n#include <linux\/susfs_def.h>\n#endif' fs/stat.c
+            fi
         fi
 
         if grep -q "vfs_statx_fd" "fs/stat.c"; then
