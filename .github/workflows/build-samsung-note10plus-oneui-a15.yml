@@ -216,7 +216,8 @@ jobs:
             -d SECURITY_KPTR_RESTRICT \
             -e DEBUG_KERNEL \
             -e KSU_SUSFS_SUS_MEMFD \
-            -e KSU_SUSFS_TRY_UMOUNT
+            -e KSU_SUSFS_TRY_UMOUNT \
+            -e BUILD_DEBUGGER 
 
           echo "[+] Configler başarıyla işlendi."
           
