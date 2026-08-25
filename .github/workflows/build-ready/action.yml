@@ -128,8 +128,7 @@ runs:
                 KERNELSU_NAME="KernelSU"
                 KERNELSU_ORIGIN_BRANCH="master"
                 if [[ "${{ env.SUSFS_ENABLE }}" == "true" ]]; then
-                    echo "[-] ${{ env.KERNELSU_AUTO_FORK }} doesn't support SuSFS! "
-                    false
+                    KERNELSU_BRANCH="master"
                 else
                     KERNELSU_BRANCH="master"
                 fi
@@ -264,6 +263,24 @@ runs:
 
           fi
 
+      - name: xxksu add SuSFS
+        shell: bash
+        run: |
+          cd $GITHUB_WORKSPACE/device_kernel/KernelSU
+
+          if [[ "${{ env.KERNELSU_SOURCE }}" == *backslashxx* ]] || [[ "${{ env.KERNELSU_AUTO_FORK }}" == "xxksu" ]]; then
+            if [[ "${{ env.SUSFS_ENABLE }}" == "true" ]]; then
+              cp /tmp/Patches/Patch/xxksu_implement_susfs.patch ./
+              patch -p1 < xxksu_implement_susfs.patch
+
+              echo "[+] xxksu susfs applied."
+            fi
+            
+          else
+            echo "[-] Your KernelSU Fork needn't it, Skipped."
+
+          fi
+
       - name: KPM Function Support
         if: env.KPM_ENABLE == 'true'
         shell: bash
@@ -328,8 +345,6 @@ runs:
             false
 
           elif [[ "${{ env.KPM_KPATCH_NEXT }}" == "true" ]]; then
-            echo "[+] Detected KPatch-Next, enabling required KPM configs."
-            ENABLE_KPM_CONFIGS
             GET_KPATCH_NEXT_TOOLS
 
           else
@@ -338,38 +353,10 @@ runs:
 
           fi
 
-      - name: Set KSU and SUSFS for DEFCONFIG
+      - name: Set KSU for DEFCONFIG
         shell: bash
         run: |
           cd $GITHUB_WORKSPACE/device_kernel
 
           # Neccssary
           echo "CONFIG_KSU=y" >> ./arch/${{ env.KERNEL_ARCH }}/configs/${{ env.DEFCONFIG_NAME }}
-
-          # Fork
-          if [[ "${{ env.KERNELSU_SOURCE }}" == *rsuntk* ]] || [[ "${{ env.KERNELSU_SOURCE }}" == *Next* ]] || [[ "${{ env.KERNELSU_AUTO_FORK }}" == "rsuntk" ]] || [[ "${{ env.KERNELSU_AUTO_FORK }}" == "next" ]] || [[ "${{ env.KERNELSU_SOURCE }}" == *ReSukiSU* ]] || [[ "${{ env.KERNELSU_AUTO_FORK }}" == "resukisu" ]]; then
-            if [[ ${{ env.SUSFS_ENABLE }} != "true" ]]; then
-                echo "CONFIG_KSU_MANUAL_HOOK=y" >> ./arch/${{ env.KERNEL_ARCH }}/configs/${{ env.DEFCONFIG_NAME }}
-
-            fi
-          fi
-
-          if [[ "${{ env.KERNELSU_SOURCE }}" == *blackslashxx* ]] || [[ "${{ env.KERNELSU_AUTO_FORK }}" == "xxksu" ]]; then
-            echo "CONFIG_KSU_KPROBES_KSUD=n" >> ./arch/${{ env.KERNEL_ARCH }}/configs/${{ env.DEFCONFIG_NAME }}
-
-          fi
-
-          if [[ "${{ env.KERNELSU_SOURCE }}" == *SukiSU* ]] || [[ "${{ env.KERNELSU_AUTO_FORK }}" == "sukisu" ]] || [[ "${{ env.KERNELSU_SOURCE }}" == *ReSukiSU* ]] || [[ "${{ env.KERNELSU_AUTO_FORK }}" == "resukisu" ]]; then
-            if [[ "${{ env.SUSFS_ENABLE }}" != "true" ]]; then
-                echo "CONFIG_KSU_SUSFS=n" >> ./arch/${{ env.KERNEL_ARCH }}/configs/${{ env.DEFCONFIG_NAME }}
-
-            elif [[ "${{ env.SUSFS_ENABLE }}" == "true" ]]; then
-                echo "CONFIG_KSU_SUSFS=y" >> ./arch/${{ env.KERNEL_ARCH }}/configs/${{ env.DEFCONFIG_NAME }}
-            fi
-          fi
-
-          if [[ "${{ env.KERNELSU_SOURCE }}" == *Next* ]] || [[ "${{ env.KERNELSU_AUTO_FORK }}" == "next" ]]; then
-            if [ "${{ env.FIRST_VERSION }}" -lt 5 ] && [ "${{ env.SECOND_VERSION }}" -lt 10 ]; then
-                echo "CONFIG_KSU_ALLOWLIST_WORKAROUND=y" >> ./arch/${{ env.KERNEL_ARCH }}/configs/${{ env.DEFCONFIG_NAME }}
-            fi
-          fi
