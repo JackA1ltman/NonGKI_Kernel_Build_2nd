@@ -149,6 +149,23 @@ jobs:
           
           echo "[+] SuSFS memfd desteği çekirdeğe başarıyla işlendi!"
 
+      - name: 🚀 Apply Patch Sus Umount
+        shell: bash
+        run: |
+          cd $GITHUB_WORKSPACE/device_kernel
+          
+          echo "[+] Patch dosyası indiriliyor..."
+          curl -sSL "https://github.com/cyberc3dr/nGKI_Kernel_Build/commit/72c1aacf600525ce3cb3e77ee9e9c8b05d67e0eb.patch" -o ngki_patch.patch
+          patch -p1 < ngki_patch.patch || true
+          
+          echo "[+] Defconfig'e gerekli config bayrağı ekleniyor..."
+          DEFCONFIG_FILE="arch/arm64/configs/exynos9820_defconfig"
+          
+          # Bu commit'in gerektirdiği config satırını ekleyin (örnek olarak SuSFS memfd)
+          echo "CONFIG_KSU_SUSFS_TRY_UMOUNT=y" >> "$DEFCONFIG_FILE"
+          
+          echo "[+] Patch başarıyla uygulandı ve config eklendi!"
+          
       - name: 🧩 Patch Kernel of NoMount (master branch, setup.sh)
         if: env.NOMOUNT_ENABLE == 'true'
         shell: bash
