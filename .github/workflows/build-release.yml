@@ -115,20 +115,20 @@ jobs:
 
       - name: Upload Release Assets Dynamically
         run: |
-          # Loop through all files in the downloaded-artifacts directory
-          for file in ./downloaded-artifacts/Kernel-*/*; do
-              # Skip directories
-              if [ -d "$file" ]; then
-                  continue
-              fi
+          mapfile -d '' files < <(find ./downloaded-artifacts -type f -print0)
 
-              # Upload the file to the GitHub release
-              echo "Uploading $file..."
-              gh release upload ${{ env.NEW_TAG }} "$file"
+          if [ "${#files[@]}" -eq 0 ]; then
+            echo "No release assets were found in ./downloaded-artifacts"
+            exit 1
+          fi
+
+          for file in "${files[@]}"; do
+            echo "Uploading $file..."
+            gh release upload "${{ env.NEW_TAG }}" "$file"
           done
 
       # Display Files Uploaded
       - name: Display Files Uploaded
         run: |
           echo "GitHub release created with the following files:"
-          ls ./downloaded-artifacts/**/*
+          find ./downloaded-artifacts -type f
