@@ -231,7 +231,6 @@ jobs:
           cat >> "$DEFCONFIG_FILE" << 'EOF'
           
           CONFIG_DEBUG_KERNEL=y
-          CONFIG_KSU_SUSFS_SUS_MEMFD=y
           CONFIG_KALLSYMS=y
           CONFIG_KALLSYMS_ALL=y
           CONFIG_KPM=y
