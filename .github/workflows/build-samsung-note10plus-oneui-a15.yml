@@ -155,10 +155,10 @@ jobs:
         run: |
           cd $GITHUB_WORKSPACE/device_kernel
           
-          echo "[+] backport_patches.sh scripti hazırlanıyor..."
+          echo "[+] backport_patches.sh scripti güvenli yedekten (/tmp/Patches_Backup) çekiliyor..."
           
-          # Workspace içindeki Patches klasöründen scripti kernel ana dizinine kopyala
-          cp $GITHUB_WORKSPACE/Patches/backport_patches.sh ./
+          # Yedeklenen klasörden scripti kernel ana dizinine kopyala
+          cp /tmp/Patches_Backup/backport_patches.sh ./
           
           # Dosyaya çalıştırma yetkisi ver (Erişim engeli hatasını önlemek için)
           chmod +x backport_patches.sh
