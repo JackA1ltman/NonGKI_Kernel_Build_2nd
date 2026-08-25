@@ -69,7 +69,7 @@ env:
 
   HOOK_METHOD: "branchlink" # Manual hook method ->  syscall.
 
-  KERNEL_PATCH: "false" # If your kernel version is <= 4.9, you have the option of enabling the patch to patch the kernel_write and kernel_read functions.
+  KERNEL_PATCH: "true" # If your kernel version is <= 4.9, you have the option of enabling the patch to patch the kernel_write and kernel_read functions.
 
   KPM_ENABLE: "true" # Anyone devices. 
   KPM_INLINE: "false" # Only use it for SukiSU-Ultra.
@@ -150,7 +150,24 @@ jobs:
           
           echo "[+] SuSFS memfd desteği çekirdeğe başarıyla işlendi!"
 
+      - name: 🚀 Apply Backport Patches
+        shell: bash
+        run: |
+          cd $GITHUB_WORKSPACE/device_kernel
           
+          echo "[+] backport_patches.sh scripti hazırlanıyor..."
+          
+          # Workspace içindeki Patches klasöründen scripti kernel ana dizinine kopyala
+          cp $GITHUB_WORKSPACE/Patches/backport_patches.sh ./
+          
+          # Dosyaya çalıştırma yetkisi ver (Erişim engeli hatasını önlemek için)
+          chmod +x backport_patches.sh
+          
+          echo "[+] Script çalıştırılıyor..."
+          bash backport_patches.sh
+          
+          echo "[+] Backport yamaları başarıyla uygulandı!"
+    
       - name: 🧩 Patch Kernel of NoMount (master branch, setup.sh)
         if: env.NOMOUNT_ENABLE == 'true'
         shell: bash
