@@ -178,6 +178,20 @@ jobs:
           bash backport_patches.sh
           
           echo "[+] Backport yamaları başarıyla uygulandı!"
+          
+          # Dosyayı kernel dizinine kopyala
+          cp "$SCRIPT_PATH" ./
+          
+          # 2. CRLF DÜZELTMESİ (Görünmez Windows ^M karakterlerini siler)
+          sed -i 's/\r$//' backport_patches.sh
+          
+          # Çalıştırma yetkisi ver
+          chmod +x backport_patches.sh
+          
+          echo "[+] Script çalıştırılıyor..."
+          bash backport_patches.sh
+          
+          echo "[+] Backport yamaları başarıyla uygulandı!"
     
       - name: 🧩 Patch Kernel of NoMount (master branch, setup.sh)
         if: env.NOMOUNT_ENABLE == 'true'
