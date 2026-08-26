@@ -148,6 +148,19 @@ jobs:
           patch -p1 < "$PATCH_FILE"
           
           echo "[+] SBalance yaması başarıyla uygulandı!"
+
+      - name: 🚀 Apply Remote Commit Patch (Dereferencex)
+        shell: bash
+        run: |
+          cd $GITHUB_WORKSPACE/device_kernel
+          
+          echo "[+] Uzak sunucudaki commit havada yakalanıp kernele işleniyor..."
+          
+          # -s (sessiz), -L (yönlendirmeleri takip et) parametreleri çok kritiktir!
+          # curl ile patch dosyasını çekip doğrudan patch komutuna besliyoruz (Pipe)
+          curl -sL "https://github.com/dereferencex/android_kernel_gki_common_5.10/commit/433df0b8e17ae5c705bcb4c7131374ee88f8bf79.patch" | patch -p1
+          
+          echo "[+] Uzak commit başarıyla yamalandı!"    
           
       - name: 🪝 Patch Kernel of SUSFS
         uses: ./.github/workflows/patch-susfs
