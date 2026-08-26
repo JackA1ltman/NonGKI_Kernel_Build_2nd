@@ -139,36 +139,39 @@ jobs:
               exit 1
           fi
           
-          echo "[+] Olası Windows satır sonu (CRLF) uyumsuzlukları temizleniyor..."
+          echo "[+] CRLF temizliği yapılıyor..."
           sed -i 's/\r$//' "$PATCH_FILE"
           
           echo "[+] Yama çekirdeğe işleniyor..."
           patch -p1 < "$PATCH_FILE" || true
           
-          # Makefile onarımı (Eğer reddedildiyse)
+          echo "[+] Dosya sisteminin güncellenmesi için 3 saniye bekleniyor..."
+          sleep 3
+          
+          # Makefile onarımı
           if [ -f "kernel/irq/Makefile.rej" ]; then
               grep "^+" kernel/irq/Makefile.rej | grep -v "^+++" | sed 's/^+//' >> kernel/irq/Makefile
               rm -f kernel/irq/Makefile.rej
           fi
           
-          # HASTA KONTROLÜ: sbalance.c gerçekten oluştu mu?
+          # sbalance.c dosyası var mı DÖNGÜSÜ (Garantili kontrol)
           if [ ! -f "kernel/irq/sbalance.c" ]; then
-              echo "[-] KRİTİK HATA: sbalance.c dosyası yama tarafından oluşturulamadı! Yama bozuk olabilir."
+              echo "[-] sbalance.c hala bulunamadı! Yama bozuk olabilir veya dosya oluşturulamadı."
+              # Reddedilen dosyaları göster ki neden oluşmadığını anlayalım
+              cat kernel/irq/*.rej || true
               exit 1
           fi
           
           echo "[+] SBalance C kodları 4.14 mimarisi için onarılıyor..."
           
-          # 1. Kütüphane eklentisi
+          # 1. Kütüphane eklentisi (En üste)
           sed -i '1s/^/#include <linux\/cpufreq.h>\n/' kernel/irq/sbalance.c
           
-          # 2. arch_scale_cpu_capacity 4.14 API uyarlaması
+          # 2. arch_scale_cpu_capacity uyarlaması
           sed -i 's/arch_scale_cpu_capacity(cpu)/arch_scale_cpu_capacity(NULL, cpu)/g' kernel/irq/sbalance.c
           
           # 3. Kapanış parantezleri
-          echo "" >> kernel/irq/sbalance.c
-          echo "	}" >> kernel/irq/sbalance.c
-          echo "}" >> kernel/irq/sbalance.c
+          echo -e "\n\t}\n}" >> kernel/irq/sbalance.c
           
           echo "[+] SBalance yaması ve Backport onarımı kusursuz tamamlandı!"
           
