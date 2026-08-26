@@ -231,9 +231,14 @@ jobs:
           cat >> "$DEFCONFIG_FILE" << 'EOF'
           
           CONFIG_DEBUG_KERNEL=y
+          CONFIG_DEBUG_INFO=y
           CONFIG_KALLSYMS=y
           CONFIG_KALLSYMS_ALL=y
           CONFIG_KPM=y
+          CONFIG_PRINTK_TIME=y
+          CONFIG_DYNAMIC_DEBUG=y
+          
+          EOF
           
       - name: 🚀 Add BBRPlus, FQ-CoDel & TCP-LP to Kernel
         shell: bash
@@ -331,7 +336,7 @@ jobs:
           SECOND_OFFSET=0xF0000000
           TAGS_OFFSET=0x00000100
           BASE=0x10000000
-          CMDLINE='loop.max_part=7'
+          CMDLINE='loop.max_part=7 loglevel=8 ignore_loglevel earlyprintk debug androidboot.selinux=permissive'
           HASHTYPE=sha1
           HEADER_VERSION=1
           OS_PATCH_LEVEL=2025-08
