@@ -126,6 +126,49 @@ jobs:
       - name: ⚙️ Get neccssary tools
         uses: ./.github/workflows/build-ready
 
+      - name: 🚀 Apply Backport Patches
+        shell: bash
+        run: |
+          cd $GITHUB_WORKSPACE/device_kernel
+          
+          echo "[+] backport_patches.sh scripti aranıyor..."
+          
+          # 1. DİNAMİK ARAMA: Klasör iç içe geçmiş olsa bile dosyayı bulur
+          SCRIPT_PATH=$(find /tmp/Patches_Backup -name "backport_patches.sh" | head -n 1)
+          
+          if [ -z "$SCRIPT_PATH" ]; then
+              echo "[-] KRİTİK HATA: backport_patches.sh hiçbir yedek klasöründe bulunamadı!"
+              exit 1
+          fi
+          
+          # Dosyayı kernel dizinine kopyala
+          cp "$SCRIPT_PATH" ./
+          
+          # 2. CRLF DÜZELTMESİ (Görünmez Windows ^M karakterlerini siler)
+          sed -i 's/\r$//' backport_patches.sh
+          
+          # Çalıştırma yetkisi ver
+          chmod +x backport_patches.sh
+          
+          echo "[+] Script çalıştırılıyor..."
+          bash backport_patches.sh
+          
+          echo "[+] Backport yamaları başarıyla uygulandı!"
+          
+          # Dosyayı kernel dizinine kopyala
+          cp "$SCRIPT_PATH" ./
+          
+          # 2. CRLF DÜZELTMESİ (Görünmez Windows ^M karakterlerini siler)
+          sed -i 's/\r$//' backport_patches.sh
+          
+          # Çalıştırma yetkisi ver
+          chmod +x backport_patches.sh
+          
+          echo "[+] Script çalıştırılıyor..."
+          bash backport_patches.sh
+          
+          echo "[+] Backport yamaları başarıyla uygulandı!"
+
       - name: ⚖️ Apply & Fix SBalance Patch (4.14 Backport)
         shell: bash
         run: |
@@ -182,66 +225,30 @@ jobs:
       - name: 🔗 Patch for no-kprobe
         uses: ./.github/workflows/patch-no-kprobe
 
-      - name: 🚀 Add SuSFS memfd Support
+      - name: 🔒 Apply SuSFS memfd Backport Patch
         shell: bash
         run: |
           cd $GITHUB_WORKSPACE/device_kernel
           
-          echo "[+] SuSFS memfd Ana Kodları indiriliyor..."
-          # Sadece gerçek kodları barındıran 1. patch'i alıyoruz
-          curl -sSL "https://github.com/sidex15/android_kernel_lge_sm8150/commit/bc23096b9df4d76c43bfea9e217978ecc93b94d4.patch" -o memfd_part1.patch
-          patch -p1 < memfd_part1.patch || true
+          echo "[+] SuSFS için memfd yaması çekiliyor..."
+          curl -sL "https://github.com/fatalcoder524/kernel_patches_additional/commit/598b8b81224ce477cfbc1dbf475a6e6549b83452.patch" -o sus_memfd.patch
           
-          echo "[+] Defconfig'e SuSFS memfd bayrağı ekleniyor..."
-          DEFCONFIG_FILE="arch/arm64/configs/exynos9820_defconfig"
+          echo "[+] CRLF (Windows satır sonu) formatı temizleniyor..."
+          sed -i 's/\r$//' sus_memfd.patch
           
-          # 2. Patch'in yapmaya çalıştığı şeyi biz kendi defconfig'imize yapıyoruz:
-          echo "CONFIG_KSU_SUSFS_SUS_MEMFD=y" >> "$DEFCONFIG_FILE"
+          echo "[+] memfd yaması kernela işleniyor..."
+          # -p1 standart yoldur, eğer patlarsa -p2 ile bir alt dizini dener.
+          patch -p1 --no-backup-if-mismatch < sus_memfd.patch || patch -p2 < sus_memfd.patch || true
           
-          echo "[+] SuSFS memfd desteği çekirdeğe başarıyla işlendi!"
-
-      - name: 🚀 Apply Backport Patches
-        shell: bash
-        run: |
-          cd $GITHUB_WORKSPACE/device_kernel
-          
-          echo "[+] backport_patches.sh scripti aranıyor..."
-          
-          # 1. DİNAMİK ARAMA: Klasör iç içe geçmiş olsa bile dosyayı bulur
-          SCRIPT_PATH=$(find /tmp/Patches_Backup -name "backport_patches.sh" | head -n 1)
-          
-          if [ -z "$SCRIPT_PATH" ]; then
-              echo "[-] KRİTİK HATA: backport_patches.sh hiçbir yedek klasöründe bulunamadı!"
-              exit 1
+          echo "[+] Hata kontrolü yapılıyor (.rej dosyaları)..."
+          # Eğer patch uyuşmazlıktan dolayı bazı satırları reddederse, neyi reddettiğini loglarda gösterir.
+          if ls *.rej 1> /dev/null 2>&1; then
+              echo "[-] DİKKAT: Bazı satırlar yamalanamadı! (Reddedilen dosyalar aşağıdadır):"
+              find . -name "*.rej" -exec cat {} \;
+          else
+              echo "[+] memfd yaması kusursuz uygulandı!"
           fi
-          
-          # Dosyayı kernel dizinine kopyala
-          cp "$SCRIPT_PATH" ./
-          
-          # 2. CRLF DÜZELTMESİ (Görünmez Windows ^M karakterlerini siler)
-          sed -i 's/\r$//' backport_patches.sh
-          
-          # Çalıştırma yetkisi ver
-          chmod +x backport_patches.sh
-          
-          echo "[+] Script çalıştırılıyor..."
-          bash backport_patches.sh
-          
-          echo "[+] Backport yamaları başarıyla uygulandı!"
-          
-          # Dosyayı kernel dizinine kopyala
-          cp "$SCRIPT_PATH" ./
-          
-          # 2. CRLF DÜZELTMESİ (Görünmez Windows ^M karakterlerini siler)
-          sed -i 's/\r$//' backport_patches.sh
-          
-          # Çalıştırma yetkisi ver
-          chmod +x backport_patches.sh
-          
-          echo "[+] Script çalıştırılıyor..."
-          bash backport_patches.sh
-          
-          echo "[+] Backport yamaları başarıyla uygulandı!"
+
     
       - name: 🧩 Patch Kernel of NoMount (master branch, setup.sh)
         if: env.NOMOUNT_ENABLE == 'true'
