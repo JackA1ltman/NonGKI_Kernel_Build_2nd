@@ -228,20 +228,25 @@ jobs:
         run: |
           cd $GITHUB_WORKSPACE/device_kernel
           DEFCONFIG_FILE="arch/arm64/configs/${{ env.DEFCONFIG_NAME }}"
+          
+          echo "[+] Samsung Knox ve DEFEX kısıtlamaları zorla siliniyor..."
+          sed -i 's/CONFIG_SEC_DEFEX=y/# CONFIG_SEC_DEFEX is not set/g' "$DEFCONFIG_FILE"
+          sed -i 's/CONFIG_SEC_RESTRICT_SETUID=y/# CONFIG_SEC_RESTRICT_SETUID is not set/g' "$DEFCONFIG_FILE"
+          sed -i 's/CONFIG_SEC_RESTRICT_FORK=y/# CONFIG_SEC_RESTRICT_FORK is not set/g' "$DEFCONFIG_FILE"
+          sed -i 's/CONFIG_SEC_RESTRICT_ROOTING=y/# CONFIG_SEC_RESTRICT_ROOTING is not set/g' "$DEFCONFIG_FILE"
+          sed -i 's/CONFIG_PROCA=y/# CONFIG_PROCA is not set/g' "$DEFCONFIG_FILE"
+          sed -i 's/CONFIG_TIMA=y/# CONFIG_TIMA is not set/g' "$DEFCONFIG_FILE"
+          sed -i 's/CONFIG_KNOX_KAP=y/# CONFIG_KNOX_KAP is not set/g' "$DEFCONFIG_FILE"
+          sed -i 's/CONFIG_SECURITY_DSMSA=y/# CONFIG_SECURITY_DSMSA is not set/g' "$DEFCONFIG_FILE"
+          
           cat >> "$DEFCONFIG_FILE" << 'EOF'
           
           CONFIG_DEBUG_KERNEL=y
           CONFIG_KALLSYMS=y
           CONFIG_KALLSYMS_ALL=y
-          CONFIG_KPM=y
-          CONFIG_SEC_DEFEX=n
-          CONFIG_SEC_RESTRICT_SETUID=n
-          CONFIG_SEC_RESTRICT_FORK=n
-          CONFIG_PROCA=n
-          CONFIG_TIMA=n
-          
           
           EOF
+          
           
       - name: 🚀 Add BBRPlus, FQ-CoDel & TCP-LP to Kernel
         shell: bash
