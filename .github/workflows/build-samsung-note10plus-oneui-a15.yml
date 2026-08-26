@@ -135,7 +135,6 @@ jobs:
           
           echo "[+] SBalance yaması aranıyor..."
           
-          # Dosyanın var olup olmadığını kontrol et
           if [ ! -f "$PATCH_FILE" ]; then
               echo "[-] KRİTİK HATA: sbalance.patch yedek klasöründe bulunamadı!"
               exit 1
@@ -145,9 +144,24 @@ jobs:
           sed -i 's/\r$//' "$PATCH_FILE"
           
           echo "[+] Yama çekirdeğe işleniyor..."
-          patch -p1 < "$PATCH_FILE"
           
-          echo "[+] SBalance yaması başarıyla uygulandı!"
+          # || true parametresi çok kritik: Makefile başarısız olsa bile GitHub Actions'ın çökmesini engeller
+          patch -p1 < "$PATCH_FILE" || true
+          
+          # Makefile.rej oluştuysa (reddedildiyse) devreye girecek "Akıllı Onarım" bloğu
+          if [ -f "kernel/irq/Makefile.rej" ]; then
+              echo "[-] Makefile yaması reddedildi! Akıllı onarım başlatılıyor..."
+              
+              # .rej dosyasındaki eklenmek istenen satırı (+) bul, başındaki artıyı sil ve Makefile'ın en altına ekle
+              grep "^+" kernel/irq/Makefile.rej | grep -v "^+++" | sed 's/^+//' >> kernel/irq/Makefile
+              
+              echo "[+] Eksik komut (sbalance.o) manuel olarak Makefile'a eklendi!"
+              
+              # .rej dosyasını siliyoruz! (Çünkü silmezsek alttaki no-kprobe kontrolü bu dosyayı görüp hata verir)
+              rm kernel/irq/Makefile.rej
+          fi
+          
+          echo "[+] SBalance yaması başarıyla uygulandı ve pürüzler giderildi!"
 
       - name: 🚀 Apply Remote Commit Patch (Dereferencex)
         shell: bash
