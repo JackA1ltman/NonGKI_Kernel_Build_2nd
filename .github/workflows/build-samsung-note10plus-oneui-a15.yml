@@ -126,36 +126,29 @@ jobs:
       - name: ⚙️ Get neccssary tools
         uses: ./.github/workflows/build-ready
 
-      - name: 🚀 Add KernelSU Multi-Manager Support (Ultimate Bypass)
+      - name: ⚖️ Apply SBalance Patch
         shell: bash
         run: |
           cd $GITHUB_WORKSPACE/device_kernel
           
-          echo "[+] Multi-Manager (Signature Bypass) işlemi başlatılıyor..."
+          PATCH_FILE="/tmp/Patches_Backup/sbalance.patch"
           
-          cat << 'EOF' > bypass_signature.py
-          import os, re
+          echo "[+] SBalance yaması aranıyor..."
           
-          patched = False
-          # Bütün kernel klasörlerini tarayıp apk_sign.c dosyasını buluyoruz
-          for root, dirs, files in os.walk('.'):
-              if 'apk_sign.c' in files:
-                  path = os.path.join(root, 'apk_sign.c')
-                  with open(path, 'r') as f: data = f.read()
-                  
-                  # v2, v3 ve v3.1 imza fonksiyonlarını bulup her zaman "return true;" vermesini sağlıyoruz
-                  data = re.sub(r'(bool\s+check_v[23]1?_signature[^{]*\{)', r'\1\n\treturn true;', data)
-                  
-                  with open(path, 'w') as f: f.write(data)
-                  patched = True
-                  print(f"[+] BAŞARILI: İmza doğrulaması iptal edildi -> {path}")
-                  
-          if not patched:
-              print("[-] HATA: apk_sign.c bulunamadı. KSU kaynak kodları inmemiş olabilir!")
-          EOF
+          # Dosyanın var olup olmadığını kontrol et
+          if [ ! -f "$PATCH_FILE" ]; then
+              echo "[-] KRİTİK HATA: sbalance.patch yedek klasöründe bulunamadı!"
+              exit 1
+          fi
           
-          python3 bypass_signature.py
-
+          echo "[+] Olası Windows satır sonu (CRLF) uyumsuzlukları temizleniyor..."
+          sed -i 's/\r$//' "$PATCH_FILE"
+          
+          echo "[+] Yama çekirdeğe işleniyor..."
+          patch -p1 < "$PATCH_FILE"
+          
+          echo "[+] SBalance yaması başarıyla uygulandı!"
+          
       - name: 🪝 Patch Kernel of SUSFS
         uses: ./.github/workflows/patch-susfs
 
