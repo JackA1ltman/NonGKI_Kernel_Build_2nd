@@ -126,25 +126,51 @@ jobs:
       - name: ⚙️ Get neccssary tools
         uses: ./.github/workflows/build-ready
 
-      - name: 🛠️ Fix SBalance C Code (4.14 Backport)
+      - name: ⚖️ Apply & Fix SBalance Patch (4.14 Backport)
         shell: bash
         run: |
           cd $GITHUB_WORKSPACE/device_kernel
           
+          PATCH_FILE="/tmp/Patches_Backup/sbalance.patch"
+          echo "[+] SBalance yaması aranıyor..."
+          
+          if [ ! -f "$PATCH_FILE" ]; then
+              echo "[-] KRİTİK HATA: sbalance.patch yedek klasöründe bulunamadı!"
+              exit 1
+          fi
+          
+          echo "[+] Olası Windows satır sonu (CRLF) uyumsuzlukları temizleniyor..."
+          sed -i 's/\r$//' "$PATCH_FILE"
+          
+          echo "[+] Yama çekirdeğe işleniyor..."
+          patch -p1 < "$PATCH_FILE" || true
+          
+          # Makefile onarımı (Eğer reddedildiyse)
+          if [ -f "kernel/irq/Makefile.rej" ]; then
+              grep "^+" kernel/irq/Makefile.rej | grep -v "^+++" | sed 's/^+//' >> kernel/irq/Makefile
+              rm -f kernel/irq/Makefile.rej
+          fi
+          
+          # HASTA KONTROLÜ: sbalance.c gerçekten oluştu mu?
+          if [ ! -f "kernel/irq/sbalance.c" ]; then
+              echo "[-] KRİTİK HATA: sbalance.c dosyası yama tarafından oluşturulamadı! Yama bozuk olabilir."
+              exit 1
+          fi
+          
           echo "[+] SBalance C kodları 4.14 mimarisi için onarılıyor..."
           
-          # 1. Eksik cpufreq kütüphanesini dosyanın en üstüne ekle
+          # 1. Kütüphane eklentisi
           sed -i '1s/^/#include <linux\/cpufreq.h>\n/' kernel/irq/sbalance.c
           
-          # 2. arch_scale_cpu_capacity fonksiyonunu 4.14'e uyarla (2 parametre)
+          # 2. arch_scale_cpu_capacity 4.14 API uyarlaması
           sed -i 's/arch_scale_cpu_capacity(cpu)/arch_scale_cpu_capacity(NULL, cpu)/g' kernel/irq/sbalance.c
           
-          # 3. Yamanın sonundaki kopuk kapanış parantezlerini ekle
+          # 3. Kapanış parantezleri
           echo "" >> kernel/irq/sbalance.c
           echo "	}" >> kernel/irq/sbalance.c
           echo "}" >> kernel/irq/sbalance.c
           
-          echo "[+] SBalance Backport onarımı kusursuz tamamlandı!"
+          echo "[+] SBalance yaması ve Backport onarımı kusursuz tamamlandı!"
           
       - name: 🚀 Apply Remote Commit Patch (SSG I/O)
         shell: bash
