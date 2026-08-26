@@ -336,7 +336,7 @@ jobs:
           SECOND_OFFSET=0xF0000000
           TAGS_OFFSET=0x00000100
           BASE=0x10000000
-          CMDLINE='loop.max_part=7 loglevel=8 ignore_loglevel earlyprintk debug androidboot.selinux=permissive'
+          CMDLINE='loop.max_part=7'
           HASHTYPE=sha1
           HEADER_VERSION=1
           OS_PATCH_LEVEL=2025-08
