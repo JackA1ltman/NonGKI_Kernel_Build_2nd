@@ -193,7 +193,7 @@ index a931624b..ed95b5fe 100644
  		return 0;
  
 +	// Handle webview zygote umount policy
-+	if (new_uid == WEBVIEW_ZYGOTE_UID && !ksu_is_webview_zygote_umount_enabled())
++	if (new_uid == WEBVIEW_ZYGOTE_UID && !ksu_webview_zygote_umount_enabled)
 +		return 0;
 +
  	// There are 6 scenarios:
