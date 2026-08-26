@@ -274,6 +274,8 @@ jobs:
           CONFIG_DEBUG_KERNEL=y
           CONFIG_KALLSYMS=y
           CONFIG_KALLSYMS_ALL=y
+          CONFIG_IRQ_SBALANCE=y
+          CONFIG_SBALANCE_EXCLUDE_CPUS="3,6,7"
           
           EOF
           
