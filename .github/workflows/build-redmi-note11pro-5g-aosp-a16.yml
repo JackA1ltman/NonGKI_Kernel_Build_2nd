@@ -134,11 +134,9 @@ jobs:
         uses: ./.github/workflows/patch-baseband-guard
 
       - name: ❌ Set Swap
-        uses: thejerrybao/setup-swap-space@v1
+        uses: pierotofy/set-swap-space@master
         with:
-            swap-space-path: /swapfile
-            swap-size-gb: 16
-            remove-existing-swap-files: true
+          swap-size-gb: 16
 
       - name: 🚀 Build Process
         uses: ./.github/workflows/build-process
