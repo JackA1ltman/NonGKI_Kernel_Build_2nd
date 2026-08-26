@@ -276,6 +276,7 @@ jobs:
           CONFIG_KALLSYMS_ALL=y
           CONFIG_IRQ_SBALANCE=y
           CONFIG_SBALANCE_EXCLUDE_CPUS="3,6,7"
+          CONFIG_IRQ_SBALANCE_POLL_MSEC=10000
           
           EOF
           
