@@ -61,13 +61,13 @@ env:
   PATCHES_BRANCH: "samsung_kernel" # [your_branch] -> main
 
   SUSFS_FOLDER_FIXED: "note10_plus_exyons9850" # Fill in your patch prefix directory here. Leave it blank if there isn't one. -> your_folder
-  SUSFS_PATCH_FIXED: "susfs_fixed,susfs_fix_fdc,susfs_fix_sysc" # Fill in your patches here. If there are multiple patches, please separate them with a comma. Leave it blank if there isn't one. -> patch1,patch2
+  SUSFS_PATCH_FIXED: "susfs_fixed" # Fill in your patches here. If there are multiple patches, please separate them with a comma. Leave it blank if there isn't one. -> patch1,patch2
 
   REKERNEL_ENABLE: "false" # if u need Re:Kernel.
   DROIDSPACES_ENABLE: "false" # if u need Droidspaces or LXC/Docker.
   NOMOUNT_ENABLE: "true" # if u need NoMount.
 
-  HOOK_METHOD: "branchlink" # Manual hook method ->  syscall.
+  HOOK_METHOD: "hookless" # Manual hook method ->  syscall.
 
   KERNEL_PATCH: "true" # If your kernel version is <= 4.9, you have the option of enabling the patch to patch the kernel_write and kernel_read functions.
 
