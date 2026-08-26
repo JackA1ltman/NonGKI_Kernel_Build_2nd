@@ -148,10 +148,20 @@ jobs:
           echo "[+] Dosya sisteminin güncellenmesi için 3 saniye bekleniyor..."
           sleep 3
           
-          # Makefile onarımı
-          if [ -f "kernel/irq/Makefile.rej" ]; then
-              grep "^+" kernel/irq/Makefile.rej | grep -v "^+++" | sed 's/^+//' >> kernel/irq/Makefile
-              rm -f kernel/irq/Makefile.rej
+          # Güvenli Makefile Onarımı
+          echo "[+] sbalance.o Makefile'a ekleniyor..."
+          if ! grep -q "sbalance.o" kernel/irq/Makefile; then
+              echo "obj-y += sbalance.o" >> kernel/irq/Makefile
+          fi
+          rm -f kernel/irq/Makefile.rej
+          
+          # sbalance.c 4.14 Backport C Kodu Onarımları
+          if [ -f "kernel/irq/sbalance.c" ]; then
+              echo "[+] sbalance.c onarılıyor (cpufreq ve makrolar)..."
+              sed -i '1s/^/#include <linux\/cpufreq.h>\n/' kernel/irq/sbalance.c
+          else
+              echo "[-] KRİTİK HATA: sbalance.c dosyası oluşmamış!"
+              exit 1
           fi
           
           # sbalance.c dosyası var mı DÖNGÜSÜ (Garantili kontrol)
