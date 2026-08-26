@@ -155,26 +155,16 @@ jobs:
           fi
           rm -f kernel/irq/Makefile.rej
           
-          # sbalance.c 4.14 Backport C Kodu Onarımları
-          if [ -f "kernel/irq/sbalance.c" ]; then
-              echo "[+] sbalance.c onarılıyor (cpufreq ve makrolar)..."
-              sed -i '1s/^/#include <linux\/cpufreq.h>\n/' kernel/irq/sbalance.c
-          else
-              echo "[-] KRİTİK HATA: sbalance.c dosyası oluşmamış!"
-              exit 1
-          fi
-          
           # sbalance.c dosyası var mı DÖNGÜSÜ (Garantili kontrol)
           if [ ! -f "kernel/irq/sbalance.c" ]; then
               echo "[-] sbalance.c hala bulunamadı! Yama bozuk olabilir veya dosya oluşturulamadı."
-              # Reddedilen dosyaları göster ki neden oluşmadığını anlayalım
               cat kernel/irq/*.rej || true
               exit 1
           fi
           
           echo "[+] SBalance C kodları 4.14 mimarisi için onarılıyor..."
           
-          # 1. Kütüphane eklentisi (En üste)
+          # 1. Kütüphane eklentisi (Sadece BİR KERE ekliyoruz)
           sed -i '1s/^/#include <linux\/cpufreq.h>\n/' kernel/irq/sbalance.c
           
           # 2. arch_scale_cpu_capacity uyarlaması
@@ -184,7 +174,7 @@ jobs:
           echo -e "\n\t}\n}" >> kernel/irq/sbalance.c
           
           echo "[+] SBalance yaması ve Backport onarımı kusursuz tamamlandı!"
-          
+
       - name: 🚀 Apply Remote Commit Patch (SSG I/O)
         shell: bash
         run: |
@@ -194,7 +184,8 @@ jobs:
           curl -sL "https://github.com/dereferencex/android_kernel_gki_common_5.10/commit/433df0b8e17ae5c705bcb4c7131374ee88f8bf79.patch" | patch -p1 || true
           
           echo "[+] Eksik kalan Makefile satırı doğrudan yazılıyor..."
-          echo "obj-\$(CONFIG_MQ_IOSCHED_SSG) += ssg-iosched.o ssg-cgroup.o" >> block/Makefile
+          echo "" >> block/Makefile 
+          echo "obj-\$(CONFIG_MQ_IOSCHED_SSG)	+= ssg-iosched.o ssg-cgroup.o" >> block/Makefile
           
           echo "[+] Gereksiz kalıntılar temizleniyor..."
           rm -f block/*.rej
@@ -206,6 +197,7 @@ jobs:
               echo "CONFIG_MQ_IOSCHED_SSG_CGROUP=y" >> "{}"
               sed -i "s/CONFIG_DEFAULT_IOSCHED=.*/CONFIG_DEFAULT_IOSCHED=\"ssg\"/g" "{}"
           ' \;
+      
           
       - name: 🪝 Patch Kernel of SUSFS
         uses: ./.github/workflows/patch-susfs
