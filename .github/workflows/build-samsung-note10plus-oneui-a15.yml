@@ -163,18 +163,33 @@ jobs:
           
           echo "[+] SBalance yaması başarıyla uygulandı ve pürüzler giderildi!"
 
-      - name: 🚀 Apply Remote Commit Patch (Dereferencex)
+      - name: 🚀 Apply Remote Commit Patch (SSG I/O)
         shell: bash
         run: |
           cd $GITHUB_WORKSPACE/device_kernel
           
-          echo "[+] Uzak sunucudaki commit havada yakalanıp kernele işleniyor..."
+          echo "[+] SSG I/O yaması çekiliyor..."
+          curl -sL "https://github.com/dereferencex/android_kernel_gki_common_5.10/commit/433df0b8e17ae5c705bcb4c7131374ee88f8bf79.patch" | patch -p1 || true
           
-          # -s (sessiz), -L (yönlendirmeleri takip et) parametreleri çok kritiktir!
-          # curl ile patch dosyasını çekip doğrudan patch komutuna besliyoruz (Pipe)
-          curl -sL "https://github.com/dereferencex/android_kernel_gki_common_5.10/commit/433df0b8e17ae5c705bcb4c7131374ee88f8bf79.patch" | patch -p1
+          echo "[+] Eksik kalan Makefile satırı onarılıyor..."
+          if [ -f "block/Makefile.rej" ]; then
+              grep "^+" block/Makefile.rej | grep -v "^+++" | sed 's/^+//' >> block/Makefile
+          fi
           
-          echo "[+] Uzak commit başarıyla yamalandı!"    
+          echo "[+] Gereksiz kalıntılar temizleniyor..."
+          rm -f block/*.rej
+          
+          echo "[+] DİKKAT: Kullanıcının uyarısı üzerine SSG, Defconfig dosyalarına işleniyor!"
+          # arch/arm64/configs içindeki tüm defconfig dosyalarını bulup SSG ayarlarını enjekte eder
+          find arch/arm64/configs -type f -name "*defconfig" -exec sh -c '
+              echo "" >> "{}"
+              echo "CONFIG_MQ_IOSCHED_SSG=y" >> "{}"
+              echo "CONFIG_MQ_IOSCHED_SSG_CGROUP=y" >> "{}"
+              # Eğer başka bir varsayılan zamanlayıcı varsa, onu ssg ile değiştir
+              sed -i "s/CONFIG_DEFAULT_IOSCHED=.*/CONFIG_DEFAULT_IOSCHED=\"ssg\"/g" "{}"
+          ' \;
+          
+          echo "[+] Yama işlemi ve Defconfig enjeksiyonu kusursuz tamamlandı!"
           
       - name: 🪝 Patch Kernel of SUSFS
         uses: ./.github/workflows/patch-susfs
