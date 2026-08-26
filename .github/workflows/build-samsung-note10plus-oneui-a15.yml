@@ -175,29 +175,6 @@ jobs:
           
           echo "[+] SBalance yaması ve Backport onarımı kusursuz tamamlandı!"
 
-      - name: 🚀 Apply Remote Commit Patch (SSG I/O)
-        shell: bash
-        run: |
-          cd $GITHUB_WORKSPACE/device_kernel
-          
-          echo "[+] SSG I/O yaması çekiliyor..."
-          curl -sL "https://github.com/dereferencex/android_kernel_gki_common_5.10/commit/433df0b8e17ae5c705bcb4c7131374ee88f8bf79.patch" | patch -p1 || true
-          
-          echo "[+] Eksik kalan Makefile satırı doğrudan yazılıyor..."
-          echo "" >> block/Makefile 
-          echo "obj-\$(CONFIG_MQ_IOSCHED_SSG)	+= ssg-iosched.o ssg-cgroup.o" >> block/Makefile
-          
-          echo "[+] Gereksiz kalıntılar temizleniyor..."
-          rm -f block/*.rej
-          
-          echo "[+] SSG, Defconfig dosyalarına işleniyor!"
-          find arch/arm64/configs -type f -name "*defconfig" -exec sh -c '
-              echo "" >> "{}"
-              echo "CONFIG_MQ_IOSCHED_SSG=y" >> "{}"
-              echo "CONFIG_MQ_IOSCHED_SSG_CGROUP=y" >> "{}"
-              sed -i "s/CONFIG_DEFAULT_IOSCHED=.*/CONFIG_DEFAULT_IOSCHED=\"ssg\"/g" "{}"
-          ' \;
-      
           
       - name: 🪝 Patch Kernel of SUSFS
         uses: ./.github/workflows/patch-susfs
