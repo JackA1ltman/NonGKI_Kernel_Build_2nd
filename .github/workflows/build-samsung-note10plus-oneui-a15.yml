@@ -126,30 +126,35 @@ jobs:
       - name: ⚙️ Get neccssary tools
         uses: ./.github/workflows/build-ready
 
-      - name: 🚀 Add KernelSU Multi-Manager Support
+      - name: 🚀 Add KernelSU Multi-Manager Support (Ultimate Bypass)
         shell: bash
         run: |
           cd $GITHUB_WORKSPACE/device_kernel
           
           echo "[+] Multi-Manager (Signature Bypass) işlemi başlatılıyor..."
           
-          # KernelSU kaynak kodlarının bulunduğu dizin
-          # Not: Senin scriptin "shell" metoduyla çekiyorsa genelde drivers/kernelsu içine iner.
-          KSU_DIR="drivers/kernelsu"
+          cat << 'EOF' > bypass_signature.py
+          import os, re
           
-          if [ -d "$KSU_DIR" ]; then
-              echo "[+] apk_sign.c dosyasına sızılıyor..."
-              
-              # 1. İmza boyutu (Size) kontrolünü bypass et
-              sed -i 's/return EXPECTED_SIZE == size;/return true;/g' $KSU_DIR/apk_sign.c || true
-              
-              # 2. İmza Hash (Kripto) doğrulamasını bypass et
-              sed -i 's/return memcmp(hash, EXPECTED_HASH, EXPECTED_SIZE) == 0;/return true;/g' $KSU_DIR/apk_sign.c || true
-              
-              echo "[+] Güvenlik duvarı yıkıldı! Artık modlu, Next veya fork Manager'lar kullanılabilir."
-          else
-              echo "[-] KSU dizini bulunamadı! Eğer klasör adı farklıysa (örn: KernelSU), scriptteki KSU_DIR değişkenini ona göre güncelle."
-          fi
+          patched = False
+          # Bütün kernel klasörlerini tarayıp apk_sign.c dosyasını buluyoruz
+          for root, dirs, files in os.walk('.'):
+              if 'apk_sign.c' in files:
+                  path = os.path.join(root, 'apk_sign.c')
+                  with open(path, 'r') as f: data = f.read()
+                  
+                  # v2, v3 ve v3.1 imza fonksiyonlarını bulup her zaman "return true;" vermesini sağlıyoruz
+                  data = re.sub(r'(bool\s+check_v[23]1?_signature[^{]*\{)', r'\1\n\treturn true;', data)
+                  
+                  with open(path, 'w') as f: f.write(data)
+                  patched = True
+                  print(f"[+] BAŞARILI: İmza doğrulaması iptal edildi -> {path}")
+                  
+          if not patched:
+              print("[-] HATA: apk_sign.c bulunamadı. KSU kaynak kodları inmemiş olabilir!")
+          EOF
+          
+          python3 bypass_signature.py
 
       - name: 🪝 Patch Kernel of SUSFS
         uses: ./.github/workflows/patch-susfs
