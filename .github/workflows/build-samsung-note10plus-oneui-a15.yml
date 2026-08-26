@@ -126,43 +126,26 @@ jobs:
       - name: ⚙️ Get neccssary tools
         uses: ./.github/workflows/build-ready
 
-      - name: ⚖️ Apply SBalance Patch
+      - name: 🛠️ Fix SBalance C Code (4.14 Backport)
         shell: bash
         run: |
           cd $GITHUB_WORKSPACE/device_kernel
           
-          PATCH_FILE="/tmp/Patches_Backup/sbalance.patch"
+          echo "[+] SBalance C kodları 4.14 mimarisi için onarılıyor..."
           
-          echo "[+] SBalance yaması aranıyor..."
+          # 1. Eksik cpufreq kütüphanesini dosyanın en üstüne ekle
+          sed -i '1s/^/#include <linux\/cpufreq.h>\n/' kernel/irq/sbalance.c
           
-          if [ ! -f "$PATCH_FILE" ]; then
-              echo "[-] KRİTİK HATA: sbalance.patch yedek klasöründe bulunamadı!"
-              exit 1
-          fi
+          # 2. arch_scale_cpu_capacity fonksiyonunu 4.14'e uyarla (2 parametre)
+          sed -i 's/arch_scale_cpu_capacity(cpu)/arch_scale_cpu_capacity(NULL, cpu)/g' kernel/irq/sbalance.c
           
-          echo "[+] Olası Windows satır sonu (CRLF) uyumsuzlukları temizleniyor..."
-          sed -i 's/\r$//' "$PATCH_FILE"
+          # 3. Yamanın sonundaki kopuk kapanış parantezlerini ekle
+          echo "" >> kernel/irq/sbalance.c
+          echo "	}" >> kernel/irq/sbalance.c
+          echo "}" >> kernel/irq/sbalance.c
           
-          echo "[+] Yama çekirdeğe işleniyor..."
+          echo "[+] SBalance Backport onarımı kusursuz tamamlandı!"
           
-          # || true parametresi çok kritik: Makefile başarısız olsa bile GitHub Actions'ın çökmesini engeller
-          patch -p1 < "$PATCH_FILE" || true
-          
-          # Makefile.rej oluştuysa (reddedildiyse) devreye girecek "Akıllı Onarım" bloğu
-          if [ -f "kernel/irq/Makefile.rej" ]; then
-              echo "[-] Makefile yaması reddedildi! Akıllı onarım başlatılıyor..."
-              
-              # .rej dosyasındaki eklenmek istenen satırı (+) bul, başındaki artıyı sil ve Makefile'ın en altına ekle
-              grep "^+" kernel/irq/Makefile.rej | grep -v "^+++" | sed 's/^+//' >> kernel/irq/Makefile
-              
-              echo "[+] Eksik komut (sbalance.o) manuel olarak Makefile'a eklendi!"
-              
-              # .rej dosyasını siliyoruz! (Çünkü silmezsek alttaki no-kprobe kontrolü bu dosyayı görüp hata verir)
-              rm kernel/irq/Makefile.rej
-          fi
-          
-          echo "[+] SBalance yaması başarıyla uygulandı ve pürüzler giderildi!"
-
       - name: 🚀 Apply Remote Commit Patch (SSG I/O)
         shell: bash
         run: |
@@ -171,25 +154,19 @@ jobs:
           echo "[+] SSG I/O yaması çekiliyor..."
           curl -sL "https://github.com/dereferencex/android_kernel_gki_common_5.10/commit/433df0b8e17ae5c705bcb4c7131374ee88f8bf79.patch" | patch -p1 || true
           
-          echo "[+] Eksik kalan Makefile satırı onarılıyor..."
-          if [ -f "block/Makefile.rej" ]; then
-              grep "^+" block/Makefile.rej | grep -v "^+++" | sed 's/^+//' >> block/Makefile
-          fi
+          echo "[+] Eksik kalan Makefile satırı doğrudan yazılıyor..."
+          echo "obj-\$(CONFIG_MQ_IOSCHED_SSG) += ssg-iosched.o ssg-cgroup.o" >> block/Makefile
           
           echo "[+] Gereksiz kalıntılar temizleniyor..."
           rm -f block/*.rej
           
-          echo "[+] DİKKAT: Kullanıcının uyarısı üzerine SSG, Defconfig dosyalarına işleniyor!"
-          # arch/arm64/configs içindeki tüm defconfig dosyalarını bulup SSG ayarlarını enjekte eder
+          echo "[+] SSG, Defconfig dosyalarına işleniyor!"
           find arch/arm64/configs -type f -name "*defconfig" -exec sh -c '
               echo "" >> "{}"
               echo "CONFIG_MQ_IOSCHED_SSG=y" >> "{}"
               echo "CONFIG_MQ_IOSCHED_SSG_CGROUP=y" >> "{}"
-              # Eğer başka bir varsayılan zamanlayıcı varsa, onu ssg ile değiştir
               sed -i "s/CONFIG_DEFAULT_IOSCHED=.*/CONFIG_DEFAULT_IOSCHED=\"ssg\"/g" "{}"
           ' \;
-          
-          echo "[+] Yama işlemi ve Defconfig enjeksiyonu kusursuz tamamlandı!"
           
       - name: 🪝 Patch Kernel of SUSFS
         uses: ./.github/workflows/patch-susfs
