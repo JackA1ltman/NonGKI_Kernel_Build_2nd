@@ -14,7 +14,6 @@ runs:
             cp /tmp/Patches/Rekernel/rekernel_patches.sh ./
             bash rekernel_patches.sh
 
-            mkdir -p drivers/rekernel
             cp /tmp/Patches/Rekernel/rekernel_extra.patch ./
             patch -p1 < rekernel_extra.patch || true
 
