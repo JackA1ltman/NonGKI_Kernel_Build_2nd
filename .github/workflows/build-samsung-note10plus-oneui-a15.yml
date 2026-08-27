@@ -219,40 +219,44 @@ jobs:
           echo "[+] SBalance yaması ve Backport onarımı kusursuz tamamlandı!"
 
 
-      - name: 🚀 Apply Native 4.14 SSG I/O Scheduler
+      - name: 🚀 Apply Native 4.14 SSG I/O Scheduler & Fixes
         shell: bash
         run: |
           cd $GITHUB_WORKSPACE/device_kernel
           
-          echo "[+] 4.14 Uyumlu SSG I/O yaması çekiliyor..."
-          curl -sL "https://github.com/manipvlator/los_kernel_xiaomi_sm6150/commit/5f39c5f68f9a8890cbf7639e35a3edb6f873bd65.patch" -o ssg_414.patch
+          echo "[+] 4.14 Uyumlu SSG I/O ana yaması çekiliyor..."
+          curl -sL "https://github.com/manipvlator/los_kernel_xiaomi_sm6150/commit/5f39c5f68f9a8890cbf7639e35a3edb6f873bd65.patch" -o ssg_414_base.patch
+          
+          echo "[+] SSG I/O ek düzeltme yamaları (Fixes) çekiliyor..."
+          curl -sL "https://github.com/manipvlator/los_kernel_xiaomi_sm6150/commit/a181d8276b765c481b7643830fd49153da7d28b2.patch" -o ssg_414_fix1.patch
+          curl -sL "https://github.com/manipvlator/los_kernel_xiaomi_sm6150/commit/4aaec6194aa556a473bf1cc82afde27825e16dd1.patch" -o ssg_414_fix2.patch
           
           echo "[+] CRLF temizliği yapılıyor..."
-          sed -i 's/\r$//' ssg_414.patch
+          sed -i 's/\r$//' ssg_414_base.patch ssg_414_fix1.patch ssg_414_fix2.patch
           
-          echo "[+] Yama uygulanıyor..."
-          patch -p1 < ssg_414.patch || true
+          echo "[+] Yamalar sırayla (Ana Yama -> Düzeltme 1 -> Düzeltme 2) uygulanıyor..."
+          patch -p1 < ssg_414_base.patch || true
+          patch -p1 < ssg_414_fix1.patch || true
+          patch -p1 < ssg_414_fix2.patch || true
           
           echo "[+] Güvenlik önlemleri (Makefile ve Kconfig çakışmaları için)..."
-          # Eğer yama Makefile'a otomatik ekleyemediyse biz manuel ekliyoruz
           if ! grep -q "ssg-iosched.o" block/Makefile; then
               echo "" >> block/Makefile
               echo "obj-\$(CONFIG_MQ_IOSCHED_SSG) += ssg-iosched.o" >> block/Makefile
           fi
           
-          # Başarısız yama artıklarını temizle ki "Error 2" vermesin
+          # Başarısız yama artıklarını temizle ki derleyici (Make) patlamasın
           find block/ -name "*.rej" -type f -delete
           
           echo "[+] SSG, Defconfig dosyalarına işleniyor ve varsayılan yapılıyor!"
           find arch/arm64/configs -type f -name "*defconfig" -exec sh -c '
               echo "" >> "{}"
               echo "CONFIG_MQ_IOSCHED_SSG=y" >> "{}"
-              # Cgroup özelliğini Android performansı için kapalı tutuyoruz
               echo "# CONFIG_MQ_IOSCHED_SSG_CGROUP is not set" >> "{}"
               sed -i "s/CONFIG_DEFAULT_IOSCHED=.*/CONFIG_DEFAULT_IOSCHED=\"ssg\"/g" "{}"
           ' \;
           
-          echo "[+] 4.14 Native SSG yaması başarıyla entegre edildi!"    
+          echo "[+] 4.14 Native SSG ve ek yamaları başarıyla entegre edildi!"
 
       - name: ⚡ Apply Additional Optimization Patches (other_opt)
         shell: bash
