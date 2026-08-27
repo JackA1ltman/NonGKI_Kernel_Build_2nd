@@ -313,6 +313,33 @@ jobs:
           ' \;
           
           echo "[+] Maple başarıyla varsayılan zamanlayıcı olarak ayarlandı!"
+
+      - name: 🚀 Enable FQ-CoDel (Network Scheduler)
+        shell: bash
+        run: |
+          cd $GITHUB_WORKSPACE/device_kernel
+          
+          echo "[+] FQ-CoDel için QoS Ana Şalterleri açılıyor ve ayarlanıyor..."
+          find arch/arm64/configs -type f -name "*defconfig" -exec sh -c '
+              echo "" >> "{}"
+              
+              # 1. QoS ve Ağ Zamanlama Ana Şalterlerini Açıyoruz (ZORUNLU BAĞIMLILIK)
+              echo "CONFIG_NET_SCHED=y" >> "{}"
+              
+              # 2. FQ-CoDel Sürücüsünü Aktif Ediyoruz
+              echo "CONFIG_NET_SCH_FQ_CODEL=y" >> "{}"
+              echo "CONFIG_DEFAULT_FQ_CODEL=y" >> "{}"
+              
+              # 3. Varsayılan Zamanlayıcıyı fq_codel Olarak Değiştiriyoruz
+              sed -i "s/CONFIG_DEFAULT_NET_SCH=.*/CONFIG_DEFAULT_NET_SCH=\"fq_codel\"/g" "{}"
+              
+              # Eğer CONFIG_DEFAULT_NET_SCH satırı orijinal dosyada hiç yoksa zorla ekliyoruz
+              if ! grep -q "CONFIG_DEFAULT_NET_SCH=\"fq_codel\"" "{}"; then
+                  echo "CONFIG_DEFAULT_NET_SCH=\"fq_codel\"" >> "{}"
+              fi
+          ' \;
+          
+          echo "[+] FQ-CoDel başarıyla defconfig'e işlendi!"    
           
       - name: 🪝 Patch Kernel of SUSFS
         uses: ./.github/workflows/patch-susfs
