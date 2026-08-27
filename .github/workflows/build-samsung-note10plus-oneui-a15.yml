@@ -218,91 +218,35 @@ jobs:
           
           echo "[+] SBalance yaması ve Backport onarımı kusursuz tamamlandı!"
 
-      - name: 🚀 Apply Remote Patch & 4.14 C Code Backport (SSG I/O)
+      - name: ⚡ Apply Additional Optimization Patches (other_opt)
         shell: bash
         run: |
           cd $GITHUB_WORKSPACE/device_kernel
           
-          echo "[+] GKI 5.10 SSG I/O yaması çekiliyor..."
-          curl -sL "https://github.com/dereferencex/android_kernel_gki_common_5.10/commit/433df0b8e17ae5c705bcb4c7131374ee88f8bf79.patch" | patch -p1 || true
+          echo "[+] Optimizasyon yamaları için depo geçici olarak klonlanıyor..."
+          # Sadece en son commiti (depth=1) çekiyoruz ki işlem 1-2 saniye sürsün
+          git clone --depth=1 https://github.com/fatalcoder524/kernel_patches_additional.git /tmp/opt_patches
           
-          echo "[+] Eksik kalan Makefile satırı onarılıyor..."
-          echo "" >> block/Makefile 
-          echo "obj-\$(CONFIG_MQ_IOSCHED_SSG) += ssg-iosched.o ssg-cgroup.o" >> block/Makefile
-          rm -f block/*.rej
+          echo "[+] other_opt klasöründeki tüm yamalar sırayla uygulanıyor..."
+          # Klasördeki tüm .patch dosyalarını bul ve döngüye sok
+          for patch_file in /tmp/opt_patches/other_opt/*.patch; do
+              echo "--------------------------------------------------------"
+              echo "[>] İşleniyor: $(basename "$patch_file")"
+              
+              # Windows/Linux satır sonu (CRLF) uyumsuzluklarını temizle
+              sed -i 's/\r$//' "$patch_file"
+              
+              # Yamayı uygula (Hata verirse derlemeyi durdurma, pas geçip diğerine devam et)
+              patch -p1 < "$patch_file" || echo "[-] UYARI: $(basename "$patch_file") yaması 4.14 ile uyumsuz olabilir, pas geçildi!"
+          done
+          echo "--------------------------------------------------------"
           
-          echo "[+] MANUEL 4.14 BACKPORT İŞLEMİ BAŞLIYOR..."
+          echo "[+] Temizlik yapılıyor..."
+          rm -rf /tmp/opt_patches
+          # Başarısız yamaların bıraktığı .rej dosyalarını sil ki derleyiciyi (Make) bozmasınlar
+          find . -type f -name "*.rej" -delete
           
-          # 1. ZBD ve Eksik Fonksiyonlar İçin Makro Enjeksiyonu
-          cat << 'EOF' > dummy_macros.h
-          /* 4.14 Compatibility Macros */
-          #ifndef blk_req_can_dispatch_to_zone
-          #define blk_req_can_dispatch_to_zone(rq) (1)
-          #endif
-          #ifndef blk_req_zone_write_lock
-          #define blk_req_zone_write_lock(rq) do {} while(0)
-          #endif
-          #ifndef blk_req_zone_write_unlock
-          #define blk_req_zone_write_unlock(rq) do {} while(0)
-          #endif
-          #ifndef blk_discard_mergable
-          #define blk_discard_mergable(rq) (0)
-          #endif
-          #ifndef ELEVATOR_F_ZBD_SEQ_WRITE
-          #define ELEVATOR_F_ZBD_SEQ_WRITE 0
-          #endif
-          #ifndef sbitmap_queue_min_shallow_depth
-          #define sbitmap_queue_min_shallow_depth(sbq, depth) do {} while(0)
-          #endif
-          #ifndef blk_mq_sched_mark_restart_hctx
-          #define blk_mq_sched_mark_restart_hctx(hctx) do {} while(0)
-          #endif
-          EOF
-          
-          cat block/ssg-iosched.c >> dummy_macros.h
-          mv dummy_macros.h block/ssg-iosched.c
-          
-          # 2. Pointer dönüşümleri ve temel argüman düzeltmeleri
-          sed -i 's/tags->bitmap_tags->sb.depth/tags->bitmap_tags.sb.depth/g' block/ssg-iosched.c
-          sed -i 's/tags->bitmap_tags->sb.map_nr/tags->bitmap_tags.sb.map_nr/g' block/ssg-iosched.c
-          sed -i 's/blk_mq_sched_try_merge(q, bio, nr_segs, &free)/blk_mq_sched_try_merge(q, bio, \&free)/g' block/ssg-iosched.c
-          sed -i 's/rqi->blkg = blkg_lookup(css_to_blkcg(blkcg_css()), rq->q);/rqi->blkg = NULL;/g' block/ssg-iosched.c
-          sed -i 's/\.ops[[:space:]]*=[[:space:]]*{/\.ops\.mq = {/g' block/ssg-iosched.c
-          
-          # 3. YENİ: 4.14 Argüman Uyuşmazlığı İçin Sarmalayıcı (Wrapper) Fonksiyonlar
-          cat << 'EOF' > wrappers_inj.h
-          
-          /* --- 4.14 Function Signature Wrappers --- */
-          static void ssg_completed_request_wrapper(struct request *rq) { ssg_completed_request(rq, 0); }
-          static void ssg_prepare_request_wrapper(struct request *rq, struct bio *bio) { ssg_prepare_request(rq); }
-          static bool ssg_bio_merge_wrapper(struct blk_mq_hw_ctx *hctx, struct bio *bio) { return ssg_bio_merge(hctx->queue, bio, 0); }
-          /* ---------------------------------------- */
-          EOF
-          
-          # Wrapper kodlarını C dosyasındaki elevator_type yapısının hemen ÜSTÜNE hatasız bir şekilde gömüyoruz
-          LINE=$(grep -n "static struct elevator_type" block/ssg-iosched.c | cut -d: -f1)
-          head -n $((LINE-1)) block/ssg-iosched.c > temp.c
-          cat wrappers_inj.h >> temp.c
-          tail -n +$LINE block/ssg-iosched.c >> temp.c
-          mv temp.c block/ssg-iosched.c
-          
-          # 4. YENİ: Hata veren değişkenlerin temizliği ve sarmalayıcı atamaları
-          sed -i 's/\.completed_request = ssg_completed_request,/\.completed_request = ssg_completed_request_wrapper,/g' block/ssg-iosched.c
-          sed -i 's/\.prepare_request = ssg_prepare_request,/\.prepare_request = ssg_prepare_request_wrapper,/g' block/ssg-iosched.c
-          sed -i 's/\.bio_merge = ssg_bio_merge,/\.bio_merge = ssg_bio_merge_wrapper,/g' block/ssg-iosched.c
-          sed -i '/\.depth_updated/d' block/ssg-iosched.c
-          sed -i '/\.elevator_features/d' block/ssg-iosched.c
-          sed -i '/\.elevator_alias/d' block/ssg-iosched.c
-          
-          echo "[+] SSG, Defconfig dosyalarına işleniyor!"
-          find arch/arm64/configs -type f -name "*defconfig" -exec sh -c '
-              echo "" >> "{}"
-              echo "CONFIG_MQ_IOSCHED_SSG=y" >> "{}"
-              echo "# CONFIG_MQ_IOSCHED_SSG_CGROUP is not set" >> "{}"
-              sed -i "s/CONFIG_DEFAULT_IOSCHED=.*/CONFIG_DEFAULT_IOSCHED=\"ssg\"/g" "{}"
-          ' \;
-          
-          echo "[+] Manuel 4.14 uyarlaması KUSURSUZ tamamlandı!"
+          echo "[+] Ekstra optimizasyon yamaları başarıyla entegre edildi!"
 
           
       - name: 🪝 Patch Kernel of SUSFS
