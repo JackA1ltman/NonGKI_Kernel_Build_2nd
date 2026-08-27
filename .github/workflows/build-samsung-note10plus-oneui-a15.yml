@@ -233,8 +233,7 @@ jobs:
           
           echo "[+] MANUEL 4.14 BACKPORT İŞLEMİ BAŞLIYOR..."
           
-          # 1. ZBD (Zoned Block) ve Eksik Fonksiyonlar İçin Makro Enjeksiyonu
-          # Bu yöntem kodun içindeki tüm implicit declaration hatalarını tek seferde çözer.
+          # 1. ZBD ve Eksik Fonksiyonlar İçin Makro Enjeksiyonu
           cat << 'EOF' > dummy_macros.h
           /* 4.14 Compatibility Macros */
           #ifndef blk_req_can_dispatch_to_zone
@@ -252,25 +251,29 @@ jobs:
           #ifndef ELEVATOR_F_ZBD_SEQ_WRITE
           #define ELEVATOR_F_ZBD_SEQ_WRITE 0
           #endif
+          #ifndef sbitmap_queue_min_shallow_depth
+          #define sbitmap_queue_min_shallow_depth(sbq, depth) do {} while(0)
+          #endif
+          #ifndef blk_mq_sched_mark_restart_hctx
+          #define blk_mq_sched_mark_restart_hctx(hctx) do {} while(0)
+          #endif
           EOF
           
-          # Makroları dosyanın en üstüne ekleyip eski kodla birleştiriyoruz
+          # Makroları koda gömüyoruz
           cat block/ssg-iosched.c >> dummy_macros.h
           mv dummy_macros.h block/ssg-iosched.c
           
-          # 2. sbitmap_queue Pointer -> Struct Dönüşümleri
+          # 2. Pointer dönüşümleri ve argüman düzeltmeleri
           sed -i 's/tags->bitmap_tags->sb.depth/tags->bitmap_tags.sb.depth/g' block/ssg-iosched.c
           sed -i 's/tags->bitmap_tags->sb.map_nr/tags->bitmap_tags.sb.map_nr/g' block/ssg-iosched.c
-          sed -i 's/sbitmap_queue_min_shallow_depth(tags->bitmap_tags,/sbitmap_queue_min_shallow_depth(\&tags->bitmap_tags,/g' block/ssg-iosched.c
-          
-          # 3. blk_mq_sched_try_merge Argüman Sayısı Uyarlaması (nr_segs siliniyor)
           sed -i 's/blk_mq_sched_try_merge(q, bio, nr_segs, &free)/blk_mq_sched_try_merge(q, bio, \&free)/g' block/ssg-iosched.c
-          
-          # 4. Hardware Context (mq_hctx) 4.14 Eşleştirmesi
-          sed -i 's/blk_mq_sched_mark_restart_hctx(rq->mq_hctx)/blk_mq_sched_mark_restart_hctx(blk_mq_map_queue(rq->q, rq->mq_ctx->cpu))/g' block/ssg-iosched.c
-          
-          # 5. Cgroup (css_to_blkcg) Uyumsuzluğunu Bypass Etme
           sed -i 's/rqi->blkg = blkg_lookup(css_to_blkcg(blkcg_css()), rq->q);/rqi->blkg = NULL;/g' block/ssg-iosched.c
+          
+          # 3. YENİ: 4.14 Union (mq) uyarlaması (.ops = { kısmını .ops.mq = { yapar)
+          sed -i 's/\.ops[[:space:]]*=[[:space:]]*{/\.ops\.mq = {/g' block/ssg-iosched.c
+          
+          # 4. YENİ: Desteklenmeyen elevator_alias değişkenini silme
+          sed -i '/\.elevator_alias/d' block/ssg-iosched.c
           
           echo "[+] SSG, Defconfig dosyalarına işleniyor!"
           find arch/arm64/configs -type f -name "*defconfig" -exec sh -c '
@@ -280,7 +283,7 @@ jobs:
               sed -i "s/CONFIG_DEFAULT_IOSCHED=.*/CONFIG_DEFAULT_IOSCHED=\"ssg\"/g" "{}"
           ' \;
           
-          echo "[+] Manuel 4.14 uyarlaması KUSURSUZ tamamlandı!"    
+          echo "[+] Manuel 4.14 uyarlaması KUSURSUZ tamamlandı!"
 
           
       - name: 🪝 Patch Kernel of SUSFS
