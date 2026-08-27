@@ -72,7 +72,7 @@ for i in "${patch_files[@]}"; do
     fs/open.c)
         sed -i '/#include <linux\/compat.h>/a #ifdef CONFIG_KSU_SUSFS\n#include <linux\/susfs_def.h>\n#endif' fs/open.c
 
-        if grep -q "internal.h" "fs/stat.c" && ! grep "static int filename_lookup" "fs/namei.c"; then
+        if ! grep -q "internal.h" "fs/stat.c" && ! grep "static int filename_lookup" "fs/namei.c"; then
             sed -i '/#include <linux\/compat.h>/a\#include "internal.h"' fs/stat.c
         fi
 
@@ -137,7 +137,7 @@ for i in "${patch_files[@]}"; do
             fi
         fi
 
-        if grep -q "internal.h" "fs/stat.c" && ! grep "static int filename_lookup" "fs/namei.c"; then
+        if ! grep -q "internal.h" "fs/stat.c" && ! grep "static int filename_lookup" "fs/namei.c"; then
             sed -i '/#include <asm\/unistd.h>/a\#include "internal.h"' fs/stat.c
         fi
 
