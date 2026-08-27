@@ -169,7 +169,90 @@ jobs:
           
           echo "[+] Backport yamaları başarıyla uygulandı!"
 
-      
+      - name: ⚖️ Apply & Fix SBalance Patch (4.14 Backport)
+        shell: bash
+        run: |
+          cd $GITHUB_WORKSPACE/device_kernel
+          
+          PATCH_FILE="/tmp/Patches_Backup/sbalance.patch"
+          echo "[+] SBalance yaması aranıyor..."
+          
+          if [ ! -f "$PATCH_FILE" ]; then
+              echo "[-] KRİTİK HATA: sbalance.patch yedek klasöründe bulunamadı!"
+              exit 1
+          fi
+          
+          echo "[+] CRLF temizliği yapılıyor..."
+          sed -i 's/\r$//' "$PATCH_FILE"
+          
+          echo "[+] Yama çekirdeğe işleniyor..."
+          patch -p1 < "$PATCH_FILE" || true
+          
+          echo "[+] Dosya sisteminin güncellenmesi için 3 saniye bekleniyor..."
+          sleep 3
+          
+          # Güvenli Makefile Onarımı
+          echo "[+] sbalance.o Makefile'a ekleniyor..."
+          if ! grep -q "sbalance.o" kernel/irq/Makefile; then
+              echo "obj-y += sbalance.o" >> kernel/irq/Makefile
+          fi
+          rm -f kernel/irq/Makefile.rej
+          
+          # sbalance.c dosyası var mı DÖNGÜSÜ (Garantili kontrol)
+          if [ ! -f "kernel/irq/sbalance.c" ]; then
+              echo "[-] sbalance.c hala bulunamadı! Yama bozuk olabilir veya dosya oluşturulamadı."
+              cat kernel/irq/*.rej || true
+              exit 1
+          fi
+          
+          echo "[+] SBalance C kodları 4.14 mimarisi için onarılıyor..."
+          
+          # 1. Kütüphane eklentisi (Sadece BİR KERE ekliyoruz)
+          sed -i '1s/^/#include <linux\/cpufreq.h>\n/' kernel/irq/sbalance.c
+          
+          # 2. arch_scale_cpu_capacity uyarlaması
+          sed -i 's/arch_scale_cpu_capacity(cpu)/arch_scale_cpu_capacity(NULL, cpu)/g' kernel/irq/sbalance.c
+          
+          # 3. Kapanış parantezleri
+          echo -e "\n\t}\n}" >> kernel/irq/sbalance.c
+          
+          echo "[+] SBalance yaması ve Backport onarımı kusursuz tamamlandı!"
+
+
+      - name: 🚀 Apply Native 4.14 SSG I/O Scheduler
+        shell: bash
+        run: |
+          cd $GITHUB_WORKSPACE/device_kernel
+          
+          echo "[+] 4.14 Uyumlu SSG I/O yaması çekiliyor..."
+          curl -sL "https://github.com/manipvlator/los_kernel_xiaomi_sm6150/commit/5f39c5f68f9a8890cbf7639e35a3edb6f873bd65.patch" -o ssg_414.patch
+          
+          echo "[+] CRLF temizliği yapılıyor..."
+          sed -i 's/\r$//' ssg_414.patch
+          
+          echo "[+] Yama uygulanıyor..."
+          patch -p1 < ssg_414.patch || true
+          
+          echo "[+] Güvenlik önlemleri (Makefile ve Kconfig çakışmaları için)..."
+          # Eğer yama Makefile'a otomatik ekleyemediyse biz manuel ekliyoruz
+          if ! grep -q "ssg-iosched.o" block/Makefile; then
+              echo "" >> block/Makefile
+              echo "obj-\$(CONFIG_MQ_IOSCHED_SSG) += ssg-iosched.o" >> block/Makefile
+          fi
+          
+          # Başarısız yama artıklarını temizle ki "Error 2" vermesin
+          find block/ -name "*.rej" -type f -delete
+          
+          echo "[+] SSG, Defconfig dosyalarına işleniyor ve varsayılan yapılıyor!"
+          find arch/arm64/configs -type f -name "*defconfig" -exec sh -c '
+              echo "" >> "{}"
+              echo "CONFIG_MQ_IOSCHED_SSG=y" >> "{}"
+              # Cgroup özelliğini Android performansı için kapalı tutuyoruz
+              echo "# CONFIG_MQ_IOSCHED_SSG_CGROUP is not set" >> "{}"
+              sed -i "s/CONFIG_DEFAULT_IOSCHED=.*/CONFIG_DEFAULT_IOSCHED=\"ssg\"/g" "{}"
+          ' \;
+          
+          echo "[+] 4.14 Native SSG yaması başarıyla entegre edildi!"    
 
       - name: ⚡ Apply Additional Optimization Patches (other_opt)
         shell: bash
@@ -292,83 +375,6 @@ jobs:
           
           EOF
           
-          
-      - name: 🚀 Add BBRPlus, FQ-CoDel & TCP-LP to Kernel
-        shell: bash
-        run: |
-          cd $GITHUB_WORKSPACE/device_kernel
-          
-          echo "[+] BBRPlus kaynak kodu indiriliyor..."
-          rm -f net/ipv4/tcp_bbrplus.c
-          wget -qO net/ipv4/tcp_bbrplus.c https://raw.githubusercontent.com/cx9208/bbrplus/master/tcp_bbrplus.c || true
-          
-          if grep -q "404: Not Found" net/ipv4/tcp_bbrplus.c || [ ! -s net/ipv4/tcp_bbrplus.c ]; then
-              echo "[!] KRİTİK HATA: tcp_bbrplus.c kaynak koddan indirilemedi."
-              exit 1
-          fi
-          
-          echo "[+] BBRPlus için inet_connection_sock.h boyutları artırılıyor..."
-          sed -i 's/104 \/ sizeof(u64)/112 \/ sizeof(u64)/g' include/net/inet_connection_sock.h || true
-          sed -i 's/13 \* sizeof(u64)/14 \* sizeof(u64)/g' include/net/inet_connection_sock.h || true
-          
-          echo "[+] tcp_snd_wnd_test gizliliği (static) kaldırılıp dışa aktarılıyor..."
-          cat << 'EOF' > fix_tcp_output.py
-          import re
-          
-          # 1. tcp_output.c düzeltmeleri
-          tcp_out_file = 'net/ipv4/tcp_output.c'
-          try:
-              with open(tcp_out_file, 'r') as f: data = f.read()
-              data = re.sub(r'static\s+bool\s+tcp_snd_wnd_test', 'bool tcp_snd_wnd_test', data)
-              if 'EXPORT_SYMBOL(tcp_snd_wnd_test)' not in data:
-                  data = re.sub(r'(bool\s+tcp_snd_wnd_test.*?^})', r'\1\nEXPORT_SYMBOL(tcp_snd_wnd_test);', data, flags=re.MULTILINE|re.DOTALL)
-              with open(tcp_out_file, 'w') as f: f.write(data)
-              print("[+] tcp_output.c güncellendi ve sembol dışa aktarıldı.")
-          except Exception as e: print(f"[!] HATA tcp_output.c: {e}")
-          
-          # 2. tcp_bbrplus.c (Assert Hata Bypass'ı)
-          bbrplus_file = 'net/ipv4/tcp_bbrplus.c'
-          try:
-              with open(bbrplus_file, 'r') as f: b_data = f.read()
-              b_data = re.sub(r'(BUILD_BUG_ON\(sizeof\(struct bbr\)\s*>\s*ICSK_CA_PRIV_SIZE\);)', r'// \1', b_data)
-              with open(bbrplus_file, 'w') as f: f.write(b_data)
-              print("[+] tcp_bbrplus.c içindeki Assert kontrolü bypass edildi.")
-          except Exception as e: print(f"[!] HATA tcp_bbrplus.c: {e}")
-          EOF
-          python3 fix_tcp_output.py
-          
-          echo "[+] Makefile güncelleniyor..."
-          sed -i 's/obj-$(CONFIG_TCP_CONG_BBR) += tcp_bbr.o/obj-$(CONFIG_TCP_CONG_BBR) += tcp_bbr.o\nobj-$(CONFIG_TCP_CONG_BBRPLUS) += tcp_bbrplus.o/g' net/ipv4/Makefile || true
-          
-          echo "[+] Kconfig güncelleniyor..."
-          sed -i '/config TCP_CONG_BBR/i \
-          config TCP_CONG_BBRPLUS\n\
-          \ttristate "BBRPlus TCP congestion control"\n\
-          \tdefault y\n\
-          \thelp\n\
-          \t  BBRPlus algorithm for network congestion control.\n' net/ipv4/Kconfig || true
-          
-          echo "[+] Defconfig'e BBRPlus, FQ-CoDel ve TCP-LP bayrakları ekleniyor..."
-          DEFCONFIG_FILE="arch/arm64/configs/exynos9820_defconfig"
-          cat >> "$DEFCONFIG_FILE" << 'EOF'
-          
-          # BBRPlus (Aktif ve Varsayılan)
-          CONFIG_TCP_CONG_BBRPLUS=y
-          CONFIG_DEFAULT_TCP_CONG="bbrplus"
-          
-          # TCP-LP (Arka plan için kernele gömülü - varsayılan yapılmadı)
-          CONFIG_TCP_CONG_LP=y
-          
-          # FQ-CoDel (Aktif ve Varsayılan Kuyruk Yöneticisi)
-          CONFIG_NET_SCH_FQ_CODEL=y
-          CONFIG_DEFAULT_FQ_CODEL=y
-          CONFIG_DEFAULT_NET_SCH="fq_codel"
-          CONFIG_NETFILTER_XT_TARGET_TTL=y
-          CONFIG_NETFILTER_XT_TARGET_HL=y
-          
-          EOF
-          
-          echo "[+] Ağ optimizasyonları başarıyla tamamlandı!"
 
       - name: 🔒 Patch Kernel of Baseband Guard
         uses: ./.github/workflows/patch-baseband-guard
