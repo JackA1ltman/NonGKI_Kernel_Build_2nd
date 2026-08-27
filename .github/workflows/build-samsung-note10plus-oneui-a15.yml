@@ -223,31 +223,33 @@ jobs:
         run: |
           cd $GITHUB_WORKSPACE/device_kernel
           
-          echo "[+] Optimizasyon yamaları için depo geçici olarak klonlanıyor..."
-          # Sadece en son commiti (depth=1) çekiyoruz ki işlem 1-2 saniye sürsün
+          echo "[+] Optimizasyon yamaları geçici olarak klonlanıyor..."
           git clone --depth=1 https://github.com/fatalcoder524/kernel_patches_additional.git /tmp/opt_patches
           
-          echo "[+] other_opt klasöründeki tüm yamalar sırayla uygulanıyor..."
-          # Klasördeki tüm .patch dosyalarını bul ve döngüye sok
+          echo "[+] other_opt klasöründeki yamalar sırayla test edilip uygulanıyor..."
           for patch_file in /tmp/opt_patches/other_opt/*.patch; do
               echo "--------------------------------------------------------"
               echo "[>] İşleniyor: $(basename "$patch_file")"
               
+              # ZEKİ FİLTRE: Eğer yama cpufreq.c'yi değiştiriyorsa veya new_data içeriyorsa atla!
+              if grep -q "get_cpumask_min_limit" "$patch_file" || grep -q "cpufreq.c" "$patch_file"; then
+                  echo "[-] UYARI: $(basename "$patch_file") yaması 4.14 cpufreq API'si ile uyumsuz. Pas geçiliyor!"
+                  continue
+              fi
+              
               # Windows/Linux satır sonu (CRLF) uyumsuzluklarını temizle
               sed -i 's/\r$//' "$patch_file"
               
-              # Yamayı uygula (Hata verirse derlemeyi durdurma, pas geçip diğerine devam et)
-              patch -p1 < "$patch_file" || echo "[-] UYARI: $(basename "$patch_file") yaması 4.14 ile uyumsuz olabilir, pas geçildi!"
+              # Yamayı uygula
+              patch -p1 < "$patch_file" || echo "[-] UYARI: Yama uygulanamadı, pas geçildi!"
           done
           echo "--------------------------------------------------------"
           
           echo "[+] Temizlik yapılıyor..."
           rm -rf /tmp/opt_patches
-          # Başarısız yamaların bıraktığı .rej dosyalarını sil ki derleyiciyi (Make) bozmasınlar
           find . -type f -name "*.rej" -delete
           
-          echo "[+] Ekstra optimizasyon yamaları başarıyla entegre edildi!"
-
+          echo "[+] Uyumlu optimizasyon yamaları başarıyla entegre edildi!"
           
       - name: 🪝 Patch Kernel of SUSFS
         uses: ./.github/workflows/patch-susfs
