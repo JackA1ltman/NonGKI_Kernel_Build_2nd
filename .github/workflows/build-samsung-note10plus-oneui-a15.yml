@@ -169,54 +169,7 @@ jobs:
           
           echo "[+] Backport yamaları başarıyla uygulandı!"
 
-      - name: ⚖️ Apply & Fix SBalance Patch (4.14 Backport)
-        shell: bash
-        run: |
-          cd $GITHUB_WORKSPACE/device_kernel
-          
-          PATCH_FILE="/tmp/Patches_Backup/sbalance.patch"
-          echo "[+] SBalance yaması aranıyor..."
-          
-          if [ ! -f "$PATCH_FILE" ]; then
-              echo "[-] KRİTİK HATA: sbalance.patch yedek klasöründe bulunamadı!"
-              exit 1
-          fi
-          
-          echo "[+] CRLF temizliği yapılıyor..."
-          sed -i 's/\r$//' "$PATCH_FILE"
-          
-          echo "[+] Yama çekirdeğe işleniyor..."
-          patch -p1 < "$PATCH_FILE" || true
-          
-          echo "[+] Dosya sisteminin güncellenmesi için 3 saniye bekleniyor..."
-          sleep 3
-          
-          # Güvenli Makefile Onarımı
-          echo "[+] sbalance.o Makefile'a ekleniyor..."
-          if ! grep -q "sbalance.o" kernel/irq/Makefile; then
-              echo "obj-y += sbalance.o" >> kernel/irq/Makefile
-          fi
-          rm -f kernel/irq/Makefile.rej
-          
-          # sbalance.c dosyası var mı DÖNGÜSÜ (Garantili kontrol)
-          if [ ! -f "kernel/irq/sbalance.c" ]; then
-              echo "[-] sbalance.c hala bulunamadı! Yama bozuk olabilir veya dosya oluşturulamadı."
-              cat kernel/irq/*.rej || true
-              exit 1
-          fi
-          
-          echo "[+] SBalance C kodları 4.14 mimarisi için onarılıyor..."
-          
-          # 1. Kütüphane eklentisi (Sadece BİR KERE ekliyoruz)
-          sed -i '1s/^/#include <linux\/cpufreq.h>\n/' kernel/irq/sbalance.c
-          
-          # 2. arch_scale_cpu_capacity uyarlaması
-          sed -i 's/arch_scale_cpu_capacity(cpu)/arch_scale_cpu_capacity(NULL, cpu)/g' kernel/irq/sbalance.c
-          
-          # 3. Kapanış parantezleri
-          echo -e "\n\t}\n}" >> kernel/irq/sbalance.c
-          
-          echo "[+] SBalance yaması ve Backport onarımı kusursuz tamamlandı!"
+      
 
       - name: ⚡ Apply Additional Optimization Patches (other_opt)
         shell: bash
