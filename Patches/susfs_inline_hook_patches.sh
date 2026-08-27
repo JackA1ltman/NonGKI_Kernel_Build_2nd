@@ -71,15 +71,20 @@ for i in "${patch_files[@]}"; do
     ## open.c
     fs/open.c)
         sed -i '/#include <linux\/compat.h>/a #ifdef CONFIG_KSU_SUSFS\n#include <linux\/susfs_def.h>\n#endif' fs/open.c
+
+        if grep -q "internal.h" "fs/stat.c" && ! grep "static int filename_lookup" "fs/namei.c"; then
+            sed -i '/#include <linux\/compat.h>/a\#include "internal.h"' fs/stat.c
+        fi
+
         if grep -q "do_faccessat" "fs/open.c" >/dev/null 2>&1; then
-            if grep "static int filename_lookup" "fs/namei.c" ; then
+            if grep -q "static int filename_lookup" "fs/namei.c" ; then
                 sed -i '/long do_faccessat(int dfd, const char __user \*filename, int mode)/i #ifdef CONFIG_KSU_SUSFS\nextern struct static_key_true ksu_su_compat_enabled;\nextern bool __ksu_is_allow_uid_for_current(uid_t uid);\nextern int ksu_handle_faccessat(int *dfd, struct filename **filename, int *mode,\n\t\t\tint *flags);\nextern int filename_lookup(int dfd, struct filename *name, unsigned flags,\n\t\t\t\tstruct path *path, struct path *root);\n#endif' fs/open.c
             else
                 sed -i '/long do_faccessat(int dfd, const char __user \*filename, int mode)/i #ifdef CONFIG_KSU_SUSFS\nextern struct static_key_true ksu_su_compat_enabled;\nextern bool __ksu_is_allow_uid_for_current(uid_t uid);\nextern int ksu_handle_faccessat(int *dfd, struct filename **filename, int *mode,\n\t\t\tint *flags);\n#endif' fs/open.c
             fi
 
         else
-            if grep "static int filename_lookup" "fs/namei.c" ; then
+            if grep -q "static int filename_lookup" "fs/namei.c" ; then
                 sed -i '/SYSCALL_DEFINE3(faccessat/i #ifdef CONFIG_KSU_SUSFS\nextern struct static_key_true ksu_su_compat_enabled;\nextern bool __ksu_is_allow_uid_for_current(uid_t uid);\nextern int ksu_handle_faccessat(int *dfd, struct filename **filename, int *mode,\n             int *flags);\nextern int filename_lookup(int dfd, struct filename *name, unsigned flags,\n\t\t\t\tstruct path *path, struct path *root);\n#endif' fs/open.c
             else
                 sed -i '/SYSCALL_DEFINE3(faccessat/i #ifdef CONFIG_KSU_SUSFS\nextern struct static_key_true ksu_su_compat_enabled;\nextern bool __ksu_is_allow_uid_for_current(uid_t uid);\nextern int ksu_handle_faccessat(int *dfd, struct filename **filename, int *mode,\n             int *flags);\n#endif' fs/open.c
@@ -132,6 +137,10 @@ for i in "${patch_files[@]}"; do
             fi
         fi
 
+        if grep -q "internal.h" "fs/stat.c" && ! grep "static int filename_lookup" "fs/namei.c"; then
+            sed -i '/#include <asm\/unistd.h>/a\#include "internal.h"' fs/stat.c
+        fi
+
         if grep -q "vfs_statx_fd" "fs/stat.c"; then
             sed -i '/int vfs_statx_fd(unsigned int fd, struct kstat \*stat,/i\#ifdef CONFIG_KSU_SUSFS\nextern struct static_key_true ksu_is_init_rc_hook_enabled;\nextern void ksu_handle_vfs_fstat(int fd, loff_t *kstat_size_ptr);\n#endif \/\/ #ifdef CONFIG_KSU_SUSFS\n' fs/stat.c
 
@@ -143,14 +152,14 @@ for i in "${patch_files[@]}"; do
         fi
 
         if grep -q "vfs_statx" "fs/stat.c"; then
-            if grep "static int filename_lookup" "fs/namei.c" ; then
+            if grep -q "static int filename_lookup" "fs/namei.c" ; then
                 sed -i '/^int vfs_statx(int dfd, const char __user \*filename, int flags,/i\#ifdef CONFIG_KSU_SUSFS\nextern struct static_key_true ksu_su_compat_enabled;\nextern bool __ksu_is_allow_uid_for_current(uid_t uid);\nextern int ksu_handle_stat(int *dfd, struct filename **filename, int *flags);\nextern int filename_lookup(int dfd, struct filename *name, unsigned flags,\n\t\t\t\tstruct path *path, struct path *root);\n#endif\n' fs/stat.c
             else
                 sed -i '/^int vfs_statx(int dfd, const char __user \*filename, int flags,/i\#ifdef CONFIG_KSU_SUSFS\nextern struct static_key_true ksu_su_compat_enabled;\nextern bool __ksu_is_allow_uid_for_current(uid_t uid);\nextern int ksu_handle_stat(int *dfd, struct filename **filename, int *flags);\n#endif\n' fs/stat.c
             fi
 
         elif grep -q "vfs_fstatat" "fs/stat.c"; then
-            if grep "static int filename_lookup" "fs/namei.c" ; then
+            if grep -q "static int filename_lookup" "fs/namei.c" ; then
                 sed -i '/^int vfs_fstatat(int dfd, const char __user \*filename, struct kstat \*stat,/i\#ifdef CONFIG_KSU_SUSFS\nextern struct static_key_true ksu_su_compat_enabled;\nextern bool __ksu_is_allow_uid_for_current(uid_t uid);\nextern int ksu_handle_stat(int *dfd, struct filename **filename, int *flags);\n			   struct path *path, struct path *root);\n\t\t\t\tstruct path *path, struct path *root);\n#endif\n' fs/stat.c
             else
                 sed -i '/^int vfs_fstatat(int dfd, const char __user \*filename, struct kstat \*stat,/i\#ifdef CONFIG_KSU_SUSFS\nextern struct static_key_true ksu_su_compat_enabled;\nextern bool __ksu_is_allow_uid_for_current(uid_t uid);\nextern int ksu_handle_stat(int *dfd, struct filename **filename, int *flags);\n			   struct path *path, struct path *root);\n#endif\n' fs/stat.c
