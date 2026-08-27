@@ -290,6 +290,29 @@ jobs:
           find . -type f -name "*.rej" -delete
           
           echo "[+] Uyumlu optimizasyon yamaları başarıyla entegre edildi!"
+
+      - name: 🚀 Set Maple as Default I/O Scheduler
+        shell: bash
+        run: |
+          cd $GITHUB_WORKSPACE/device_kernel
+          
+          echo "[+] Maple I/O Scheduler defconfig dosyalarına işleniyor..."
+          find arch/arm64/configs -type f -name "*defconfig" -exec sh -c '
+              echo "" >> "{}"
+              
+              # Maple modülünün çekirdeğe gömülü derlenmesini garantiliyoruz
+              echo "CONFIG_IOSCHED_MAPLE=y" >> "{}"
+              
+              # Eski varsayılanı (cfq, ssg, noop vb.) eziyoruz
+              sed -i "s/CONFIG_DEFAULT_IOSCHED=.*/CONFIG_DEFAULT_IOSCHED=\"maple\"/g" "{}"
+              
+              # Eğer config dosyasında hiç DEFAULT_IOSCHED tanımı yoksa zorla ekliyoruz
+              if ! grep -q "CONFIG_DEFAULT_IOSCHED=\"maple\"" "{}"; then
+                  echo "CONFIG_DEFAULT_IOSCHED=\"maple\"" >> "{}"
+              fi
+          ' \;
+          
+          echo "[+] Maple başarıyla varsayılan zamanlayıcı olarak ayarlandı!"
           
       - name: 🪝 Patch Kernel of SUSFS
         uses: ./.github/workflows/patch-susfs
