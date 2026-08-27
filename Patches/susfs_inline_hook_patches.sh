@@ -178,7 +178,7 @@ for i in "${patch_files[@]}"; do
     fs/namei.c)
         if grep "static int filename_lookup" "fs/namei.c" ; then
             sed -i 's/static int filename_lookup(int dfd, struct filename \*name, unsigned flags,/int filename_lookup(int dfd, struct filename *name, unsigned flags,/' fs/namei.c
-            echo "[+] fs/namei.c removed static staus."
+            echo "[+] fs/namei.c removed static status."
         fi
 
         if grep "throne_tracker" "fs/namei.c" >/dev/null 2>&1; then
