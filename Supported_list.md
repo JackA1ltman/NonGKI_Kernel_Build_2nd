@@ -1,7 +1,8 @@
 | Device | Location | Codename | Kernel/Author/Name | OS | Android | Pack Method | KernelSU | SuSFS | Hook | KPM | Re:Kernel | BBG | NoMount | Status |  
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|  
 | Oneplus 8 | All | instantnoodle | [4.19/ppajda/XTD](https://github.com/ppajda/android_kernel_oneplus_sm8250) | Oxygen OS 13.1 | 13 | AnyKernel3 | ReSukiSU | ✅ | Inline | ❌ | ❌ | ✅ | ❌ | Stable |  
-| Xiaomi Mix2s | All | polaris | [4.9/Evolution-X-Devices/sdm845](https://github.com/Evolution-X-Devices/kernel_xiaomi_sdm845) | Evolution X 10.X | 15 | AnyKernel3 | ReSukiSU | ✅ | Inline | ❌ | ✅ | ✅ | ❌ | Stable |   
+| Xiaomi Mix2s | All | polaris | [4.9/Evolution-X-Devices/sdm845](https://github.com/Evolution-X-Devices/kernel_xiaomi_sdm845) | Evolution X 10.X | 15 | AnyKernel3 | ReSukiSU | ✅ | Inline | ❌ | ✅ | ✅ | ❌ | Stable |
+| Xiaomi Mi 2s | All | aries | [3.4/Z-fly/LineageOS](https://github.com/Z-fly/android_kernel_xiaomi_aries) | Lineage OS 23 | 16 | AnyKernel3 | xxksu | ❌ | Syscall | ❌ | ❌ | ❌ | ❌ | Stable |  
 | Redmi K20 Pro | All | raphael | [4.14/SOVIET-ANDROID/SOVIET-STAR-OSS](https://github.com/SOVIET-ANDROID/kernel_xiaomi_raphael) | Based AOSP | 15 | AnyKernel3 | ReSukiSU | ✅ | Inline | ❌ | ❌ | ❌ | ❌ | Stable |  
 | Samsung Note 10 Plus | EU | d2s | [4.14/Ocin4ever/ExtremeKernel](https://github.com/Ocin4ever/ExtremeKernel) | OneUI 7 | 15 | AnyKernel3 | ReSukiSU | ✅ | Inline | ❌ | ❌ | ❌ | ❌ | Stable |  
 | Xiaomi 11 | All | venus | [5.4/kamikaonashi/venus](https://github.com/kamikaonashi/kernel_xiaomi_venus) | Evolution X 11.X | 16 | AnyKernel3 | ReSukiSU | ✅ | Inline | ❌ | ✅ | ❌ | ❌ | Stable |  

@@ -374,80 +374,84 @@ runs:
           elif [[ -z "${{ env.GCC_64_SOURCE }}" ]] && [[ -z "${{ env.GCC_32_SOURCE }}" ]]; then
             echo "[-] GCC is not configured, Skipped."
 
-          elif [[ -n "${{ env.GCC_64_SOURCE }}" ]] && [[ -n "${{ env.GCC_32_SOURCE }}" ]]; then
-            echo "::group::[+] Getting GCC 64..."
+          else
+            if [[ -n "${{ env.GCC_64_SOURCE }}" ]]; then
+              echo "::group::[+] Getting GCC 64..."
 
-            if [[ "${{ env.GCC_64_SOURCE }}" == *".git" ]]; then
-              git clone "${{ env.GCC_64_SOURCE }}" -b "${{ env.GCC_64_BRANCH }}" gcc-64 --depth=1
+              if [[ "${{ env.GCC_64_SOURCE }}" == *".git" ]]; then
+                git clone "${{ env.GCC_64_SOURCE }}" -b "${{ env.GCC_64_BRANCH }}" gcc-64 --depth=1
 
-            elif [[ "${{ env.GCC_64_SOURCE }}" == *'.tar.gz' ]]; then
-              ${{ env.CURLX }} "${{ env.GCC_64_SOURCE }}" gcc-64.tar.gz
-              mkdir gcc-64
-              tar -C gcc-64/ -zxf gcc-64.tar.gz
+              elif [[ "${{ env.GCC_64_SOURCE }}" == *'.tar.gz' ]]; then
+                ${{ env.CURLX }} "${{ env.GCC_64_SOURCE }}" gcc-64.tar.gz
+                mkdir gcc-64
+                tar -C gcc-64/ -zxf gcc-64.tar.gz
 
-            elif [[ "${{ env.GCC_64_SOURCE }}" == *'.tar.xz' ]]; then
-              ${{ env.CURLX }} "${{ env.GCC_64_SOURCE }}" gcc-64.tar.xz
-              mkdir gcc-64
-              tar -C gcc-64/ -xf gcc-64.tar.xz --strip-components 1
+              elif [[ "${{ env.GCC_64_SOURCE }}" == *'.tar.xz' ]]; then
+                ${{ env.CURLX }} "${{ env.GCC_64_SOURCE }}" gcc-64.tar.xz
+                mkdir gcc-64
+                tar -C gcc-64/ -xf gcc-64.tar.xz --strip-components 1
 
-            elif [[ "${{ env.GCC_64_SOURCE }}" == *'.xz' ]]; then
-              ${{ env.CURLX }} "${{ env.GCC_64_SOURCE }}" gcc-64.xz
-              mkdir gcc-64
-              tar -C gcc-64/ -xf gcc-64.xz --strip-components 1
+              elif [[ "${{ env.GCC_64_SOURCE }}" == *'.xz' ]]; then
+                ${{ env.CURLX }} "${{ env.GCC_64_SOURCE }}" gcc-64.xz
+                mkdir gcc-64
+                tar -C gcc-64/ -xf gcc-64.xz --strip-components 1
 
-            elif [[ "${{ env.GCC_64_SOURCE }}" == *'.zip' ]]; then
-              ${{ env.CURLX }} "${{ env.GCC_64_SOURCE }}" gcc-64.zip
-              mkdir gcc-64
-              unzip gcc-64.zip -d gcc-64/
+              elif [[ "${{ env.GCC_64_SOURCE }}" == *'.zip' ]]; then
+                ${{ env.CURLX }} "${{ env.GCC_64_SOURCE }}" gcc-64.zip
+                mkdir gcc-64
+                unzip gcc-64.zip -d gcc-64/
 
-            else
+              else
                 echo "::endgroup::"
                 echo "[-] Please input a valid GCC link!"
                 false
+              fi
+
+              echo "::endgroup::"
+              bash found_gcc.sh GCC_64
             fi
 
-            echo "::endgroup::"
-            bash found_gcc.sh GCC_64
+            if [[ -n "${{ env.GCC_32_SOURCE }}" ]]; then
+              echo "::group::[+] Getting GCC 32..."
 
-            echo "::group::[+] Getting GCC 32..."
+              if [[ "${{ env.GCC_32_SOURCE }}" == *".git" ]]; then
+                git clone "${{ env.GCC_32_SOURCE }}" -b "${{ env.GCC_32_BRANCH }}" gcc-32 --depth=1
 
-            if [[ "${{ env.GCC_32_SOURCE }}" == *".git" ]]; then
-              git clone "${{ env.GCC_32_SOURCE }}" -b "${{ env.GCC_32_BRANCH }}" gcc-32 --depth=1
+              elif [[ "${{ env.GCC_32_SOURCE }}" == *'.tar.gz' ]]; then
+                ${{ env.CURLX }} "${{ env.GCC_32_SOURCE }}" gcc-32.tar.gz
+                mkdir gcc-32
+                tar -C gcc-32/ -zxf gcc-32.tar.gz
 
-            elif [[ "${{ env.GCC_32_SOURCE }}" == *'.tar.gz' ]]; then
-              ${{ env.CURLX }} "${{ env.GCC_32_SOURCE }}" gcc-32.tar.gz
-              mkdir gcc-32
-              tar -C gcc-32/ -zxf gcc-32.tar.gz
+              elif [[ "${{ env.GCC_32_SOURCE }}" == *'.tar.xz' ]]; then
+                ${{ env.CURLX }} "${{ env.GCC_32_SOURCE }}" gcc-32.tar.xz
+                mkdir gcc-32
+                tar -C gcc-32/ -xf gcc-32.tar.xz --strip-components 1
 
-            elif [[ "${{ env.GCC_32_SOURCE }}" == *'.tar.xz' ]]; then
-              ${{ env.CURLX }} "${{ env.GCC_32_SOURCE }}" gcc-32.tar.xz
-              mkdir gcc-32
-              tar -C gcc-32/ -xf gcc-32.tar.xz --strip-components 1
+              elif [[ "${{ env.GCC_32_SOURCE }}" == *'.xz' ]]; then
+                ${{ env.CURLX }} "${{ env.GCC_32_SOURCE }}" gcc-32.xz
+                mkdir gcc-32
+                tar -C gcc-32/ -xf gcc-32.xz --strip-components 1
 
-            elif [[ "${{ env.GCC_32_SOURCE }}" == *'.xz' ]]; then
-              ${{ env.CURLX }} "${{ env.GCC_32_SOURCE }}" gcc-32.xz
-              mkdir gcc-32
-              tar -C gcc-32/ -xf gcc-32.xz --strip-components 1
+              elif [[ "${{ env.GCC_32_SOURCE }}" == *'.zip' ]]; then
+                ${{ env.CURLX }} "${{ env.GCC_32_SOURCE }}" gcc-32.zip
+                mkdir gcc-32
+                unzip gcc-32.zip -d gcc-32/
 
-            elif [[ "${{ env.GCC_32_SOURCE }}" == *'.zip' ]]; then
-              ${{ env.CURLX }} "${{ env.GCC_32_SOURCE }}" gcc-32.zip
-              mkdir gcc-32
-              unzip gcc-32.zip -d gcc-32/
-
-            else
+              else
                 echo "::endgroup::"
                 echo "[-] Please input a valid GCC link!"
                 false
-            fi
+              fi
 
-            echo "::endgroup::"
-            bash found_gcc.sh GCC_32
+              echo "::endgroup::"
+              bash found_gcc.sh GCC_32
+            fi
 
           fi
 
           # Set Clang
           if [[ -z "${{ env.CLANG_SOURCE }}" ]]; then
-            echo "[-] GCC is not configured, Skipped."
+            echo "[-] Clang is not configured, Skipped."
 
           else
             echo "::group::[+] Getting Clang..."

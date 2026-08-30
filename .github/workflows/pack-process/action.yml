@@ -26,7 +26,19 @@ runs:
 
           fi
 
-          if [[ -f "$IMAGE_DIR/Image.gz-dtb" ]]; then
+          if [[ "${{ env.KERNEL_ARCH }}" == "arm" && -f "$IMAGE_DIR/zImage-dtb" ]]; then
+            cp -fp $IMAGE_DIR/zImage-dtb tmp
+            echo "Found zImage-dtb !"
+
+          elif [[ "${{ env.KERNEL_ARCH }}" == "arm" && -f "$IMAGE_DIR/zImage" ]]; then
+            cp -fp $IMAGE_DIR/zImage tmp
+            echo "Found zImage !"
+
+          elif [[ "${{ env.KERNEL_ARCH }}" == "arm" ]]; then
+            echo "[-] Could not find an ARM zImage to package."
+            false
+
+          elif [[ -f "$IMAGE_DIR/Image.gz-dtb" ]]; then
             cp -fp $IMAGE_DIR/Image.gz-dtb tmp
             echo "Found Image.gz-dtb !"
 
@@ -37,6 +49,10 @@ runs:
           elif [[ -f "$IMAGE_DIR/Image" ]]; then
             cp -fp $IMAGE_DIR/Image tmp
             echo "Found Image !"
+
+          else
+            echo "[-] Could not find a kernel image to package."
+            false
 
           fi
 
@@ -115,7 +131,21 @@ runs:
 
           mkboottools/unpack_bootimg.py --boot_img boot_source_${{ env.DEVICE_NAME }}.img
 
-          if [[ -f "$IMAGE_DIR/Image.gz-dtb" ]]; then
+          if [[ "${{ env.KERNEL_ARCH }}" == "arm" && -f "$IMAGE_DIR/zImage-dtb" ]]; then
+            rm -f out/kernel
+            cp -fp $IMAGE_DIR/zImage-dtb out/kernel
+            echo "Found zImage-dtb !"
+
+          elif [[ "${{ env.KERNEL_ARCH }}" == "arm" && -f "$IMAGE_DIR/zImage" ]]; then
+            rm -f out/kernel
+            cp -fp $IMAGE_DIR/zImage out/kernel
+            echo "Found zImage !"
+
+          elif [[ "${{ env.KERNEL_ARCH }}" == "arm" ]]; then
+            echo "[-] Could not find an ARM zImage to package."
+            false
+
+          elif [[ -f "$IMAGE_DIR/Image.gz-dtb" ]]; then
             rm -f out/kernel
             cp -fp $IMAGE_DIR/Image.gz-dtb out/kernel
             echo "Found Image.gz-dtb !"
@@ -129,6 +159,10 @@ runs:
             rm -f out/kernel
             cp -fp $IMAGE_DIR/Image out/kernel
             echo "Found Image !"
+
+          else
+            echo "[-] Could not find a kernel image to package."
+            false
 
           fi
 

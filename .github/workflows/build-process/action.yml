@@ -33,9 +33,21 @@ runs:
       - name: Build Kernel
         shell: bash
         run: |
+          set -o pipefail
           cd $GITHUB_WORKSPACE/device_kernel/
 
           # Function
+          SET_ARM_CROSS_COMPILE(){
+          local GCC_32_SETTING="${{ env.GCC_32 }}"
+
+          if [[ "$GCC_32_SETTING" == CROSS_COMPILE_ARM32=* ]] || [[ "$GCC_32_SETTING" == CROSS_COMPILE=* ]]; then
+            export CROSS_COMPILE="${GCC_32_SETTING#*=}"
+          else
+            echo "[-] Invalid ARM GCC configuration: $GCC_32_SETTING"
+            false
+          fi
+          }
+
           BUILD_PROCESS(){
           if [ -n "$1" ]; then
             echo "Select: $1"
@@ -57,7 +69,7 @@ runs:
             echo "================"
             echo "=Read Defconfig="
             echo "================"
-            make O=out ARCH="${{ env.KERNEL_ARCH }}" ${{ env.DEFCONFIG_NAME }}
+            make CC="ccache ${CROSS_COMPILE}gcc" O=out ARCH="${{ env.KERNEL_ARCH }}" ${{ env.CUSTOM_CMDS }} ${{ env.EXTRA_CMDS }} ${{ env.DEFCONFIG_NAME }}
           fi
 
           if [[ "${{ env.BUILD_OTHER_CONFIG }}"  == "true" ]]; then
@@ -77,7 +89,7 @@ runs:
                 echo "======================="
                 echo "=Execuate olddefconfig="
                 echo "======================="
-                make O=out ARCH="${{ env.KERNEL_ARCH }}" olddefconfig
+                make CC="ccache ${CROSS_COMPILE}gcc" O=out ARCH="${{ env.KERNEL_ARCH }}" ${{ env.CUSTOM_CMDS }} ${{ env.EXTRA_CMDS }} olddefconfig
             fi
           fi
 
@@ -95,8 +107,21 @@ runs:
                 echo "======================="
                 echo "=Execuate olddefconfig="
                 echo "======================="
-                make O=out ARCH="${{ env.KERNEL_ARCH }}" olddefconfig
+                make CC="ccache ${CROSS_COMPILE}gcc" O=out ARCH="${{ env.KERNEL_ARCH }}" ${{ env.CUSTOM_CMDS }} ${{ env.EXTRA_CMDS }} olddefconfig
             fi
+          fi
+
+          # CONFIG_MODVERSIONS in older Kbuild versions compiles some objects
+          # to .tmp_*.o and then moves them over the final object. If ccache
+          # returns both paths as hard links to the same cache entry, mv fails
+          # with "are the same file". Keep ccache enabled, but force copy mode
+          # for this configuration.
+          if grep -q '^CONFIG_MODVERSIONS=y$' out/.config; then
+            if [[ "${CCACHE_HARDLINK:-}" == "true" ]]; then
+              echo "[-] Disabling ccache hard links for CONFIG_MODVERSIONS."
+            fi
+            unset CCACHE_HARDLINK
+            export CCACHE_NOHARDLINK=true
           fi
 
           # KPM Detect
@@ -132,83 +157,60 @@ runs:
             echo "===================="
 
             if [[ "${{ env.BASEBAND_GUARD_ENABLE }}" == "true" ]]; then
-                make -j$(nproc --all) O=out ARCH="${{ env.KERNEL_ARCH }}" security/selinux/
+                make -j$(nproc --all) CC="ccache ${CROSS_COMPILE}gcc" ${{ env.CUSTOM_CMDS }} ${{ env.EXTRA_CMDS }} O=out ARCH="${{ env.KERNEL_ARCH }}" security/selinux/
                 echo "[+] Pre-built SELinux done."
             fi
 
-            make -j$(nproc --all) O=out ARCH="${{ env.KERNEL_ARCH }}" 2>&1|tee error.log
+            make -j$(nproc --all) CC="ccache ${CROSS_COMPILE}gcc" ${{ env.CUSTOM_CMDS }} ${{ env.EXTRA_CMDS }} O=out ARCH="${{ env.KERNEL_ARCH }}" 2>&1|tee error.log
           fi
           }
 
           # Core
           if [ -n "${{ env.CLANG_SOURCE }}" ]; then
-            if [ -n "${{ env.GCC_64 }}" ] && [ -n "${{ env.GCC_32 }}" ]; then
-                echo "=================================="
-                echo "=Detected Clang and GCC 64 and 32="
-                echo "=================================="
+            if [ "${{ env.KERNEL_ARCH }}" == "arm64" ]; then
+              if [ -n "${{ env.GCC_64 }}" ]; then
                 export "${{ env.GCC_64 }}"
+              fi
+              if [ -n "${{ env.GCC_32 }}" ]; then
                 export "${{ env.GCC_32 }}"
-                BUILD_PROCESS true
-            elif [ "${{ env.GNU_GCC }}" == "true" ]; then
-                echo "============================"
-                echo "=Detected Clang and GNU GCC="
-                echo "============================"
-                export "${{ env.GCC_64 }}"
-                export "${{ env.GCC_32 }}"
-                BUILD_PROCESS true
-            elif [ -n "${{ env.GCC_64 }}" ]; then
-                echo "==========================="
-                echo "=Detected Clang and GCC 64="
-                echo "==========================="
-                export "${{ env.GCC_64 }}"
-                BUILD_PROCESS true
-            else
-                echo "====================="
-                echo "=Detected Only Clang="
-                echo "====================="
-                BUILD_PROCESS true
+              fi
+            elif [ "${{ env.KERNEL_ARCH }}" == "arm" ] && [ -n "${{ env.GCC_32 }}" ]; then
+              SET_ARM_CROSS_COMPILE
             fi
+            echo "================"
+            echo "=Detected Clang="
+            echo "================"
+            BUILD_PROCESS true
 
           elif [ "${{ env.KERNEL_ARCH }}" == "arm64" ]; then
-            if [ -n "${{ env.GCC_64 }}" ] && [ -n "${{ env.GCC_32 }}" ]; then
-                echo "=================================="
-                echo "=Detected ARM64 GCC 64 and GCC 32="
-                echo "=================================="
-                export "${{ env.GCC_64 }}"
+            if [ -n "${{ env.GCC_64 }}" ]; then
+              export "${{ env.GCC_64 }}"
+              if [ -n "${{ env.GCC_32 }}" ]; then
                 export "${{ env.GCC_32 }}"
-                BUILD_PROCESS
-            elif [ "${{ env.GNU_GCC }}" == "true" ]; then
-                echo "========================"
-                echo "=Detected ARM64 GNU GCC="
-                echo "========================"
-                export "${{ env.GCC_64 }}"
-                export "${{ env.GCC_32 }}"
-                BUILD_PROCESS
-            elif [ -n "${{ env.GCC_64 }}" ]; then
-                echo "============================"
-                echo "=Detected ARM64 Only GCC 64="
-                echo "============================"
-                export "${{ env.GCC_64 }}"
-                BUILD_PROCESS
+              fi
+              echo "===================="
+              echo "=Detected ARM64 GCC="
+              echo "===================="
+              BUILD_PROCESS
+            else
+              echo "[-] ARM64 GCC is not configured."
+              false
             fi
 
           elif [ "${{ env.KERNEL_ARCH }}" == "arm" ]; then
-            if [ "${{ env.GNU_GCC }}" == "true" ]; then
-                echo "======================"
-                echo "=Detected ARM GNU GCC="
-                echo "======================"
-                export "${{ env.GCC_32 }}"
-                BUILD_PROCESS
-            elif [ -n "${{ env.GCC_32 }}" ]; then
-                echo "====================="
-                echo "=Detected ARM GCC 32="
-                echo "====================="
-                export "${{ env.GCC_32 }}"
-                BUILD_PROCESS
+            if [ -n "${{ env.GCC_32 }}" ]; then
+              SET_ARM_CROSS_COMPILE
+              echo "=================="
+              echo "=Detected ARM GCC="
+              echo "=================="
+              BUILD_PROCESS
+            else
+              echo "[-] ARM GCC is not configured."
+              false
             fi
 
           else
-            echo "invaild kernel arch, stop."
+            echo "[-] Invalid kernel architecture, stop."
             false
           fi
 

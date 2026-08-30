@@ -37,8 +37,11 @@ runs:
           if [[ -d "arch/arm64/configs" ]]; then
             echo "KERNEL_ARCH=arm64" >> $GITHUB_ENV
 
+          elif [[ -d "arch/arm/configs" ]]; then
+            echo "KERNEL_ARCH=arm" >> $GITHUB_ENV
+
           else
-            echo "[-] Non-ARM64 Devies not supported!"
+            echo "[-] Only ARM64 and ARM kernel trees are supported!"
             false
 
           fi
