@@ -13,7 +13,7 @@ env:
   EXTRA_CMDS : "LLVM=1 LLVM_IAS=1"
 
   KERNEL_SOURCE : "https://github.com/anrui2032/android_kernel_smartisan_sdm660.git"
-  KERNEL_BRANCH : "lineage-18.1"
+  KERNEL_BRANCH : "deprecated/lineage-18.1"
 
   CLANG_SOURCE : "https://github.com/LineageOS/android_prebuilts_clang_kernel_linux-x86_clang-r416183b.git"
   CLANG_BRANCH : "lineage-20.0"
