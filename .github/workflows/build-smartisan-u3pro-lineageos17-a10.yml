@@ -1,4 +1,4 @@
-name: Build Smartisan U3 Pro (Lineage OS 18 A11)
+name: Build Smartisan U3 Pro (Lineage OS 17 A10)
 
 on:
   workflow_call:
@@ -13,7 +13,7 @@ env:
   EXTRA_CMDS : "LLVM=1 LLVM_IAS=1"
 
   KERNEL_SOURCE : "https://github.com/anrui2032/android_kernel_smartisan_sdm660.git"
-  KERNEL_BRANCH : "lineage-18.1"
+  KERNEL_BRANCH : "lineage-17.1"
 
   CLANG_SOURCE : "https://github.com/LineageOS/android_prebuilts_clang_kernel_linux-x86_clang-r416183b.git"
   CLANG_BRANCH : "lineage-20.0"
@@ -25,7 +25,7 @@ env:
   GCC_32_BRANCH : "android12L-release"
 
   DEFCONFIG_SOURCE: ""
-  DEFCONFIG_NAME : "smartisan-perf_defconfig"
+  DEFCONFIG_NAME : "osborn_defconfig"
   DEFCONFIG_ORIGIN_IMAGE: ""
   DEFCONFIG_FROM_BOOT: false
 
@@ -91,7 +91,7 @@ env:
 
 jobs:
   build-kernel:
-    name: Smartisan U3 Pro (Lineage OS 18 A11)
+    name: Smartisan U3 Pro (Lineage OS 17 A10)
     runs-on: ubuntu-latest # u can changed to ubuntu 22.04, and need container set ubuntu-latest
     # container: archlinux/archlinux:latest # if u need use arch linux -> archlinux/archlinux:latest or ubuntu 20.04 -> ubuntu:focal
     env:
