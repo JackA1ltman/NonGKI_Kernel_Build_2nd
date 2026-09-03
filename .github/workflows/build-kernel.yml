@@ -112,11 +112,11 @@ jobs:
     secrets: inherit
 
   # Smartisan
-  build-smartisan-u3pro-lineageos17-a10:
-    name: "Smartisan U3 Pro (Lineage OS 17 A10)"
+  build-smartisan-u3pro-lineageos17-a11:
+    name: "Smartisan U3 Pro (Lineage OS 17 A11)"
     strategy:
       fail-fast: true
-    uses: ./.github/workflows/build-smartisan-u3pro-lineageos17-a10.yml
+    uses: ./.github/workflows/build-smartisan-u3pro-lineageos17-a11.yml
     secrets: inherit
 
   # Nothing
