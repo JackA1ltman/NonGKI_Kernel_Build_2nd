@@ -52,7 +52,7 @@ jobs:
         | Redmi K20 Pro | raphael | 4.14 | Based AOSP | 15 | AnyKernel3 | ReSukiSU | ✅ | ❌ | ❌ | ❌ |
         | Samsung Note 10 Plus | d2s | 4.14 | OneUI 7 | 15 | AnyKernel3 | ReSukiSU | ✅ | ❌ | ❌ | ❌ |
         | Xiaomi 11 | venus | 5.4 | Evolution X 11.X | 16 | AnyKernel3 | ReSukiSU | ✅ | ✅ | ❌ | ❌ |
-        | Smartisan U3 Pro | osborn | 4.4 | Lineage OS 17.1 | 11 | AnyKernel3 | xxksu | ❌ | ❌ | ❌ | ❌ |
+        | Smartisan U3 Pro | osborn | 4.4 | Lineage OS 18 | 11 | AnyKernel3 | xxksu | ❌ | ❌ | ❌ | ❌ |
         | Redmi 8 | olive | 4.19 | Based AOSP | 15 | AnyKernel3 | ReSukiSU | ✅ | ✅ | ✅ | ❌ |
         | Redmi Note 7 | lavender | 4.19 | Based AOSP | 15 | AnyKernel3 | ReSukiSU | ✅ | ❌ | ❌ | ❌ |
         | Samsung Note 10 | d1 | 4.14 | OneUI 7 | 15 | AnyKernel3 | ReSukiSU | ✅ | ❌ | ❌ | ❌ |
