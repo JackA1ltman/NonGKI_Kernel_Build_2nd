@@ -1856,7 +1856,7 @@ index 07a3b5b..657b6a2 100644
  }
  #endif
 diff --git a/fs/stat.c b/fs/stat.c
-index 298eb77..6cc1aa9 100644
+index 298eb77..1c602bf 100644
 --- a/fs/stat.c
 +++ b/fs/stat.c
 @@ -21,6 +21,11 @@
@@ -1871,7 +1871,7 @@ index 298eb77..6cc1aa9 100644
  /**
   * generic_fillattr - Fill in the basic attributes from the inode struct
   * @inode: Inode to use as the source
-@@ -77,9 +82,51 @@ int vfs_getattr_nosec(const struct path *path, struct kstat *stat,
+@@ -77,9 +82,53 @@ int vfs_getattr_nosec(const struct path *path, struct kstat *stat,
  	if (IS_AUTOMOUNT(inode))
  		stat->attributes |= STATX_ATTR_AUTOMOUNT;
  
@@ -1880,10 +1880,12 @@ index 298eb77..6cc1aa9 100644
 +		bool is_fuse = false;
 +		if (susfs_is_inode_sus_kstat(d_backing_inode(path->dentry), &is_fuse)) {
 +			if (!is_fuse) {
-+				stat->mnt_id = real_mount(path->mnt)->mnt_id;
++				// stat->mnt_id = real_mount(path->mnt)->mnt_id;
++				// only for 5.10 kernel
 +				stat->result_mask |= STATX_SUS_KSTAT;
 +			}
-+			stat->mnt_id = real_mount(path->mnt)->mnt_id;
++			// stat->mnt_id = real_mount(path->mnt)->mnt_id;
++			// only for 5.10 kernel
 +			stat->result_mask |= STATX_SUS_KSTAT_FUSE;
 +		}
 +	}
@@ -1923,7 +1925,7 @@ index 298eb77..6cc1aa9 100644
  
  	generic_fillattr(inode, stat);
  	return 0;
-@@ -165,6 +212,7 @@ EXPORT_SYMBOL(vfs_statx_fd);
+@@ -165,6 +214,7 @@ EXPORT_SYMBOL(vfs_statx_fd);
   *
   * 0 will be returned on success, and a -ve error code if unsuccessful.
   */

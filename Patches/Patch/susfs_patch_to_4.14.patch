@@ -1913,7 +1913,7 @@ index e6f4c7b..0c5e360 100644
  }
  #endif
 diff --git a/fs/stat.c b/fs/stat.c
-index 0fda4b6..aacd5a7 100644
+index 0fda4b6..dd2c150 100644
 --- a/fs/stat.c
 +++ b/fs/stat.c
 @@ -21,6 +21,11 @@
@@ -1928,7 +1928,7 @@ index 0fda4b6..aacd5a7 100644
  /**
   * generic_fillattr - Fill in the basic attributes from the inode struct
   * @inode: Inode to use as the source
-@@ -75,9 +80,51 @@ int vfs_getattr_nosec(const struct path *path, struct kstat *stat,
+@@ -75,9 +80,53 @@ int vfs_getattr_nosec(const struct path *path, struct kstat *stat,
  	stat->result_mask |= STATX_BASIC_STATS;
  	request_mask &= STATX_ALL;
  	query_flags &= KSTAT_QUERY_FLAGS;
@@ -1937,10 +1937,12 @@ index 0fda4b6..aacd5a7 100644
 +		bool is_fuse = false;
 +		if (susfs_is_inode_sus_kstat(d_backing_inode(path->dentry), &is_fuse)) {
 +			if (!is_fuse) {
-+				stat->mnt_id = real_mount(path->mnt)->mnt_id;
++				// stat->mnt_id = real_mount(path->mnt)->mnt_id;
++				// only for 5.10 kernel
 +				stat->result_mask |= STATX_SUS_KSTAT;
 +			}
-+			stat->mnt_id = real_mount(path->mnt)->mnt_id;
++			// stat->mnt_id = real_mount(path->mnt)->mnt_id;
++			// only for 5.10 kernel
 +			stat->result_mask |= STATX_SUS_KSTAT_FUSE;
 +		}
 +	}

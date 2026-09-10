@@ -1538,7 +1538,7 @@ index 3494d7a..e58dd1f 100644
  	return error;
  }
 diff --git a/fs/stat.c b/fs/stat.c
-index 004dd77..43084ee 100644
+index 004dd77..3f16c0a 100644
 --- a/fs/stat.c
 +++ b/fs/stat.c
 @@ -18,6 +18,11 @@
@@ -1553,7 +1553,7 @@ index 004dd77..43084ee 100644
  void generic_fillattr(struct inode *inode, struct kstat *stat)
  {
  	stat->dev = inode->i_sb->s_dev;
-@@ -53,8 +58,53 @@ int vfs_getattr_nosec(struct path *path, struct kstat *stat)
+@@ -53,8 +58,55 @@ int vfs_getattr_nosec(struct path *path, struct kstat *stat)
  {
  	struct inode *inode = d_backing_inode(path->dentry);
  
@@ -1562,10 +1562,12 @@ index 004dd77..43084ee 100644
 +		bool is_fuse = false;
 +		if (susfs_is_inode_sus_kstat(d_backing_inode(path->dentry), &is_fuse)) {
 +			if (!is_fuse) {
-+				stat->mnt_id = real_mount(path->mnt)->mnt_id;
++				// stat->mnt_id = real_mount(path->mnt)->mnt_id;
++				// only for 5.10 kernel
 +				stat->result_mask |= STATX_SUS_KSTAT;
 +			}
-+			stat->mnt_id = real_mount(path->mnt)->mnt_id;
++			// stat->mnt_id = real_mount(path->mnt)->mnt_id;
++			// only for 5.10 kernel
 +			stat->result_mask |= STATX_SUS_KSTAT_FUSE;
 +		}
 +	}
