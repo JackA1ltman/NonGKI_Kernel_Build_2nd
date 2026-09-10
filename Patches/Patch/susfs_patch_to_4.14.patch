@@ -1,32 +1,3 @@
-diff --git a/.git/ORIG_HEAD b/.git/ORIG_HEAD
-deleted file mode 100644
-index 26321da..0000000
---- a/.git/ORIG_HEAD
-+++ /dev/null
-@@ -1 +0,0 @@
--e21e98053a2a94b666bc23db555ca8a0c967df32
-diff --git a/.git/index b/.git/index
-index 70bbad8..be87d88 100644
-Binary files a/.git/index and b/.git/index differ
-diff --git a/.git/logs/HEAD b/.git/logs/HEAD
-index 1aca3c8..9749fb4 100644
---- a/.git/logs/HEAD
-+++ b/.git/logs/HEAD
-@@ -1,2 +1 @@
- 0000000000000000000000000000000000000000 e21e98053a2a94b666bc23db555ca8a0c967df32 JackA1ltman <cs2dtzq@163.com> 1766631696 +0800	clone: from https://github.com/crdroidandroid/android_kernel_xiaomi_sm8150.git
--e21e98053a2a94b666bc23db555ca8a0c967df32 e21e98053a2a94b666bc23db555ca8a0c967df32 JackA1ltman <cs2dtzq@163.com> 1780148510 +0800	reset: moving to origin/15.0-base
-diff --git a/.git/objects/0d/ac25a085d5d4b8dee1c072cbb96d8b206eff70 b/.git/objects/0d/ac25a085d5d4b8dee1c072cbb96d8b206eff70
-deleted file mode 100644
-index 0a91ca5..0000000
-Binary files a/.git/objects/0d/ac25a085d5d4b8dee1c072cbb96d8b206eff70 and /dev/null differ
-diff --git a/.git/objects/45/c0f532b02b85578b6599b71c6ca7367caf2045 b/.git/objects/45/c0f532b02b85578b6599b71c6ca7367caf2045
-deleted file mode 100644
-index f8242cc..0000000
-Binary files a/.git/objects/45/c0f532b02b85578b6599b71c6ca7367caf2045 and /dev/null differ
-diff --git a/.git/objects/69/8b1ab103d584ac8258f95b3ffd6238e28ec115 b/.git/objects/69/8b1ab103d584ac8258f95b3ffd6238e28ec115
-deleted file mode 100644
-index e0ec48b..0000000
-Binary files a/.git/objects/69/8b1ab103d584ac8258f95b3ffd6238e28ec115 and /dev/null differ
 diff --git a/fs/Makefile b/fs/Makefile
 index 3bbe62a..c9d9eef 100644
 --- a/fs/Makefile
@@ -883,7 +854,7 @@ index d772fe4..0a2fc6a 100644
 +}
 +#endif // #ifdef CONFIG_KSU_SUSFS
 diff --git a/fs/notify/fdinfo.c b/fs/notify/fdinfo.c
-index c62a87e..35b2f7b 100644
+index c62a87e..a344469 100644
 --- a/fs/notify/fdinfo.c
 +++ b/fs/notify/fdinfo.c
 @@ -13,6 +13,9 @@
@@ -941,7 +912,7 @@ index c62a87e..35b2f7b 100644
  {
  	struct inotify_inode_mark *inode_mark;
  	struct inode *inode;
-@@ -83,6 +106,59 @@ static void inotify_fdinfo(struct seq_file *m, struct fsnotify_mark *mark)
+@@ -83,6 +106,60 @@ static void inotify_fdinfo(struct seq_file *m, struct fsnotify_mark *mark)
  	inode_mark = container_of(mark, struct inotify_inode_mark, fsn_mark);
  	inode = igrab(mark->connector->inode);
  	if (inode) {
@@ -966,35 +937,36 @@ index c62a87e..35b2f7b 100644
 +		if (likely(susfs_is_current_proc_umounted())) {
 +			struct mount *mnt = real_mount(file->f_path.mnt);
 +			if (mnt->mnt_id >= DEFAULT_KSU_MNT_ID) {
-+			struct path path;
-+			char *pathname = kmalloc(PAGE_SIZE, GFP_KERNEL);
-+			char *dpath;
-+			if (!pathname) {
-+				goto orig_flow;
-+			}
-+			dpath = d_path(&file->f_path, pathname, PAGE_SIZE);
-+			if (!dpath) {
-+				goto out_kfree;
-+			}
-+			if (kern_path(dpath, 0, &path)) {
-+				goto out_kfree;
-+			}
-+			if (!d_backing_inode(path.dentry)) {
-+				goto out_path_put;
-+			}
-+			seq_printf(m, "inotify wd:%x ino:%lx sdev:%x mask:%x ignored_mask:0 ",
-+					inode_mark->wd, d_backing_inode(path.dentry)->i_ino, d_backing_inode(path.dentry)->i_sb->s_dev,
-+					inotify_mark_user_mask(mark));
-+			show_mark_fhandle(m, d_backing_inode(path.dentry));
-+			seq_putc(m, '\n');
-+			path_put(&path);
-+			kfree(pathname);
-+			iput(inode);
-+			return;
++				struct path path;
++				char *pathname = kmalloc(PAGE_SIZE, GFP_KERNEL);
++				char *dpath;
++				if (!pathname) {
++					goto orig_flow;
++				}
++				dpath = d_path(&file->f_path, pathname, PAGE_SIZE);
++				if (!dpath) {
++					goto out_kfree;
++				}
++				if (kern_path(dpath, 0, &path)) {
++					goto out_kfree;
++				}
++				if (!d_backing_inode(path.dentry)) {
++					goto out_path_put;
++				}
++				seq_printf(m, "inotify wd:%x ino:%lx sdev:%x mask:%x ignored_mask:0 ",
++						inode_mark->wd, d_backing_inode(path.dentry)->i_ino, d_backing_inode(path.dentry)->i_sb->s_dev,
++						inotify_mark_user_mask(mark));
++				show_mark_fhandle(m, d_backing_inode(path.dentry));
++				seq_putc(m, '\n');
++				path_put(&path);
++				kfree(pathname);
++				iput(inode);
++				return;
 +out_path_put:
-+			path_put(&path);
++				path_put(&path);
 +out_kfree:
-+			kfree(pathname);
++				kfree(pathname);
++			}
 +		}
 +orig_flow:
 +#endif // #ifdef CONFIG_KSU_SUSFS_SUS_MOUNT

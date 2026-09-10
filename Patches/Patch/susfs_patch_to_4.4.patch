@@ -651,7 +651,7 @@ index 6f9a6be..a98ea8b 100644
 +#endif // #ifdef CONFIG_KSU_SUSFS
 +
 diff --git a/fs/notify/fdinfo.c b/fs/notify/fdinfo.c
-index fd98e51..fcef300 100644
+index fd98e51..34c36e8 100644
 --- a/fs/notify/fdinfo.c
 +++ b/fs/notify/fdinfo.c
 @@ -12,6 +12,9 @@
@@ -709,7 +709,7 @@ index fd98e51..fcef300 100644
  {
  	struct inotify_inode_mark *inode_mark;
  	struct inode *inode;
-@@ -90,6 +113,59 @@ static void inotify_fdinfo(struct seq_file *m, struct fsnotify_mark *mark)
+@@ -90,6 +113,60 @@ static void inotify_fdinfo(struct seq_file *m, struct fsnotify_mark *mark)
  		 * used only internally to the kernel.
  		 */
  		u32 mask = mark->mask & IN_ALL_EVENTS;
@@ -734,35 +734,36 @@ index fd98e51..fcef300 100644
 +		if (likely(susfs_is_current_proc_umounted())) {
 +			struct mount *mnt = real_mount(file->f_path.mnt);
 +			if (mnt->mnt_id >= DEFAULT_KSU_MNT_ID) {
-+			struct path path;
-+			char *pathname = kmalloc(PAGE_SIZE, GFP_KERNEL);
-+			char *dpath;
-+			if (!pathname) {
-+				goto orig_flow;
-+			}
-+			dpath = d_path(&file->f_path, pathname, PAGE_SIZE);
-+			if (!dpath) {
-+				goto out_kfree;
-+			}
-+			if (kern_path(dpath, 0, &path)) {
-+				goto out_kfree;
-+			}
-+			if (!d_backing_inode(path.dentry)) {
-+				goto out_path_put;
-+			}
-+			seq_printf(m, "inotify wd:%x ino:%lx sdev:%x mask:%x ignored_mask:%x ",
-+						inode_mark->wd, d_backing_inode(path.dentry)->i_ino, d_backing_inode(path.dentry)->i_sb->s_dev,
-+						mask, mark->ignored_mask);
-+			show_mark_fhandle(m, d_backing_inode(path.dentry));
-+			seq_putc(m, '\n');
-+			path_put(&path);
-+			kfree(pathname);
-+			iput(inode);
-+			return;
++				struct path path;
++				char *pathname = kmalloc(PAGE_SIZE, GFP_KERNEL);
++				char *dpath;
++				if (!pathname) {
++					goto orig_flow;
++				}
++				dpath = d_path(&file->f_path, pathname, PAGE_SIZE);
++				if (!dpath) {
++					goto out_kfree;
++				}
++				if (kern_path(dpath, 0, &path)) {
++					goto out_kfree;
++				}
++				if (!d_backing_inode(path.dentry)) {
++					goto out_path_put;
++				}
++				seq_printf(m, "inotify wd:%x ino:%lx sdev:%x mask:%x ignored_mask:%x ",
++							inode_mark->wd, d_backing_inode(path.dentry)->i_ino, d_backing_inode(path.dentry)->i_sb->s_dev,
++							mask, mark->ignored_mask);
++				show_mark_fhandle(m, d_backing_inode(path.dentry));
++				seq_putc(m, '\n');
++				path_put(&path);
++				kfree(pathname);
++				iput(inode);
++				return;
 +out_path_put:
-+			path_put(&path);
++				path_put(&path);
 +out_kfree:
-+			kfree(pathname);
++				kfree(pathname);
++			}
 +		}
 +orig_flow:
 +#endif // #ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
