@@ -1871,7 +1871,7 @@ index 3c5ce8a..76b25d1 100644
  }
  #endif
 diff --git a/fs/stat.c b/fs/stat.c
-index 3765431..3689fd5 100644
+index 3765431..475416f 100644
 --- a/fs/stat.c
 +++ b/fs/stat.c
 @@ -21,6 +21,11 @@
@@ -1879,9 +1879,9 @@ index 3765431..3689fd5 100644
  #include <asm/unistd.h>
  
 +#ifdef CONFIG_KSU_SUSFS_SUS_KSTAT
-++extern bool susfs_is_inode_sus_kstat(struct inode *inode, bool *out_is_fuse);
-++extern void susfs_sus_kstat_spoof_generic_fillattr(struct inode *inode, struct kstat *stat, u32 result_mask);
-++#endif // #ifdef CONFIG_KSU_SUSFS_SUS_KSTAT
++extern bool susfs_is_inode_sus_kstat(struct inode *inode, bool *out_is_fuse);
++extern void susfs_sus_kstat_spoof_generic_fillattr(struct inode *inode, struct kstat *stat, u32 result_mask);
++#endif // #ifdef CONFIG_KSU_SUSFS_SUS_KSTAT
 +
  /**
   * generic_fillattr - Fill in the basic attributes from the inode struct
