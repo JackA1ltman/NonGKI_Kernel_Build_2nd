@@ -117,7 +117,14 @@ jobs:
         run: |
           # Only ${{ env.DEVICE_NAME }} use it.
           cd $GITHUB_WORKSPACE/device_kernel
-          # Nothing
+
+          # Keep the normal SCM version metadata, but suppress the suffix
+          # produced after the build actions modify the checked-out tree.
+          if ! grep -q "^[[:space:]]*printf '%s' -dirty[[:space:]]*$" scripts/setlocalversion; then
+            echo "[-] Could not find the Git dirty-suffix logic in scripts/setlocalversion."
+            exit 1
+          fi
+          sed -i "s/^\([[:space:]]*\)printf '%s' -dirty[[:space:]]*$/\1: # Suppress dirty suffix./" scripts/setlocalversion
 
       - name: 🧰 Patch Kernel of Re:Kernel
         uses: ./.github/workflows/patch-rekernel
