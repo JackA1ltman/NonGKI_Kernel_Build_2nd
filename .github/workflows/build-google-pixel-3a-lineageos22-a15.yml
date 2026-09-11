@@ -118,12 +118,11 @@ jobs:
           # Only ${{ env.DEVICE_NAME }} use it.
           cd $GITHUB_WORKSPACE/device_kernel
 
-          # setlocalversion recursively includes every nested Git checkout.
-          # build-ready adds AnyKernel3 and KernelSU, while patch-susfs adds
-          # the patch repository, which can exceed UTS_RELEASE's 64-byte limit.
-          # An empty .scmversion is the kernel's supported SCM override and
-          # suppresses commit, nested-repository, and -dirty suffixes.
-          : > .scmversion
+          # Preserve the clean LineageOS release format (for example,
+          # 4.9.337-gb929452c5c49) using only the kernel checkout's commit.
+          # The .scmversion override prevents setlocalversion from appending
+          # nested-repository revisions or a -dirty suffix.
+          printf -- '-g%s' "$(git rev-parse --short=12 HEAD)" > .scmversion
 
       - name: 🧰 Patch Kernel of Re:Kernel
         uses: ./.github/workflows/patch-rekernel
