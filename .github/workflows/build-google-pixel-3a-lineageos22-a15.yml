@@ -118,13 +118,12 @@ jobs:
           # Only ${{ env.DEVICE_NAME }} use it.
           cd $GITHUB_WORKSPACE/device_kernel
 
-          # Keep the normal SCM version metadata, but suppress the suffix
-          # produced after the build actions modify the checked-out tree.
-          if ! grep -q "^[[:space:]]*printf '%s' -dirty[[:space:]]*$" scripts/setlocalversion; then
-            echo "[-] Could not find the Git dirty-suffix logic in scripts/setlocalversion."
-            exit 1
-          fi
-          sed -i "s/^\([[:space:]]*\)printf '%s' -dirty[[:space:]]*$/\1: # Suppress dirty suffix./" scripts/setlocalversion
+          # setlocalversion recursively includes every nested Git checkout.
+          # build-ready adds AnyKernel3 and KernelSU, while patch-susfs adds
+          # the patch repository, which can exceed UTS_RELEASE's 64-byte limit.
+          # An empty .scmversion is the kernel's supported SCM override and
+          # suppresses commit, nested-repository, and -dirty suffixes.
+          : > .scmversion
 
       - name: 🧰 Patch Kernel of Re:Kernel
         uses: ./.github/workflows/patch-rekernel
