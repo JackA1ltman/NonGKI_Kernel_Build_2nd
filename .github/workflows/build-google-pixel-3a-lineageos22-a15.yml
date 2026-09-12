@@ -54,7 +54,7 @@ env:
   AK3_SOURCE: "https://github.com/osm0sis/AnyKernel3.git"
   AK3_BRANCH: "master"
   BOOT_SOURCE: "" # Used only by MKBOOTIMG packaging.
-  PACK_KMODULES: "false"
+  PACK_KMODULES: "true"
   ROM_TEXT: "lineageos22_2_a15"
 
   # bonito_defconfig builds the QCOM DTBs and dtbo.img directly.
