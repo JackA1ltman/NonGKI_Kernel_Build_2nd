@@ -61,11 +61,12 @@ env:
   GENERATE_DTB: "false"
   GENERATE_CHIP: "qcom" # Used only if GENERATE_DTB is enabled later.
 
-  # Optional integrations (disabled for this device configuration)
+  # Optional integrations
   REKERNEL_ENABLE: "false"
   DROIDSPACES_ENABLE: "false"
   BASEBAND_GUARD_ENABLE: "false"
   BASEBAND_GUARD_BOOT: "false"
+  NOMOUNT_ENABLE: "true"
 
   # SuSFS builds use the inline hook path in patch-no-kprobe; syscall is the fallback without SuSFS.
   HOOK_METHOD: "syscall"
@@ -112,6 +113,9 @@ jobs:
 
       - name: 🪝 Patch Kernel of SuSFS
         uses: ./.github/workflows/patch-susfs
+
+      - name: 🛡️ Patch Kernel of NoMount
+        uses: ./.github/workflows/patch-nomount
 
       - name: 🪛 Extra Kernel Options
         run: |

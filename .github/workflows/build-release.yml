@@ -47,7 +47,7 @@ jobs:
 
         | Device Name | Codename | Kernel | System | Android | Method | KernelSU | SuSFS | Re:Kernel | BBG | NoMount |
         |----------|----------|----------|----------|----------|----------|----------|----------|----------|----------|----------|
-        | Google Pixel 3a | bonito | 4.9 | Lineage OS 22.2 | 15 | AnyKernel3 | ReSukiSU | ✅ | ❌ | ❌ | ❌ |
+        | Google Pixel 3a | bonito | 4.9 | Lineage OS 22.2 | 15 | AnyKernel3 | ReSukiSU | ✅ | ❌ | ❌ | ✅ |
         | OnePlus 8 | instantnoodle | 4.19 | Oxygen OS 13.1 | 13 | AnyKernel3 | ReSukiSU | ✅ | ❌ | ✅ | ❌ |
         | Xiaomi Mix2s | polaris | 4.9 | Evolution X 10.X | 15 | AnyKernel3 | ReSukiSU | ✅ | ✅ | ✅ | ❌ |
         | Redmi K20 Pro | raphael | 4.14 | Based AOSP | 15 | AnyKernel3 | ReSukiSU | ✅ | ❌ | ❌ | ❌ |

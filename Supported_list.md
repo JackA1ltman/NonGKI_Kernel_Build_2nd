@@ -1,6 +1,6 @@
 | Device | Location | Codename | Kernel/Author/Name | OS | Android | Pack Method | KernelSU | SuSFS | Hook | KPM | Re:Kernel | BBG | NoMount | Status |  
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|  
-| Google Pixel 3a | All | bonito | [4.9/LineageOS/google msm-4.9](https://github.com/LineageOS/android_kernel_google_msm-4.9) | Lineage OS 22.2 | 15 | AnyKernel3 | ReSukiSU | ✅ | Inline | ❌ | ❌ | ❌ | ❌ | Pending validation |
+| Google Pixel 3a | All | bonito | [4.9/LineageOS/google msm-4.9](https://github.com/LineageOS/android_kernel_google_msm-4.9) | Lineage OS 22.2 | 15 | AnyKernel3 | ReSukiSU | ✅ | Inline | ❌ | ❌ | ❌ | ✅ | Pending validation |
 | Oneplus 8 | All | instantnoodle | [4.19/ppajda/XTD](https://github.com/ppajda/android_kernel_oneplus_sm8250) | Oxygen OS 13.1 | 13 | AnyKernel3 | ReSukiSU | ✅ | Inline | ❌ | ❌ | ✅ | ❌ | Stable |  
 | Xiaomi Mix2s | All | polaris | [4.9/Evolution-X-Devices/sdm845](https://github.com/Evolution-X-Devices/kernel_xiaomi_sdm845) | Evolution X 10.X | 15 | AnyKernel3 | ReSukiSU | ✅ | Inline | ❌ | ✅ | ✅ | ❌ | Stable |   
 | Redmi K20 Pro | All | raphael | [4.14/SOVIET-ANDROID/SOVIET-STAR-OSS](https://github.com/SOVIET-ANDROID/kernel_xiaomi_raphael) | Based AOSP | 15 | AnyKernel3 | ReSukiSU | ✅ | Inline | ❌ | ❌ | ❌ | ❌ | Stable |  
