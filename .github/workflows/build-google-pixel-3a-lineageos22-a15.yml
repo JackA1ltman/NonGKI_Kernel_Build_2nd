@@ -122,6 +122,14 @@ jobs:
           # Only ${{ env.DEVICE_NAME }} use it.
           cd $GITHUB_WORKSPACE/device_kernel
 
+          # Match build.config.bonito_no-cfi: disable Clang LTO and CFI.
+          ./scripts/config --file "arch/${KERNEL_ARCH}/configs/${DEFCONFIG_NAME}" \
+            -d LTO \
+            -d LTO_CLANG \
+            -d CFI \
+            -d CFI_PERMISSIVE \
+            -d CFI_CLANG
+
           # Preserve the clean LineageOS release format (for example,
           # 4.9.337-gb929452c5c49) using only the kernel checkout's commit.
           # The .scmversion override prevents setlocalversion from appending
