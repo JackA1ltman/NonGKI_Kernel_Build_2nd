@@ -1983,7 +1983,7 @@ index 0fda4b6..dd2c150 100644
  	generic_fillattr(inode, stat);
  	return 0;
 diff --git a/fs/statfs.c b/fs/statfs.c
-index e6ceb3e..f7d5ed9 100644
+index e6ceb3e..8102d2f 100644
 --- a/fs/statfs.c
 +++ b/fs/statfs.c
 @@ -9,6 +9,10 @@
@@ -2022,9 +2022,9 @@ index e6ceb3e..f7d5ed9 100644
 +	if (retval)
 +		return retval;
 +	if (susfs_sus_kstat_spoof_vfs_statfs(d_backing_inode(dentry), buf, is_fuse))
-+		goto orig_flow;
++		goto bypass_orig_flow;
 +	retval = dentry->d_sb->s_op->statfs(dentry, buf);
-+orig_flow:
++bypass_orig_flow:
 +	if (retval == 0 && buf->f_frsize == 0)
 +		buf->f_frsize = buf->f_bsize;
 +	return retval;
@@ -2073,7 +2073,7 @@ index e6ceb3e..f7d5ed9 100644
  	return error;
 diff --git a/fs/susfs.c b/fs/susfs.c
 new file mode 100644
-index 0000000..211c9e9
+index 0000000..f2f93ae
 --- /dev/null
 +++ b/fs/susfs.c
 @@ -0,0 +1,1561 @@
@@ -2398,30 +2398,11 @@ index 0000000..211c9e9
 +			err = -ENOENT;
 +			goto out_path_put_path;
 +		}
-+		if (is_update) {
++		if (is_update)
 +			new_entry->info.spoofed_size = d_backing_inode(path.dentry)->i_size;
-+		} else {
-+			new_entry->is_fuse = true;
-+			new_entry->target_dev = fi->inode.i_sb->s_dev;
-+			new_entry->spoofed_mnt_id = susfs_get_non_sus_mnt_id_from_mnt(real_mount(path.mnt));
-+			no_sus_vfsmnt = susfs_get_non_sus_vfsmnt_from_vfsmnt(path.mnt);
-+			err = statfs_by_dentry(no_sus_vfsmnt->mnt_root, &new_entry->spoofed_kstatfs);
-+			dput(no_sus_vfsmnt->mnt_root);
-+			mntput(no_sus_vfsmnt);
-+			if (err)
-+				goto out_path_put_path;
-+		}
-+		set_bit(AS_FLAGS_SUS_KSTAT, &fi->inode.i_state);
-+		SUSFS_LOGI("marked AS_FLAGS_SUS_KSTAT on pathname: '%s', is_fuse: %d, fi->inode.i_sb->s_dev: %u, fi->nodeid: %llu, fi->inode.i_ino: %lu, fi->inode.i_state: 0x%lx, spoofed_mnt_id: '%d'\n",
-+					target_pathname, new_entry->is_fuse, fi->inode.i_sb->s_dev, fi->nodeid, fi->inode.i_ino, fi->inode.i_state, new_entry->spoofed_mnt_id);
-+		goto out_path_put_path;
-+	}
 +
-+	if (is_update) {
-+		new_entry->info.spoofed_size = d_backing_inode(path.dentry)->i_size;
-+	} else {
-+		new_entry->is_fuse = false;
-+		new_entry->target_dev = inode->i_sb->s_dev;
++		new_entry->is_fuse = true;
++		new_entry->target_dev = fi->inode.i_sb->s_dev;
 +		new_entry->spoofed_mnt_id = susfs_get_non_sus_mnt_id_from_mnt(real_mount(path.mnt));
 +		no_sus_vfsmnt = susfs_get_non_sus_vfsmnt_from_vfsmnt(path.mnt);
 +		err = statfs_by_dentry(no_sus_vfsmnt->mnt_root, &new_entry->spoofed_kstatfs);
@@ -2429,7 +2410,26 @@ index 0000000..211c9e9
 +		mntput(no_sus_vfsmnt);
 +		if (err)
 +			goto out_path_put_path;
++
++		set_bit(AS_FLAGS_SUS_KSTAT, &fi->inode.i_state);
++		SUSFS_LOGI("marked AS_FLAGS_SUS_KSTAT on pathname: '%s', is_fuse: %d, fi->inode.i_sb->s_dev: %u, fi->nodeid: %llu, fi->inode.i_ino: %lu, fi->inode.i_state: 0x%lx, spoofed_mnt_id: '%d'\n",
++					target_pathname, new_entry->is_fuse, fi->inode.i_sb->s_dev, fi->nodeid, fi->inode.i_ino, fi->inode.i_state, new_entry->spoofed_mnt_id);
++		goto out_path_put_path;
 +	}
++
++	if (is_update)
++		new_entry->info.spoofed_size = d_backing_inode(path.dentry)->i_size;
++
++	new_entry->is_fuse = false;
++	new_entry->target_dev = inode->i_sb->s_dev;
++	new_entry->spoofed_mnt_id = susfs_get_non_sus_mnt_id_from_mnt(real_mount(path.mnt));
++	no_sus_vfsmnt = susfs_get_non_sus_vfsmnt_from_vfsmnt(path.mnt);
++	err = statfs_by_dentry(no_sus_vfsmnt->mnt_root, &new_entry->spoofed_kstatfs);
++	dput(no_sus_vfsmnt->mnt_root);
++	mntput(no_sus_vfsmnt);
++	if (err)
++		goto out_path_put_path;
++
 +	set_bit(AS_FLAGS_SUS_KSTAT, &inode->i_state);
 +	SUSFS_LOGI("marked AS_FLAGS_SUS_KSTAT on pathname: '%s', is_fuse: %d, inode->i_sb->s_dev: %u,  inode->i_ino: %lu, inode->i_state: 0x%lx, spoofed_mnt_id: '%d'\n",
 +				target_pathname, new_entry->is_fuse, inode->i_sb->s_dev, inode->i_ino, inode->i_state, new_entry->spoofed_mnt_id);
