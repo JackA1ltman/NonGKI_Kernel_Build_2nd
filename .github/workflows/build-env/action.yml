@@ -134,8 +134,10 @@ runs:
             ${{ env.CURLX }} https://android.googlesource.com/platform/system/libufdt/+archive/refs/heads/main/utils/src.tar.gz src.tar.gz
             tar zxvf src.tar.gz
             rm -f src.tar.gz
-            ln -s mkdtboimg.py /usr/bin/mkdtboimg
-            ln -s mkdtboimg.py /usr/bin/mkdtimg
+            chmod +x "$GITHUB_WORKSPACE/mkdtbo/mkdtboimg.py"
+            ln -sfn "$GITHUB_WORKSPACE/mkdtbo/mkdtboimg.py" /usr/bin/mkdtboimg
+            ln -sfn "$GITHUB_WORKSPACE/mkdtbo/mkdtboimg.py" /usr/bin/mkdtimg
+            test -x /usr/bin/mkdtimg
             cd $GITHUB_WORKSPACE
 
             if [ "${{ env.PYTHON_VERSION }}" == "3" ]; then
@@ -184,8 +186,10 @@ runs:
             ${{ env.CURLX }} https://android.googlesource.com/platform/system/libufdt/+archive/refs/heads/main/utils/src.tar.gz src.tar.gz
             tar zxvf src.tar.gz
             rm -f src.tar.gz
-            sudo ln -s mkdtboimg.py /usr/bin/mkdtboimg
-            sudo ln -s mkdtboimg.py /usr/bin/mkdtimg
+            chmod +x "$GITHUB_WORKSPACE/mkdtbo/mkdtboimg.py"
+            sudo ln -sfn "$GITHUB_WORKSPACE/mkdtbo/mkdtboimg.py" /usr/bin/mkdtboimg
+            sudo ln -sfn "$GITHUB_WORKSPACE/mkdtbo/mkdtboimg.py" /usr/bin/mkdtimg
+            test -x /usr/bin/mkdtimg
             cd $GITHUB_WORKSPACE
 
             if [ "${{ env.PYTHON_VERSION }}" == "3" ]; then
@@ -238,8 +242,10 @@ runs:
             ${{ env.CURLX }} https://android.googlesource.com/platform/system/libufdt/+archive/refs/heads/main/utils/src.tar.gz src.tar.gz
             tar zxvf src.tar.gz
             rm -f src.tar.gz
-            sudo ln -s mkdtboimg.py /usr/bin/mkdtboimg
-            sudo ln -s mkdtboimg.py /usr/bin/mkdtimg
+            chmod +x "$GITHUB_WORKSPACE/mkdtbo/mkdtboimg.py"
+            sudo ln -sfn "$GITHUB_WORKSPACE/mkdtbo/mkdtboimg.py" /usr/bin/mkdtboimg
+            sudo ln -sfn "$GITHUB_WORKSPACE/mkdtbo/mkdtboimg.py" /usr/bin/mkdtimg
+            test -x /usr/bin/mkdtimg
             cd $GITHUB_WORKSPACE
 
             if [ "${{ env.PYTHON_VERSION }}" == "3" ]; then
@@ -293,8 +299,10 @@ runs:
             ${{ env.CURLX }} https://android.googlesource.com/platform/system/libufdt/+archive/refs/heads/main/utils/src.tar.gz src.tar.gz
             tar zxvf src.tar.gz
             rm -f src.tar.gz
-            ln -s mkdtboimg.py /usr/bin/mkdtboimg
-            ln -s mkdtboimg.py /usr/bin/mkdtimg
+            chmod +x "$GITHUB_WORKSPACE/mkdtbo/mkdtboimg.py"
+            ln -sfn "$GITHUB_WORKSPACE/mkdtbo/mkdtboimg.py" /usr/bin/mkdtboimg
+            ln -sfn "$GITHUB_WORKSPACE/mkdtbo/mkdtboimg.py" /usr/bin/mkdtimg
+            test -x /usr/bin/mkdtimg
             cd $GITHUB_WORKSPACE
 
             if [ "${{ env.PYTHON_VERSION }}" == "3" ]; then
