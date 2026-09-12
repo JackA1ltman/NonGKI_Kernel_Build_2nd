@@ -23,21 +23,15 @@ env:
   CLANG_BRANCH: "lineage-20.0"
 
   # These match the Android 4.9 GCC toolchain families referenced by build.config.common.
-  GCC_GNU: "false"
   GCC_64_SOURCE: "https://github.com/LineageOS/android_prebuilts_gcc_linux-x86_aarch64_aarch64-linux-android-4.9.git"
   GCC_64_BRANCH: "lineage-19.1"
   GCC_32_SOURCE: "https://github.com/LineageOS/android_prebuilts_gcc_linux-x86_arm_arm-linux-androideabi-4.9.git"
   GCC_32_BRANCH: "lineage-19.1"
 
   # Defconfig
-  DEFCONFIG_SOURCE: "" # Optional direct URL for a replacement defconfig file.
   DEFCONFIG_NAME: "bonito_defconfig"
-  DEFCONFIG_ORIGIN_IMAGE: "" # Optional boot/kernel image URL used to extract a defconfig.
-  DEFCONFIG_FROM_BOOT: "false"
 
   # KernelSU: ReSukiSU with SuSFS
-  KERNELSU_SOURCE: ""
-  KERNELSU_BRANCH: ""
   KERNELSU_AUTO_GET: "true"
   KERNELSU_AUTO_FORK: "resukisu"
   KERNELSU_METHOD: "shell" # shell, manual, or only.
@@ -53,39 +47,17 @@ env:
   PACK_METHOD: "Anykernel3"
   AK3_SOURCE: "https://github.com/osm0sis/AnyKernel3.git"
   AK3_BRANCH: "master"
-  BOOT_SOURCE: "" # Used only by MKBOOTIMG packaging.
   PACK_KMODULES: "true"
   ROM_TEXT: "lineageos22_2_a15"
 
-  # bonito_defconfig builds the QCOM DTBs and dtbo.img directly.
-  GENERATE_DTB: "false"
-  GENERATE_CHIP: "qcom" # Used only if GENERATE_DTB is enabled later.
-
-  # Optional integrations
-  REKERNEL_ENABLE: "false"
-  DROIDSPACES_ENABLE: "false"
-  BASEBAND_GUARD_ENABLE: "false"
-  BASEBAND_GUARD_BOOT: "false"
+  # NoMount
   NOMOUNT_ENABLE: "true"
 
   # SuSFS builds use the inline hook path in patch-no-kprobe; syscall is the fallback without SuSFS.
   HOOK_METHOD: "syscall"
 
-  # Optional KPM support
-  KPM_ENABLE: "false"
-  KPM_INLINE: "false"
-  KPM_KPATCH_NEXT: "false"
-  KPM_PATCH_SOURCE: "https://raw.githubusercontent.com/SukiSU-Ultra/SukiSU_patch/refs/heads/main/kpm/patch_linux"
-
-  # Build diagnostics and extra config merging
-  BUILD_DEBUGGER: "false"
-  SKIP_PATCH: "false"
-  BUILD_OTHER_CONFIG: "false"
-  MERGE_CONFIG_FILES: "" # Comma-separated paths relative to arch/arm64/configs/.
-
   # Runner setup
   PYTHON_VERSION: "3"
-  FREE_MORE_SPACE: "false"
 
 jobs:
   build-kernel:
