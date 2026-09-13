@@ -1610,7 +1610,7 @@ index 004dd77..3f16c0a 100644
  	generic_fillattr(inode, stat);
  	return 0;
 diff --git a/fs/statfs.c b/fs/statfs.c
-index 083dc0a..eb2a7bd 100644
+index 083dc0a..3ba543f 100644
 --- a/fs/statfs.c
 +++ b/fs/statfs.c
 @@ -7,6 +7,9 @@
@@ -1623,7 +1623,7 @@ index 083dc0a..eb2a7bd 100644
  #include "internal.h"
  
  static int flags_by_mnt(int mnt_flags)
-@@ -63,11 +66,73 @@ static int statfs_by_dentry(struct dentry *dentry, struct kstatfs *buf)
+@@ -63,9 +66,71 @@ static int statfs_by_dentry(struct dentry *dentry, struct kstatfs *buf)
  	return retval;
  }
  
@@ -1665,8 +1665,9 @@ index 083dc0a..eb2a7bd 100644
 +		struct inode *inode = d_backing_inode(path->dentry);
 +		bool is_fuse = false;
 +		if (susfs_is_inode_sus_kstat(inode, &is_fuse)) {
-+			error = susfs_statfs_by_dentry(path->dentry, buf, &is_fuse);
-+			goto bypass_orig_flow;
++			// - here we do not call calculate_f_flags() as buf->f_flags will be spoofed
++			//   by susfs_statfs_by_dentry().
++			return susfs_statfs_by_dentry(path->dentry, buf, &is_fuse);
 +		}
 +	}
 +#endif // #ifdef CONFIG_KSU_SUSFS_SUS_KSTAT
@@ -1679,7 +1680,9 @@ index 083dc0a..eb2a7bd 100644
 +			dput(no_sus_vfsmnt->mnt_root);
 +			mntput(no_sus_vfsmnt);
 +			error = statfs_by_dentry(path->dentry, buf);
-+			goto bypass_orig_flow;
++			if (!error)
++				buf->f_flags = calculate_f_flags(path->mnt);
++			return error;
 +	}
 +		error = statfs_by_dentry(no_sus_vfsmnt->mnt_root, buf);
 +		if (!error)
@@ -1691,12 +1694,7 @@ index 083dc0a..eb2a7bd 100644
 +#endif // #ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
  
  	error = statfs_by_dentry(path->dentry, buf);
-+#if defined(CONFIG_KSU_SUSFS_SUS_MOUNT) || defined(CONFIG_KSU_SUSFS_SUS_KSTAT)
-+bypass_orig_flow:
-+#endif // #if defined(CONFIG_KSU_SUSFS_SUS_MOUNT) || defined(CONFIG_KSU_SUSFS_SUS_KSTAT)
  	if (!error)
- 		buf->f_flags = calculate_f_flags(path->mnt);
- 	return error;
 diff --git a/fs/super.c b/fs/super.c
 index 55cd884..ce01bc0 100644
 --- a/fs/super.c
