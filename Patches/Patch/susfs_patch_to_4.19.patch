@@ -2024,6 +2024,50 @@ index 2978659..9620958 100644
  	if (!error)
  		buf->f_flags = calculate_f_flags(path->mnt);
  	return error;
+diff --git a/fs/super.c b/fs/super.c
+index 08d39b2..ff85927 100644
+--- a/fs/super.c
++++ b/fs/super.c
+@@ -36,8 +36,16 @@
+ #include <linux/fsnotify.h>
+ #include <linux/lockdep.h>
+ #include <linux/user_namespace.h>
++#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
++#include <linux/susfs_def.h>
++#endif // #ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
+ #include "internal.h"
+ 
++#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
++extern bool susfs_is_current_ksu_domain(void);
++extern struct static_key_true susfs_is_sdcard_android_data_not_decrypted;
++#endif // #ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
++
+ static int thaw_super_locked(struct super_block *sb);
+ 
+ static LIST_HEAD(super_blocks);
+@@ -1015,6 +1023,22 @@ int get_anon_bdev(dev_t *p)
+ {
+ 	int dev;
+ 
++#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
++	if (static_branch_unlikely(&susfs_is_sdcard_android_data_not_decrypted)) {
++		if (susfs_is_current_ksu_domain()) {
++			dev = ida_alloc_range(&unnamed_dev_ida, DEFAULT_KSU_MNT_MINOR_DEV, (1 << MINORBITS) - 1,
++				GFP_ATOMIC);
++			if (dev == -ENOSPC)
++				dev = -EMFILE;
++			if (dev < 0)
++				return dev;
++
++			*p = MKDEV(0, dev);
++			return 0;
++		}
++	}
++#endif // #ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
++
+ 	/*
+ 	 * Many userspace utilities consider an FSID of 0 invalid.
+ 	 * Always return at least 1 from get_anon_bdev.
 diff --git a/fs/susfs.c b/fs/susfs.c
 new file mode 100644
 index 0000000..f2f93ae
@@ -3842,10 +3886,10 @@ index 0000000..125ec8f
 +#endif
 diff --git a/include/linux/susfs_def.h b/include/linux/susfs_def.h
 new file mode 100644
-index 0000000..fe48902
+index 0000000..ceadf45
 --- /dev/null
 +++ b/include/linux/susfs_def.h
-@@ -0,0 +1,218 @@
+@@ -0,0 +1,219 @@
 +#ifndef KSU_SUSFS_DEF_H
 +#define KSU_SUSFS_DEF_H
 +
@@ -3905,6 +3949,7 @@ index 0000000..fe48902
 +
 +#define DEFAULT_KSU_MNT_ID 2000000000 /* used for mounts created or single cloned by ksu process */
 +#define DEFAULT_KSU_MNT_GROUP_ID 200000 /* used by mount->mnt_group_id */
++#define DEFAULT_KSU_MNT_MINOR_DEV (1 << 12) /* should be way enough, here minor(dev) begins with 4097 */
 +
 +#ifndef FUSE_SUPER_MAGIC
 +#define FUSE_SUPER_MAGIC 0x65735546
