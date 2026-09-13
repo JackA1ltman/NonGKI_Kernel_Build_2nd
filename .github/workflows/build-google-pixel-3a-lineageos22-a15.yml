@@ -47,7 +47,7 @@ env:
   PACK_METHOD: "Anykernel3"
   AK3_SOURCE: "https://github.com/osm0sis/AnyKernel3.git"
   AK3_BRANCH: "master"
-  PACK_KMODULES: "true"
+  PACK_KMODULES: "false"
   ROM_TEXT: "lineageos22_2_a15"
 
   # NoMount
@@ -95,12 +95,14 @@ jobs:
           cd $GITHUB_WORKSPACE/device_kernel
 
           # Match build.config.bonito_no-cfi: disable Clang LTO and CFI.
+          # Also compile WLAN driver into kernel to avoid the need for a separate module.
           ./scripts/config --file "arch/${KERNEL_ARCH}/configs/${DEFCONFIG_NAME}" \
             -d LTO \
             -d LTO_CLANG \
             -d CFI \
             -d CFI_PERMISSIVE \
-            -d CFI_CLANG
+            -d CFI_CLANG \
+            -e CONFIG_QCA_CLD_WLAN
 
           # Preserve the clean LineageOS release format (for example,
           # 4.9.337-gb929452c5c49) using only the kernel checkout's commit.
