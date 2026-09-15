@@ -1696,17 +1696,17 @@ index 083dc0a..3ba543f 100644
  	error = statfs_by_dentry(path->dentry, buf);
  	if (!error)
 diff --git a/fs/super.c b/fs/super.c
-index 55cd884..ce01bc0 100644
+index 55cd884..c273ba6 100644
 --- a/fs/super.c
 +++ b/fs/super.c
 @@ -34,8 +34,16 @@
  #include <linux/fsnotify.h>
  #include <linux/lockdep.h>
  #include <linux/user_namespace.h>
-+#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
++#ifdef CONFIG_KSU_SUSFS
 +#include <linux/susfs_def.h>
 +#include <linux/jump_label.h>
-+#endif // #ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
++#endif // #ifdef CONFIG_KSU_SUSFS
  #include "internal.h"
  
 +#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
