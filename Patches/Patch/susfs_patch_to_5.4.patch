@@ -2022,16 +2022,16 @@ index 4960c69..3cc3ab3 100644
  	error = statfs_by_dentry(path->dentry, buf);
  	if (!error)
 diff --git a/fs/super.c b/fs/super.c
-index 8edf44a..49b48e0 100644
+index 8edf44a..1f7cfe5 100644
 --- a/fs/super.c
 +++ b/fs/super.c
 @@ -38,8 +38,16 @@
  #include <linux/user_namespace.h>
  #include <linux/fs_context.h>
  #include <uapi/linux/mount.h>
-+#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
++#ifdef CONFIG_KSU_SUSFS
 +#include <linux/susfs_def.h>
-+#endif // #ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
++#endif // #ifdef CONFIG_KSU_SUSFS
  #include "internal.h"
  
 +#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
