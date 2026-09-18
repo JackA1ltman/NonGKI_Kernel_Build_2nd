@@ -72,11 +72,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
 
-      # Download Artifacts for A12 (Only if A12 Build is successful or input is true or empty)
+      # Download Artifacts
       - name: Download Artifacts
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v8
         with:
           path: ./downloaded-artifacts
+          skip-decompress: true
 
       # Get the Latest Tag from GitHub
       - name: Generate and Create New Tag
@@ -136,7 +137,7 @@ jobs:
       - name: Upload Release Assets Dynamically
         run: |
           # Loop through all files in the downloaded-artifacts directory
-          for file in ./downloaded-artifacts/Kernel-*/*; do
+          for file in ./downloaded-artifacts/*; do
               # Skip directories
               if [ -d "$file" ]; then
                   continue
@@ -151,4 +152,4 @@ jobs:
       - name: Display Files Uploaded
         run: |
           echo "GitHub release created with the following files:"
-          ls ./downloaded-artifacts/**/*
+          ls ./downloaded-artifacts/*
