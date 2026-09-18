@@ -1,4 +1,4 @@
-name: Build Samsung Note 10 Plus (OneUI A15)
+name: Build Samsung Galaxy Note10+ (OneUI A15)
 
 on:
   workflow_call:
@@ -91,7 +91,7 @@ env:
 
 jobs:
   build-kernel:
-    name: Samsung Note 10 Plus (OneUI A15)
+    name: Samsung Galaxy Note10+ (OneUI A15)
     runs-on: ubuntu-latest # u can changed to ubuntu 22.04, and need container set ubuntu-latest
     # container: archlinux/archlinux:latest # if u need use arch linux -> archlinux/archlinux:latest or ubuntu 20.04 -> ubuntu:focal
     env:

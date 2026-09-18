@@ -1,4 +1,4 @@
-name: Build Xiaomi 11 (Evolution X 11 A16)
+name: Build Xiaomi Mi 11 (Evolution X 11 A16)
 
 on:
   workflow_call:
@@ -92,7 +92,7 @@ env:
 
 jobs:
   build-kernel:
-    name: Xiaomi 11 (Evolution X 11 A16)
+    name: Xiaomi Mi 11 (Evolution X 11 A16)
     runs-on: ubuntu-latest # u can changed to ubuntu 22.04, and need container set ubuntu-latest
     # container: archlinux/archlinux:latest # if u need use arch linux -> archlinux/archlinux:latest or ubuntu 20.04 -> ubuntu:focal
     env:

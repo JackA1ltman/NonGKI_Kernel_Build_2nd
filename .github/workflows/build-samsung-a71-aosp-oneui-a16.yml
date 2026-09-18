@@ -1,4 +1,4 @@
-name: Build Samsung Galaxy A71 (Based AOSP & OneUI A16)
+name: Build Samsung Galaxy A71 (AOSP Based & OneUI A16)
 
 on:
   workflow_call:
@@ -90,7 +90,7 @@ env:
       
 jobs:
   build-kernel:
-    name: Samsung Galaxy A71 (Based AOSP & OneUI A16)
+    name: Samsung Galaxy A71 (AOSP Based & OneUI A16)
     runs-on: ubuntu-latest # u can changed to ubuntu 22.04, and need container set ubuntu-latest
     # container: archlinux/archlinux:latest # if u need use arch linux -> archlinux/archlinux:latest or ubuntu 20.04 -> ubuntu:focal
     env:
@@ -100,7 +100,7 @@ jobs:
       
     steps:
       - name: ⏰ Checkout repository
-        uses: actions/checkout@v6 # Đổi thành v4 vì v6 chưa tồn tại, Github Actions có thể báo lỗi
+        uses: actions/checkout@v6 # Đổi thành v4 vì v6 chưa tồn tại, GitHub Actions có thể báo lỗi
 
       - name: ⌛️ Compilation environment preparation
         uses: ./.github/workflows/build-env
@@ -175,7 +175,7 @@ jobs:
           mkdir -p tmp
 
           if [[ "${{ env.AK3_SOURCE }}" =~ "osm0sis" ]]; then
-            sed -i 's|ExampleKernel by osm0sis @ xda-developers|NonGKI Kernel Build by JackAltman @ Github\nHaotic Kernel Build by nduykha @ Github|g' AnyKernel3/anykernel.sh
+            sed -i 's|ExampleKernel by osm0sis @ xda-developers|NonGKI Kernel Build by JackAltman @ GitHub\nHaotic Kernel Build by nduykha @ GitHub|g' AnyKernel3/anykernel.sh
             sed -i 's/do.devicecheck=1/do.devicecheck=0/g' AnyKernel3/anykernel.sh
             sed -i 's!BLOCK=/dev/block/platform/omap/omap_hsmmc.0/by-name/boot;!BLOCK=auto;!g' AnyKernel3/anykernel.sh
             sed -i 's/IS_SLOT_DEVICE=0;/is_slot_device=auto;/g' AnyKernel3/anykernel.sh

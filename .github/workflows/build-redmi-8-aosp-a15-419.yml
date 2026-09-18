@@ -1,4 +1,4 @@
-name: Build Redmi 8 (Based-AOSP A15) (Kernel 4.19)
+name: Build Xiaomi Redmi 8 (AOSP Based A15) (Kernel 4.19)
 
 on:
   workflow_call:
@@ -91,7 +91,7 @@ env:
 
 jobs:
   build-kernel:
-    name: Redmi 8 (Based AOSP A15) (Kernel 4.19)
+    name: Xiaomi Redmi 8 (AOSP Based A15) (Kernel 4.19)
     runs-on: ubuntu-latest # u can changed to ubuntu 22.04, and need container set ubuntu-latest
     container: ubuntu:focal # if u need use arch linux -> archlinux/archlinux:latest or ubuntu 20.04 -> ubuntu:focal
     env:

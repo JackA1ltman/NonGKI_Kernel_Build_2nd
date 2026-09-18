@@ -1,6 +1,6 @@
 #!/bin/bash
-# Patches author: simonpunk @ Gitlab
-#                 backslashxx @ Github
+# Patches author: simonpunk @ GitLab
+#                 backslashxx @ GitHub
 # Shell authon: JackA1ltman <cs2dtzq@163.com>
 # Tested kernel versions: 5.4, 4.19, 4.14, 4.9, 4.4, 3.18
 # 20251120

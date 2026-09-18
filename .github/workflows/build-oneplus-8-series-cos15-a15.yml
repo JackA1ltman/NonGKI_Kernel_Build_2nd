@@ -1,4 +1,4 @@
-name: Build Oneplus 8 Series (ColorOS 15 A15)
+name: Build OnePlus 8 Series (ColorOS 15 A15)
 
 on:
   workflow_call:
@@ -91,7 +91,7 @@ env:
 
 jobs:
   build-kernel:
-    name: Oneplus 8 Series (ColorOS 15 A15)
+    name: OnePlus 8 Series (ColorOS 15 A15)
     runs-on: ubuntu-latest # u can changed to ubuntu 22.04, and need container set ubuntu-latest
     # container: ubuntu:bionic # if u need use arch linux -> archlinux/archlinux:latest or ubuntu 20.04 -> ubuntu:focal
     env:
@@ -134,14 +134,14 @@ jobs:
       - name: 🚀 Build Process
         uses: ./.github/workflows/build-process
 
-      - name: ❗ Oneplus 8 Remove files
+      - name: ❗ OnePlus 8 Remove files
         run: |
           # Only ${{ env.DEVICE_NAME }} use it.
           cd $GITHUB_WORKSPACE/device_kernel
 
           rm -f out/arch/arm64/boot/dtbo.img
           rm -f out/arch/arm64/boot/dtb
-          echo "Removed dtbo.img and dtb for Oneplus 8."
+          echo "Removed dtbo.img and dtb for OnePlus 8."
 
       - name: 🔩 Pack Process
         uses: ./.github/workflows/pack-process

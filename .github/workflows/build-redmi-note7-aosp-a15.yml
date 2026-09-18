@@ -1,4 +1,4 @@
-name: Build Redmi Note 7 (Based AOSP A15)
+name: Build Xiaomi Redmi Note 7 (AOSP Based A15)
 
 on:
   workflow_call:
@@ -91,7 +91,7 @@ env:
 
 jobs:
   build-kernel:
-    name: Redmi Note 7 (Based AOSP A15)
+    name: Xiaomi Redmi Note 7 (AOSP Based A15)
     runs-on: ubuntu-latest # u can changed to ubuntu 22.04, and need container set ubuntu-latest
     # container: ubuntu:focal # if u need use arch linux -> archlinux/archlinux:latest or ubuntu 20.04 -> ubuntu:focal
     env:
