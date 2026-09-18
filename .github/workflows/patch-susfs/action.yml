@@ -1,9 +1,9 @@
-name: 'Patch SuSFS for Kernel.'
+name: 'Patch SUSFS for Kernel.'
 
 runs:
   using: 'composite'
   steps:
-      - name: Get SuSFS
+      - name: Get SUSFS
         if: env.SUSFS_ENABLE == 'true'
         shell: bash
         run: |
@@ -48,7 +48,7 @@ runs:
 
           fi
 
-      - name: Patch SuSFS
+      - name: Patch SUSFS
         if: env.SUSFS_ENABLE == 'true'
         shell: bash
         run: |
@@ -69,22 +69,22 @@ runs:
 
           }
 
-          # Check SuSFS
+          # Check SUSFS
           if grep -q "CONFIG_KSU_SUSFS" "fs/namespace.c"; then
-            echo "[-] SuSFS is already patched, Skipped."
+            echo "[-] SUSFS is already patched, Skipped."
             echo "SUSFS_SKIP=true" >> $GITHUB_ENV
 
           else
             cp /tmp/Patches/Patch/susfs_patch_to_${{ env.KERNEL_VERSION }}.patch ./
 
             patch -p1 < susfs_patch_to_${{ env.KERNEL_VERSION }}.patch || true
-            echo "[+] SuSFS Patch completed."
+            echo "[+] SUSFS Patch completed."
 
           fi
 
           # Patch .rej find
           if [[ "${{ env.BUILD_DEBUGGER }}" == "true" ]]; then
-            echo "[+] Checking SuSFS v${SUSFS_VERSION} rej files..."
+            echo "[+] Checking SUSFS v${SUSFS_VERSION} rej files..."
             mapfile -t REJ_FILES < <(find . -type f -name "*.rej")
 
             if [ ${#REJ_FILES[@]} -eq 0 ]; then
@@ -100,12 +100,12 @@ runs:
             fi
 
             if [[ "${{ env.SKIP_PATCH }}" == "true" ]] || [ -n "${{ env.SUSFS_PATCH_FIXED }}" ]; then
-                echo "[+] SuSFS Patch Version: v${SUSFS_VERSION}. "
-                echo "[+] SKIP_PATCH enabled or found SuSFS v2.2.00 Fixed Patch, skipping."
+                echo "[+] SUSFS Patch Version: v${SUSFS_VERSION}. "
+                echo "[+] SKIP_PATCH enabled or found SUSFS v2.2.00 Fixed Patch, skipping."
                 PACK_FILES
 
             elif [[ "${{ env.SKIP_PATCH }}" != "true" ]] || [ -z "${{ env.SUSFS_PATCH_FIXED }}" ]; then
-                echo "[+] SuSFS Patch Version: v${SUSFS_VERSION}. "
+                echo "[+] SUSFS Patch Version: v${SUSFS_VERSION}. "
                 echo "[-] Found .rej files, Stopped! "
                 PACK_FILES
                 false

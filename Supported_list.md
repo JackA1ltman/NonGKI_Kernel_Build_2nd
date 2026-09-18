@@ -1,4 +1,4 @@
-| Device | Location | Codename | Kernel/Author/Name | OS | Android | Pack Method | KernelSU | SuSFS | Hook | KPM | Re:Kernel | BBG | NoMount | Status |  
+| Device | Location | Codename | Kernel/Author/Name | OS | Android | Pack Method | KernelSU | SUSFS | Hook | KPM | Re:Kernel | BBG | NoMount | Status |  
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|  
 | Oneplus 8 | All | instantnoodle | [4.19/ppajda/XTD](https://github.com/ppajda/android_kernel_oneplus_sm8250) | Oxygen OS 13.1 | 13 | AnyKernel3 | ReSukiSU | ✅ | Inline | ❌ | ❌ | ✅ | ❌ | Stable |  
 | Xiaomi Mix2s | All | polaris | [4.9/Evolution-X-Devices/sdm845](https://github.com/Evolution-X-Devices/kernel_xiaomi_sdm845) | Evolution X 10.X | 15 | AnyKernel3 | ReSukiSU | ✅ | Inline | ❌ | ✅ | ✅ | ❌ | Stable |   

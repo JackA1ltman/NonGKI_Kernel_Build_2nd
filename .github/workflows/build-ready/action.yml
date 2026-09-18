@@ -128,7 +128,7 @@ runs:
                 KERNELSU_NAME="KernelSU"
                 KERNELSU_ORIGIN_BRANCH="master"
                 if [[ "${{ env.SUSFS_ENABLE }}" == "true" ]]; then
-                    echo "[-] ${{ env.KERNELSU_AUTO_FORK }} doesn't support SuSFS! "
+                    echo "[-] ${{ env.KERNELSU_AUTO_FORK }} doesn't support SUSFS! "
                     false
                 else
                     KERNELSU_BRANCH="master"
@@ -139,7 +139,7 @@ runs:
                 KERNELSU_NAME="KernelSU"
                 KERNELSU_ORIGIN_BRANCH="main"
                 if [[ "${{ env.SUSFS_ENABLE }}" == "true" ]]; then
-                    echo "[-] ${{ env.KERNELSU_AUTO_FORK }} doesn't support SuSFS! "
+                    echo "[-] ${{ env.KERNELSU_AUTO_FORK }} doesn't support SUSFS! "
                     false
                 else
                     KERNELSU_BRANCH="main"
@@ -160,7 +160,7 @@ runs:
                 KERNELSU_NAME="KernelSU-Next"
                 KERNELSU_ORIGIN_BRANCH="legacy"
                 if [[ "${{ env.SUSFS_ENABLE }}" == "true" ]]; then
-                    echo "[-] ${{ env.KERNELSU_AUTO_FORK }} doesn't support SuSFS! "
+                    echo "[-] ${{ env.KERNELSU_AUTO_FORK }} doesn't support SUSFS! "
                     false
                 else
                     KERNELSU_BRANCH="legacy"

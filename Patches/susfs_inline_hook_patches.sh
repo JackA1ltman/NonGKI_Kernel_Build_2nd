@@ -5,7 +5,7 @@
 # Tested kernel versions: 5.4, 4.19, 4.14, 4.9, 4.4, 3.18
 # 20251120
 
-# This Hook is only available for SuSFS v2.3.00 onwards.
+# This Hook is only available for SUSFS v2.3.00 onwards.
 
 patch_files=(
     fs/exec.c

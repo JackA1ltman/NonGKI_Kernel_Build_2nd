@@ -13,7 +13,7 @@
 > **获取示例：[sample](https://github.com/JackA1ltman/NonGKI_Kernel_Build_2nd/tree/sample)**  
 
 ### 简介  
-本项目建立之初，目标就是为了更多**Non-GKI内核**提供相对稳定的**KernelSU**以及**SuSFS**的编译更新渠道  
+本项目建立之初，目标就是为了更多**Non-GKI内核**提供相对稳定的**KernelSU**以及**SUSFS**的编译更新渠道  
 同时提供更轻松的基于**Github Action**的编译渠道，不仅仅是便于我们维护，也便于您利用我们的项目编译属于自己的内核  
 
 > [!IMPORTANT]
@@ -41,8 +41,8 @@
     - [x] 无特殊需求无需修改子模块
     - [x] 便于理解和学习的子模块
 - [x] **易用**
-    - [x] 若无SuSFS需求在仅修改部分变量后就可以直接进行编译
-    - [x] 本地生成SuSFS修补补丁后更容易的填写和调用补丁
+    - [x] 若无SUSFS需求在仅修改部分变量后就可以直接进行编译
+    - [x] 本地生成SUSFS修补补丁后更容易的填写和调用补丁
     - [x] 多分支保证Fork后不再难以寻找示例YAML
 - [x] **系统**
     - [x] 支持Ubuntu 20.04-24.04
@@ -69,13 +69,13 @@
 ### 版权
 - [KernelSU](https://github.com/tiann/KernelSU) - @tiann
     - [rsuntk](https://github.com/rsuntk/KernelSU) - @rsuntk
-        - [rsuntk-SuSFS](https://github.com/cyberc3dr/KernelSU) - @cyberc3dr
+        - [rsuntk-SUSFS](https://github.com/cyberc3dr/KernelSU) - @cyberc3dr
     - [xxksu](https://github.com/backslashxx/KernelSU) - @backslashxx
     - [SukiSU-Ultra](https://github.com/SukiSU-Ultra/SukiSU-Ultra) - @ShirkNeko
         - [ReSukiSU](https://github.com/ReSukiSU/ReSukiSU) - @ReSukiSU Development
             - [ReSukiSU_CI](https://github.com/cctv18/ReSukiSU_CI) - @cctv18
     - [Next](https://github.com/KernelSU-Next/KernelSU-Next) - @rifsxd
-- [SuSFS](https://gitlab.com/simonpunk/susfs4ksu) - @simonpunk
+- [SUSFS](https://gitlab.com/simonpunk/susfs4ksu) - @simonpunk
 - [Re:Kernel](https://github.com/Sakion-Team/Re-Kernel) - @Sakion-Team
 - [Baseband Guard](https://github.com/vc-teahouse/Baseband-guard) - @秋刀鱼
 - [Droidspaces](https://github.com/ravindu644/Droidspaces-OSS) - @ravindu644

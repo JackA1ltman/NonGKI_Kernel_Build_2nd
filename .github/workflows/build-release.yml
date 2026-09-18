@@ -45,7 +45,7 @@ jobs:
       RELEASE_NOTES: |
         Below is the codename reference table. Please select the image or archive you need based on this table.
 
-        | Device Name | Codename | Kernel | System | Android | Method | KernelSU | SuSFS | Re:Kernel | BBG | NoMount |
+        | Device Name | Codename | Kernel | System | Android | Method | KernelSU | SUSFS | Re:Kernel | BBG | NoMount |
         |----------|----------|----------|----------|----------|----------|----------|----------|----------|----------|----------|
         | OnePlus 8 | instantnoodle | 4.19 | Oxygen OS 13.1 | 13 | AnyKernel3 | ReSukiSU | ✅ | ❌ | ✅ | ❌ |
         | Xiaomi Mix2s | polaris | 4.9 | Evolution X 10.X | 15 | AnyKernel3 | ReSukiSU | ✅ | ✅ | ✅ | ❌ |

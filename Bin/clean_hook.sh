@@ -35,7 +35,7 @@ for file in "${KSU_CLEAN_FILES[@]}"; do
     fi
 done
 
-# Removal of SuSFS
+# Removal of SUSFS
 
 for file in "${SUSFS_CLEAN_FILES[@]}"; do
     perl -i -0777 -pe 's/#ifndef CONFIG_KSU_SUSFS[^\n]*\n(.*?)#else\n(.*?)#endif\n/$1/gs; s/#ifdef CONFIG_KSU_SUSFS[^\n]*\n(.*?)#else\n(.*?)#endif\n/$1/gs' "${file}"
@@ -44,9 +44,9 @@ for file in "${SUSFS_CLEAN_FILES[@]}"; do
     sed -i '/#ifndef CONFIG_KSU_SUSFS/,/#endif/d' "${file}"
 
     if grep -q "CONFIG_KSU_SUSFS/" "${file}"; then
-        echo "[-] Could not remove SuSFS hook from ${file}."
+        echo "[-] Could not remove SUSFS hook from ${file}."
     else
-        echo "[+] Cleaned SuSFS Hook for ${file}."
+        echo "[+] Cleaned SUSFS Hook for ${file}."
     fi
 done
 
