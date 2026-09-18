@@ -54,6 +54,13 @@ jobs:
     secrets: inherit
 
   # Smartisan
+  build-smartisan-r1-smartisanos-a8:
+    name: "Smartisan R1 (Smartisan OS A8.1)"
+    strategy:
+      fail-fast: true
+    uses: ./.github/workflows/build-smartisan-r1-smartisanos-a8.yml
+    secrets: inherit
+
   build-smartisan-u3pro-lineageos18-a11:
     name: "Smartisan U3 Pro (LineageOS 18 A11)"
     strategy:

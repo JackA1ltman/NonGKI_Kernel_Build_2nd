@@ -6,6 +6,7 @@
 | Samsung Galaxy A71 | All | a71 | [4.14/nduykha/kernel_samsung_sm7150](https://github.com/nduykha/kernel_samsung_sm7150) | AOSP Based & OneUI | 16 | AnyKernel3 | ReSukiSU | ✅ | Inline | ❌ | ✅ | ✅ | ❌ | Stable |   
 | Samsung Galaxy Note10 | EU | d1 | [4.14/Ocin4ever/ExtremeKernel](https://github.com/Ocin4ever/ExtremeKernel) | OneUI 7 | 15 | AnyKernel3 | ReSukiSU | ✅ | Inline | ❌ | ❌ | ❌ | ❌ | Stable |  
 | Samsung Galaxy Note10+ | EU | d2s | [4.14/Ocin4ever/ExtremeKernel](https://github.com/Ocin4ever/ExtremeKernel) | OneUI 7 | 15 | AnyKernel3 | ReSukiSU | ✅ | Inline | ❌ | ❌ | ❌ | ❌ | Stable |  
+| Smartisan R1 | All | trident | [4.9/Ephemera42/SmartisanOS](https://github.com/Ephemera42/android_kernel_smartisan_sdm845) | Smartisan OS | 8.1 | AnyKernel3 | xxKSU | ❌ | Syscall | ❌ | ❌ | ❌ | ❌ | Stable |  
 | Smartisan U3 Pro | All | osborn | [4.4/anrui2032/LineageOS](https://github.com/anrui2032/android_kernel_smartisan_sdm660) | LineageOS 18 | 11 | AnyKernel3 | xxKSU | ❌ | Syscall | ❌ | ❌ | ❌ | ❌ | Stable |  
 | Xiaomi Mi 11 | All | venus | [5.4/kamikaonashi/venus](https://github.com/kamikaonashi/kernel_xiaomi_venus) | Evolution X 11.X | 16 | AnyKernel3 | ReSukiSU | ✅ | Inline | ❌ | ✅ | ❌ | ❌ | Stable |  
 | Xiaomi Mi MIX 2S | All | polaris | [4.9/Evolution-X-Devices/sdm845](https://github.com/Evolution-X-Devices/kernel_xiaomi_sdm845) | Evolution X 10.X | 15 | AnyKernel3 | ReSukiSU | ✅ | Inline | ❌ | ✅ | ✅ | ❌ | Stable |   

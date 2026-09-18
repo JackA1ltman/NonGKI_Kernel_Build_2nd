@@ -53,6 +53,7 @@ jobs:
         | Samsung Galaxy A71 | a71 | 4.14 | AOSP Based & OneUI | 16 | AnyKernel3 | ReSukiSU | ✅ | ✅ | ✅ | ❌ |
         | Samsung Galaxy Note10 | d1 | 4.14 | OneUI 7 | 15 | AnyKernel3 | ReSukiSU | ✅ | ❌ | ❌ | ❌ |
         | Samsung Galaxy Note10+ | d2s | 4.14 | OneUI 7 | 15 | AnyKernel3 | ReSukiSU | ✅ | ❌ | ❌ | ❌ |
+        | Smartisan R1 | trident | 4.9 | Smartisan OS | 8.1 | AnyKernel3 | xxKSU | ❌ | ❌ | ❌ | ❌ |
         | Smartisan U3 Pro | osborn | 4.4 | LineageOS 18 | 11 | AnyKernel3 | xxKSU | ❌ | ❌ | ❌ | ❌ |
         | Xiaomi Mi 11 | venus | 5.4 | Evolution X 11.X | 16 | AnyKernel3 | ReSukiSU | ✅ | ✅ | ❌ | ❌ |
         | Xiaomi Mi MIX 2S | polaris | 4.9 | Evolution X 10.X | 15 | AnyKernel3 | ReSukiSU | ✅ | ✅ | ✅ | ❌ |
