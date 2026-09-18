@@ -50,7 +50,7 @@ env:
 
   # Other env
   PYTHON_VERSION: "3"
-  PACK_METHOD: "Anykernel3"
+  PACK_METHOD: "AnyKernel3"
   PACK_KMODULES: "false"
 
   KERNELSU_METHOD: "shell"
@@ -175,13 +175,13 @@ jobs:
           mkdir -p tmp
 
           if [[ "${{ env.AK3_SOURCE }}" =~ "osm0sis" ]]; then
-            sed -i 's|ExampleKernel by osm0sis @ xda-developers|NonGKI Kernel Build by JackAltman @ Github\nHaotic Kernel Build by nduykha @ Github|g' Anykernel3/anykernel.sh
-            sed -i 's/do.devicecheck=1/do.devicecheck=0/g' Anykernel3/anykernel.sh
-            sed -i 's!BLOCK=/dev/block/platform/omap/omap_hsmmc.0/by-name/boot;!BLOCK=auto;!g' Anykernel3/anykernel.sh
-            sed -i 's/IS_SLOT_DEVICE=0;/is_slot_device=auto;/g' Anykernel3/anykernel.sh
-            echo "Now using official Anykernel3."
+            sed -i 's|ExampleKernel by osm0sis @ xda-developers|NonGKI Kernel Build by JackAltman @ Github\nHaotic Kernel Build by nduykha @ Github|g' AnyKernel3/anykernel.sh
+            sed -i 's/do.devicecheck=1/do.devicecheck=0/g' AnyKernel3/anykernel.sh
+            sed -i 's!BLOCK=/dev/block/platform/omap/omap_hsmmc.0/by-name/boot;!BLOCK=auto;!g' AnyKernel3/anykernel.sh
+            sed -i 's/IS_SLOT_DEVICE=0;/is_slot_device=auto;/g' AnyKernel3/anykernel.sh
+            echo "Now using official AnyKernel3."
           else
-            echo "Now using custom Anykernel3."
+            echo "Now using custom AnyKernel3."
           fi
 
           if [[ -f "$IMAGE_DIR/Image.gz-dtb" ]]; then
@@ -242,7 +242,7 @@ jobs:
             fi
           fi
 
-          cp -rp ./Anykernel3/* tmp
+          cp -rp ./AnyKernel3/* tmp
           cd tmp
           7za a -mx9 tmp.zip *
           cd ..
