@@ -83,7 +83,7 @@ index 80b743c..86447fa 100644
  	return dentry;
  }
  
-@@ -1663,15 +1689,53 @@ static struct dentry *__lookup_hash(const struct qstr *name,
+@@ -1663,15 +1689,54 @@ static struct dentry *__lookup_hash(const struct qstr *name,
  		struct dentry *base, unsigned int flags)
  {
  	struct dentry *dentry = lookup_dcache(name, base, flags);
@@ -109,9 +109,10 @@ index 80b743c..86447fa 100644
  
 +#ifdef CONFIG_KSU_SUSFS_SUS_PATH
 +	dentry = lookup_real(base->d_inode, dentry, flags);
-+	bool is_fuse = dentry->d_inode->i_sb->s_magic == FUSE_SUPER_MAGIC;
 +
 +	if (unlikely(dentry) && !IS_ERR(dentry) && dentry->d_inode && !found_sus_path && susfs_is_inode_sus_path(dentry->d_inode)) {
++	        bool is_fuse = dentry->d_inode->i_sb->s_magic == FUSE_SUPER_MAGIC;
++
 +		if (d_in_lookup(dentry))
 +			d_lookup_done(dentry);
 +		if (!(flags & LOOKUP_RCU))
