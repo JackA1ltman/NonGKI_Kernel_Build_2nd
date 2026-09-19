@@ -1,4 +1,4 @@
-name: Build Xiaomi Redmi K20 Pro (AOSP Based A15) (Soviet-Star-OSS)
+name: Build Smartisan R1 (Smartisan OS A8.1)
 
 on:
   workflow_call:
@@ -6,39 +6,39 @@ on:
 
 env:
   # Device env
-  DEVICE_NAME : "redmi_k20_pro"
-  DEVICE_CODENAME : "raphael"
+  DEVICE_NAME : "smartisan_r1"
+  DEVICE_CODENAME : "trident"
 
-  CUSTOM_CMDS : "CLANG_TRIPLE=aarch64-linux-gnu-"
-  EXTRA_CMDS : "LLVM=1 LLVM_IAS=1"
+  CUSTOM_CMDS : ""
+  EXTRA_CMDS : ""
 
-  KERNEL_SOURCE : "https://github.com/JackA1ltman/kernel_xiaomi_raphael_noksu.git"
-  KERNEL_BRANCH : "15.0"
+  KERNEL_SOURCE : "https://github.com/Ephemera42/android_kernel_smartisan_sdm845.git"
+  KERNEL_BRANCH : "android-4.9-o-mr1"
 
-  CLANG_SOURCE : "https://raw.githubusercontent.com/Neutron-Toolchains/antman/main/antman"
+  CLANG_SOURCE : ""
   CLANG_BRANCH : ""
 
   GCC_GNU : false
-  GCC_64_SOURCE : ""
-  GCC_64_BRANCH : ""
-  GCC_32_SOURCE : ""
-  GCC_32_BRANCH : ""
+  GCC_64_SOURCE : "https://github.com/LineageOS/android_prebuilts_gcc_linux-x86_aarch64_aarch64-linux-android-4.9.git"
+  GCC_64_BRANCH : "lineage-19.1"
+  GCC_32_SOURCE : "https://github.com/LineageOS/android_prebuilts_gcc_linux-x86_arm_arm-linux-androideabi-4.9.git"
+  GCC_32_BRANCH : "lineage-19.1"
 
   DEFCONFIG_SOURCE: ""
-  DEFCONFIG_NAME : "raphael_defconfig"
+  DEFCONFIG_NAME : "trident_defconfig"
   DEFCONFIG_ORIGIN_IMAGE: ""
   DEFCONFIG_FROM_BOOT: false
 
   KERNELSU_SOURCE : ""
   KERNELSU_BRANCH : ""
 
-  KERNELSU_AUTO_GET : "true"
-  KERNELSU_AUTO_FORK : "resukisu" # xxksu, rsuntk , next, resukisu and sukisu
+  KERNELSU_AUTO_GET : "true" # if u want easy setting kernelsu, u can true.
+  KERNELSU_AUTO_FORK : "xxksu" # magic, rsuntk, next, resukisu and sukisu
 
-  SUSFS_ENABLE : true
-  SUSFS_FIXED : true
+  SUSFS_ENABLE : false
+  SUSFS_FIXED : false
 
-  AK3_SOURCE : "https://github.com/SOVIET-ANDROID/AnyKernel3.git"
+  AK3_SOURCE : "https://github.com/osm0sis/AnyKernel3.git"
   AK3_BRANCH : "master"
 
   BOOT_SOURCE : ""
@@ -46,27 +46,27 @@ env:
   NEED_DTBO : false
   NEED_SAFE_DTBO : false
 
-  ROM_TEXT : "based_aosp_a15"
+  ROM_TEXT : "smartisanos_a8"
 
   # Other env
-  PYTHON_VERSION: "3" # Only 2(Ubuntu 22.04 and Ubuntu 20.04) or 3(Any OS Versions).
+  PYTHON_VERSION: "2" # Only 2(Ubuntu 22.04 and Ubuntu 20.04) or 3(Any OS Versions).
 
   PACK_METHOD: "AnyKernel3" # AnyKernel3 need SOURCE and BRANCH, MKBOOTIMG needn't it.
   PACK_KMODULES: "false" # if u want pack kernel modules (.ko) into AnyKernel3.
 
   KERNELSU_METHOD: "shell" # shell, manual and only.
 
-  PATCHES_SOURCE: "JackA1ltman/NonGKI_Kernel_Patches" # [your_name]/[your_patch] -> gooder123/NonGKI_Patcher
-  PATCHES_BRANCH: "mi_kernel" # [your_branch] -> main
+  PATCHES_SOURCE: "author/source" # [your_name]/[your_patch] -> gooder123/NonGKI_Patcher
+  PATCHES_BRANCH: "branch" # [your_branch] -> main
 
-  SUSFS_FOLDER_FIXED: "k20p_aosp_sovietstar_a15" # Fill in your patch prefix directory here. Leave it blank if there isn't one. -> your_folder
-  SUSFS_PATCH_FIXED: "susfs_fixed" # Fill in your patches here. If there are multiple patches, please separate them with a comma. Leave it blank if there isn't one. -> patch1,patch2
+  SUSFS_FOLDER_FIXED: "" # Fill in your patch prefix directory here. Leave it blank if there isn't one. -> your_folder
+  SUSFS_PATCH_FIXED: "" # Fill in your patches here. If there are multiple patches, please separate them with a comma. Leave it blank if there isn't one. -> patch1,patch2
 
   REKERNEL_ENABLE: "false" # if u need Re:Kernel.
   DROIDSPACES_ENABLE: "false" # if u need Droidspaces or LXC/Docker.
   NOMOUNT_ENABLE: "false" # if u need NoMount.
 
-  HOOK_METHOD: "syscall" # Manual hook method ->  syscall.
+  HOOK_METHOD: "syscall" # Manual hook method -> syscall.
 
   KERNEL_PATCH: "false" # If your kernel version is <= 4.9, you have the option of enabling the patch to patch the kernel_write and kernel_read functions.
 
@@ -91,7 +91,7 @@ env:
 
 jobs:
   build-kernel:
-    name: Xiaomi Redmi K20 Pro (AOSP Based A15) (Soviet-Star-OSS)
+    name: Smartisan R1 (Smartisan OS A8.1)
     runs-on: ubuntu-latest # u can changed to ubuntu 22.04, and need container set ubuntu-latest
     # container: archlinux/archlinux:latest # if u need use arch linux -> archlinux/archlinux:latest or ubuntu 20.04 -> ubuntu:focal
     env:
@@ -112,15 +112,41 @@ jobs:
       - name: 🪝 Patch Kernel of SUSFS
         uses: ./.github/workflows/patch-susfs
 
-      - name: 🔗 Patch for no-kprobe
-        uses: ./.github/workflows/patch-no-kprobe
-
       - name: 🪛 Extra Kernel Options
         run: |
-          # Only ${{ env.DEVICE_NAME }} use it.
+          # KernelSU
           cd $GITHUB_WORKSPACE/device_kernel
-          # Nothing
-
+          echo "CONFIG_KSU_TAMPER_SYSCALL_TABLE=y" >> ./arch/arm64/configs/trident_defconfig
+          sed -i 's/^static DEFINE_RWLOCK(policy_rwlock);$/DEFINE_RWLOCK(policy_rwlock);/' security/selinux/ss/services.c
+          sed -i '/KBUILD_CFLAGS   :=/s//& -w/' Makefile
+          # AnyKernel3
+          sed -i '/^\. tools\/ak3-core\.sh;/a \
+          \
+          patch_os_version() {\
+            ui_print " " "Syncing OS version and patch level...";\
+            local prop="/system/build.prop";\
+            local TARGET_VER="";\
+            local TARGET_PATCH="";\
+            if [ -f "$prop" ]; then\
+              TARGET_VER=$(file_getprop "$prop" ro.build.version.release);\
+              TARGET_PATCH=$(file_getprop "$prop" ro.build.version.security_patch | grep -oE '\''^[0-9]{4}-[0-9]{2}'\'');\
+            else\
+              ui_print "- Warning: $prop not found!";\
+            fi\
+            if [ -f "$SPLITIMG/header" ]; then\
+              if [ -n "$TARGET_VER" ] && [ -n "$TARGET_PATCH" ]; then\
+                ui_print "- Updating header: OS $TARGET_VER (Patch: $TARGET_PATCH)";\
+                sed -i "s/^os_version=.*/os_version=$TARGET_VER/" "$SPLITIMG/header";\
+                sed -i "s/^os_patch_level=.*/os_patch_level=$TARGET_PATCH/" "$SPLITIMG/header";\
+              else\
+                ui_print "- Warning: Could not find valid version/patch info in $prop.";\
+              fi\
+            else\
+              ui_print "- Warning: header file not found, skipped.";\
+            fi\
+          }' AnyKernel3/anykernel.sh
+          sed -i 's/^dump_boot;.*/&\n\npatch_os_version;/' AnyKernel3/anykernel.sh
+          sed -i 's/^supported\.versions=.*/supported.versions=8.1.0/' AnyKernel3/anykernel.sh
 
       - name: 🧰 Patch Kernel of Re:Kernel
         uses: ./.github/workflows/patch-rekernel

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Patches author: Sakion-Team @ Github
-#                 AlexLiuDev233 @ Github
+# Patches author: Sakion-Team @ GitHub
+#                 AlexLiuDev233 @ GitHub
 # Shell author: JackA1ltman <cs2dtzq@163.com>
 # Tested kernel versions: 5.4, 4.19, 4.14, 4.9, 4.4, 3.18
 # 20250822

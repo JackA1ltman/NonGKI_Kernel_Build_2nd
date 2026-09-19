@@ -10,17 +10,16 @@
 
 > [!NOTE]
 > **Version 2.0**  
-> **Get Sample：[sample](https://github.com/JackA1ltman/NonGKI_Kernel_Build_2nd/tree/sample)**  
+> **Get Sample：[sample](https://github.com/JackA1ltman/NonGKI_Kernel_Build_2nd/tree/sample)**
 
 ### Introduction
 
-The initial goal of this project was to provide a relatively stable channel for compiling and updating **KernelSU** and **SuSFS** for a wider range of **Non-GKI** kernels.  
-It also aims to provide an easier compilation process using **GitHub Actions**, which not only makes it easier for us to maintain but also allows you to use our project to compile your own kernels.  
+The initial goal of this project was to provide a relatively stable channel for compiling and updating **KernelSU** and **SUSFS** for a wider range of **Non-GKI** kernels.
 
-
+It also aims to provide an easier compilation process using **GitHub Actions**, which not only makes it easier for us to maintain but also allows you to use our project to compile your own kernels.
 
 > [!IMPORTANT]
->We are based on the [GPLv3 License](LICENSE)  
+>We are based on the [GPLv3 License](LICENSE)
 >
 >We permit:
 >  - Forking and using for personal compilation.
@@ -44,23 +43,23 @@ It also aims to provide an easier compilation process using **GitHub Actions**, 
   - [x] No need to modify submodules unless there are special requirements.
   - [x] Submodules are easy to understand and learn from.
 - [x] **Ease of Use**
-  - [x] If you don't need SuSFS, you can compile directly after modifying only a few variables.
-  - [x] Easier to fill out and call patches after locally generating SuSFS patch files.
+  - [x] If you don't need SUSFS, you can compile directly after modifying only a few variables.
+  - [x] Easier to fill out and call patches after locally generating SUSFS patch files.
   - [x] Multiple branches ensure it's easy to find example YAML files after forking.
 - [x] **System**
-  - [x] Supports Ubuntu 20.04-24.04.
+  - [x] Supports Ubuntu 20.04 - 24.04.
   - [x] Supports Arch Linux.
-  - [x] Supports compilation on X86_64.
+  - [x] Supports compilation on x86_64.
   - [ ] Supports compilation on ARM64.
 - [x] **Compilation**
   - [x] Supports ARM64 kernels.
-  - [ ] Supports ARM (ARMV7A) kernels.(Aborted support.)
+  - [ ] Supports ARM (ARMv7-A) kernels. (Aborted support.)
 
 ---
 
 ### Acknowledgements
 
-- Thanks to the contributors of the [Version 1.X series](https://github.com/JackA1ltman/NonGKI_Kernel_Build) (in no particular order):
+- Thanks to the contributors of the [Version 1.x series](https://github.com/JackA1ltman/NonGKI_Kernel_Build) (in no particular order):
   - [@adontoo](https://github.com/adontoo)
   - [@PeterTea5822](https://github.com/PeterTea5822)
   - [@pkczc](https://github.com/pkczc)
@@ -72,13 +71,13 @@ It also aims to provide an easier compilation process using **GitHub Actions**, 
 ### Copyright
 - [KernelSU](https://github.com/tiann/KernelSU) - @tiann
   - [rsuntk](https://github.com/rsuntk/KernelSU) - @rsuntk
-    - [rsuntk-SuSFS](https://github.com/cyberc3dr/KernelSU) - @cyberc3dr
-  - [xxksu](https://github.com/backslashxx/KernelSU) - @backslashxx
+    - [rsuntk-SUSFS](https://github.com/cyberc3dr/KernelSU) - @cyberc3dr
+  - [xxKSU](https://github.com/backslashxx/KernelSU) - @backslashxx
   - [SukiSU-Ultra](https://github.com/SukiSU-Ultra/SukiSU-Ultra) - @ShirkNeko
     - [ReSukiSU](https://github.com/ReSukiSU/ReSukiSU) - @ReSukiSU Development
       - [ReSukiSU_CI](https://github.com/cctv18/ReSukiSU_CI) - @cctv18
   - [Next](https://github.com/KernelSU-Next/KernelSU-Next) - @rifsxd
-- [SuSFS](https://gitlab.com/simonpunk/susfs4ksu) - @simonpunk
+- [SUSFS](https://gitlab.com/simonpunk/susfs4ksu) - @simonpunk
 - [Re:Kernel](https://github.com/Sakion-Team/Re-Kernel) - @Sakion-Team
 - [Baseband Guard](https://github.com/vc-teahouse/Baseband-guard) - @秋刀鱼
 - [Droidspaces](https://github.com/ravindu644/Droidspaces-OSS) - @ravindu644
