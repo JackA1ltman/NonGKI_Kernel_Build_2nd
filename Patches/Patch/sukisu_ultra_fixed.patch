@@ -1,0 +1,133 @@
+diff --git a/feature/selinux_hide.c b/feature/selinux_hide.c
+index 31b2de8..f6a68d7 100644
+--- a/feature/selinux_hide.c
++++ b/feature/selinux_hide.c
+@@ -36,7 +36,11 @@ extern void context_struct_compute_av_fn(struct policydb *policydb,
+ struct selinux_state fake_state;
+ #endif
+ #ifdef KSU_COMPAT_USE_STATIC_KEY
+-DEFINE_STATIC_KEY_FALSE(fake_status_initialize_key);
++// We should talk to you, susfs
++// Why use manual hook instead of auto hook
++__maybe_static DEFINE_STATIC_KEY_FALSE(fake_status_initialize_key);
++#else
++static bool fake_status_initialize_key __read_mostly = false;
+ #endif
+ struct page *fake_status = NULL;
+ 
+@@ -78,14 +82,22 @@ void ksu_selinux_hide_handle_second_stage()
+     initialize_fake_status();
+     // https://github.com/torvalds/linux/blame/e8c2f9fdadee7cbc75134dc463c1e0d856d6e5c7/security/selinux/selinuxfs.c#L2014
+     if (fake_status)
++#ifdef KSU_COMPAT_USE_STATIC_KEY
+         static_key_disable(&fake_status_initialize_key.key);
++#else
++        fake_status_initialize_key = true;
++#endif
+     else
+         pr_warn("selinux_hide: fake status need late initialization\n");
+ }
+ 
+ void ksu_selinux_hide_handle_post_fs_data()
+ {
++#ifdef KSU_COMPAT_USE_STATIC_KEY
+     static_key_disable(&fake_status_initialize_key.key);
++#else
++    fake_status_initialize_key = true;
++#endif
+     if (!fake_status)
+         pr_err("selinux_hide: fake status is not initialized after post-fs-data!\n");
+ }
+diff --git a/infra/kernel_compat.h b/infra/kernel_compat.h
+index 5b10ee7..bea39fb 100644
+--- a/infra/kernel_compat.h
++++ b/infra/kernel_compat.h
+@@ -256,4 +256,29 @@ __weak void groups_sort(struct group_info *group_info)
+ 
+ #endif
+ 
++// https://github.com/torvalds/linux/commit/294f69e662d1570703e9b56e95be37a9fd3afba5
++// f**k old compiler, thx for your notices, but better don't notice next time
++#ifndef __has_attribute
++#define __has_attribute(x) __GCC4_has_attribute_##x
++#define __GCC4_has_attribute___fallthrough__ 0
++#endif
++/*
++ * Add the pseudo keyword 'fallthrough' so case statement blocks
++ * must end with any of these keywords:
++ *   break;
++ *   fallthrough;
++ *   continue;
++ *   goto <label>;
++ *   return [expression];
++ *
++ *  gcc: https://gcc.gnu.org/onlinedocs/gcc/Statement-Attributes.html#Statement-Attributes
++ */
++#if __has_attribute(__fallthrough__)
++#define fallthrough __attribute__((__fallthrough__))
++#else
++#define fallthrough                                                                                                    \
++    do {                                                                                                               \
++    } while (0) /* fallthrough */
++#endif
++
+ #endif
+diff --git a/policy/allowlist.c b/policy/allowlist.c
+index fa32ac1..19e15d0 100644
+--- a/policy/allowlist.c
++++ b/policy/allowlist.c
+@@ -1,3 +1,5 @@
++#include "infra/kernel_compat.h"
++
+ #define FILE_MAGIC 0x7f4b5355 // ' KSU', u32
+ #define FILE_FORMAT_VERSION 4 // u32
+ 
+@@ -576,4 +578,4 @@ void __exit ksu_allowlist_exit(void)
+         put_perm_data(np);
+     }
+     mutex_unlock(&allowlist_mutex);
+-}
+\ No newline at end of file
++}
+diff --git a/runtime/ksud.c b/runtime/ksud.c
+index c9d11da..1f32d11 100644
+--- a/runtime/ksud.c
++++ b/runtime/ksud.c
+@@ -61,7 +61,6 @@ void on_post_fs_data(void)
+ #else
+     stop_input_hook();
+ #endif
+-    ksu_selinux_hide_handle_post_fs_data();
+ }
+ 
+ extern void ext4_unregister_sysfs(struct super_block *sb);
+@@ -223,7 +222,6 @@ int ksu_handle_execveat_ksud(int *fd, struct filename **filename_ptr,
+             char buf[16];
+             if (check_argv(*argv, 1, "second_stage", buf, sizeof(buf))) {
+                 pr_info("/system/bin/init second_stage executed\n");
+-                ksu_selinux_hide_handle_second_stage();
+                 apply_kernelsu_rules();
+                 cache_sid();
+                 setup_ksu_cred();
+diff --git a/sulog/event.c b/sulog/event.c
+index e45f01f..9a1b25c 100644
+--- a/sulog/event.c
++++ b/sulog/event.c
+@@ -142,7 +142,7 @@ static __u32 ksu_sulog_flatten_argv(struct user_arg_ptr *argv_user, char *dst, _
+             return ksu_sulog_copy_empty_string(dst);
+ 
+         copied =
+-            strncpy_from_user_nofault(arg, (const void __user *)untagged_addr((unsigned long)arg_user), sizeof(arg));
++            ksu_strncpy_from_user_nofault(arg, (const void __user *)untagged_addr((unsigned long)arg_user), sizeof(arg));
+         if (copied <= 0)
+             return ksu_sulog_copy_empty_string(dst);
+ 
+@@ -374,7 +374,7 @@ static struct ksu_sulog_pending_event *ksu_sulog_capture_grant_root(const struct
+     struct ksu_sulog_event *event;
+ 
+     // This is actually stupid fix
+-    #define USER_ARG_NULL user_arg_null_ptr()
++    #define USER_ARG_NULL (&(struct user_arg_ptr){ 0 })
+ 
+     pending = ksu_sulog_capture(KSU_SULOG_EVENT_IOCTL_GRANT_ROOT, NULL, USER_ARG_NULL, gfp);
+     if (!pending)
