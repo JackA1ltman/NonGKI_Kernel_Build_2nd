@@ -336,38 +336,10 @@ runs:
 
           fi
 
-      - name: Set KSU and SUSFS for DEFCONFIG
+      - name: Set KSU for DEFCONFIG
         shell: bash
         run: |
           cd $GITHUB_WORKSPACE/device_kernel
 
           # Neccssary
           echo "CONFIG_KSU=y" >> ./arch/${{ env.KERNEL_ARCH }}/configs/${{ env.DEFCONFIG_NAME }}
-
-          # Fork
-          if [[ "${{ env.KERNELSU_SOURCE }}" == *rsuntk* ]] || [[ "${{ env.KERNELSU_SOURCE }}" == *Next* ]] || [[ "${{ env.KERNELSU_AUTO_FORK }}" == "rsuntk" ]] || [[ "${{ env.KERNELSU_AUTO_FORK }}" == "next" ]] || [[ "${{ env.KERNELSU_SOURCE }}" == *ReSukiSU* ]] || [[ "${{ env.KERNELSU_AUTO_FORK }}" == "resukisu" ]]; then
-            if [[ ${{ env.SUSFS_ENABLE }} != "true" ]]; then
-                echo "CONFIG_KSU_MANUAL_HOOK=y" >> ./arch/${{ env.KERNEL_ARCH }}/configs/${{ env.DEFCONFIG_NAME }}
-
-            fi
-          fi
-
-          if [[ "${{ env.KERNELSU_SOURCE }}" == *blackslashxx* ]] || [[ "${{ env.KERNELSU_AUTO_FORK }}" == "xxksu" ]]; then
-            echo "CONFIG_KSU_KPROBES_KSUD=n" >> ./arch/${{ env.KERNEL_ARCH }}/configs/${{ env.DEFCONFIG_NAME }}
-
-          fi
-
-          if [[ "${{ env.KERNELSU_SOURCE }}" == *SukiSU* ]] || [[ "${{ env.KERNELSU_AUTO_FORK }}" == "sukisu" ]] || [[ "${{ env.KERNELSU_SOURCE }}" == *ReSukiSU* ]] || [[ "${{ env.KERNELSU_AUTO_FORK }}" == "resukisu" ]]; then
-            if [[ "${{ env.SUSFS_ENABLE }}" != "true" ]]; then
-                echo "CONFIG_KSU_SUSFS=n" >> ./arch/${{ env.KERNEL_ARCH }}/configs/${{ env.DEFCONFIG_NAME }}
-
-            elif [[ "${{ env.SUSFS_ENABLE }}" == "true" ]]; then
-                echo "CONFIG_KSU_SUSFS=y" >> ./arch/${{ env.KERNEL_ARCH }}/configs/${{ env.DEFCONFIG_NAME }}
-            fi
-          fi
-
-          if [[ "${{ env.KERNELSU_SOURCE }}" == *Next* ]] || [[ "${{ env.KERNELSU_AUTO_FORK }}" == "next" ]]; then
-            if [ "${{ env.FIRST_VERSION }}" -lt 5 ] && [ "${{ env.SECOND_VERSION }}" -lt 10 ]; then
-                echo "CONFIG_KSU_ALLOWLIST_WORKAROUND=y" >> ./arch/${{ env.KERNEL_ARCH }}/configs/${{ env.DEFCONFIG_NAME }}
-            fi
-          fi

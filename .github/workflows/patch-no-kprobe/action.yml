@@ -22,6 +22,10 @@ runs:
             cp /tmp/Patches/syscall_hook_patches.sh ./
             bash syscall_hook_patches.sh ./
 
+            if [[ "${{ env.KERNELSU_SOURCE }}" == *ReSukiSU* ]] || [[ "${{ env.KERNELSU_AUTO_FORK }}" == "resukisu" ]]; then
+              echo "CONFIG_KSU_MANUAL_HOOK=y" >> ./arch/${{ env.KERNEL_ARCH }}/configs/${{ env.DEFCONFIG_NAME }}
+            fi
+
             echo "[+] executed syscall hook successfully."
 
           else
