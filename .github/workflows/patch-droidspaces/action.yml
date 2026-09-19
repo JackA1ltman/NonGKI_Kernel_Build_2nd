@@ -17,7 +17,7 @@ runs:
           }
 
           if [[ "${{ env.SUSFS_ENABLE }}" == "true" ]]; then
-            echo "[-] Detected that SuSFS has been enabled, which may cause Droidspaces to work abnormally."
+            echo "[-] Detected that SUSFS has been enabled, which may cause Droidspaces to work abnormally."
           fi
 
           if [[ -f "net/netfilter/xt_qtaguid.c" ]]; then

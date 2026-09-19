@@ -31,7 +31,7 @@ env:
   # Defconfig
   DEFCONFIG_NAME: "bonito_defconfig"
 
-  # KernelSU: ReSukiSU with SuSFS
+  # KernelSU: ReSukiSU with SUSFS
   KERNELSU_AUTO_GET: "true"
   KERNELSU_AUTO_FORK: "resukisu"
   KERNELSU_METHOD: "shell" # shell, manual, or only.
@@ -44,7 +44,7 @@ env:
   SUSFS_PATCH_FIXED: "susfs_patch_to_4.9_secondary" # Comma-separated patch names without .patch.
 
   # Packaging
-  PACK_METHOD: "Anykernel3"
+  PACK_METHOD: "AnyKernel3"
   AK3_SOURCE: "https://github.com/osm0sis/AnyKernel3.git"
   AK3_BRANCH: "master"
   PACK_KMODULES: "false"
@@ -53,7 +53,7 @@ env:
   # NoMount
   NOMOUNT_ENABLE: "true"
 
-  # SuSFS builds use the inline hook path in patch-no-kprobe; syscall is the fallback without SuSFS.
+  # SUSFS builds use the inline hook path in patch-no-kprobe; syscall is the fallback without SUSFS.
   HOOK_METHOD: "syscall"
 
   # Runner setup
@@ -83,7 +83,7 @@ jobs:
       - name: 🔗 Patch for no-kprobe
         uses: ./.github/workflows/patch-no-kprobe
 
-      - name: 🪝 Patch Kernel of SuSFS
+      - name: 🪝 Patch Kernel of SUSFS
         uses: ./.github/workflows/patch-susfs
 
       - name: 🛡️ Patch Kernel of NoMount

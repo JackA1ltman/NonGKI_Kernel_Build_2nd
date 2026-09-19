@@ -3,8 +3,8 @@ name: 'Pack Process.'
 runs:
   using: 'composite'
   steps:
-      - name: Make Anykernel3 Flasher
-        if: env.PACK_METHOD == 'Anykernel3'
+      - name: Make AnyKernel3 Flasher
+        if: env.PACK_METHOD == 'AnyKernel3'
         shell: bash
         run: |
           TIME=$(date +"%Y%m%d%H%M%S")
@@ -15,19 +15,19 @@ runs:
           mkdir -p tmp
 
           if [[ "${{ env.AK3_SOURCE }}" =~ "osm0sis" ]]; then
-            sed -i 's/ExampleKernel by osm0sis @ xda-developers/NonGKI Kernel Build by JackAltman @ Github/g' Anykernel3/anykernel.sh
-            sed -i 's/do.devicecheck=1/do.devicecheck=0/g' Anykernel3/anykernel.sh
-            sed -i 's!BLOCK=/dev/block/platform/omap/omap_hsmmc.0/by-name/boot;!BLOCK=auto;!g' Anykernel3/anykernel.sh
-            sed -i 's/IS_SLOT_DEVICE=0;/is_slot_device=auto;/g' Anykernel3/anykernel.sh
+            sed -i 's/ExampleKernel by osm0sis @ xda-developers/NonGKI Kernel Build by JackAltman @ GitHub/g' AnyKernel3/anykernel.sh
+            sed -i 's/do.devicecheck=1/do.devicecheck=0/g' AnyKernel3/anykernel.sh
+            sed -i 's!BLOCK=/dev/block/platform/omap/omap_hsmmc.0/by-name/boot;!BLOCK=auto;!g' AnyKernel3/anykernel.sh
+            sed -i 's/IS_SLOT_DEVICE=0;/is_slot_device=auto;/g' AnyKernel3/anykernel.sh
 
             if [[ "${{ env.PACK_KMODULES }}" == "true" ]]; then
-              sed -i 's/^do\.modules=.*/do.modules=1/' Anykernel3/anykernel.sh
+              sed -i 's/^do\.modules=.*/do.modules=1/' AnyKernel3/anykernel.sh
             fi
 
-            echo "Now using official Anykernel3."
+            echo "Now using official AnyKernel3."
 
           else
-            echo "Now using custom Anykernel3."
+            echo "Now using custom AnyKernel3."
 
           fi
 
@@ -80,7 +80,7 @@ runs:
 
           fi
 
-          # Added kernel modules to Anykernel3
+          # Added kernel modules to AnyKernel3
           if [ "${{ env.PACK_KMODULES }}" == "true" ]; then
             echo "[+] Packing kernel modules (.ko)..."
             mkdir -p tmp/modules/vendor/lib/modules
@@ -97,7 +97,7 @@ runs:
 
           fi
 
-          cp -rp ./Anykernel3/* tmp
+          cp -rp ./AnyKernel3/* tmp
           cd tmp
           7za a -mx9 tmp.zip *
           cd ..
