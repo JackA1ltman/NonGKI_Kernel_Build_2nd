@@ -73,19 +73,19 @@ for i in "${patch_files[@]}"; do
     fs/open.c)
         sed -i '/#include <linux\/compat.h>/a #ifdef CONFIG_KSU_SUSFS\n#include <linux\/susfs_def.h>\n#endif' fs/open.c
 
-        if ! grep -q "internal.h" "fs/stat.c" && ! grep "static int filename_lookup" "fs/namei.c"; then
+        if ! grep -q "internal.h" "fs/stat.c" && ! grep -q "static int filename_lookup" "fs/namei.c" >/dev/null 2>&1; then
             sed -i '/#include <linux\/compat.h>/a\#include "internal.h"' fs/stat.c
         fi
 
         if grep -q "do_faccessat" "fs/open.c" >/dev/null 2>&1; then
-            if grep -q "static int filename_lookup" "fs/namei.c" ; then
+            if grep -q "static int filename_lookup" "fs/namei.c" >/dev/null 2>&1; then
                 sed -i '/long do_faccessat(int dfd, const char __user \*filename, int mode)/i #ifdef CONFIG_KSU_SUSFS\nextern struct static_key_true ksu_su_compat_enabled;\nextern bool __ksu_is_allow_uid_for_current(uid_t uid);\nextern int ksu_handle_faccessat(int *dfd, struct filename **filename, int *mode,\n\t\t\tint *flags);\nextern int filename_lookup(int dfd, struct filename *name, unsigned flags,\n\t\t\t\tstruct path *path, struct path *root);\n#endif' fs/open.c
             else
                 sed -i '/long do_faccessat(int dfd, const char __user \*filename, int mode)/i #ifdef CONFIG_KSU_SUSFS\nextern struct static_key_true ksu_su_compat_enabled;\nextern bool __ksu_is_allow_uid_for_current(uid_t uid);\nextern int ksu_handle_faccessat(int *dfd, struct filename **filename, int *mode,\n\t\t\tint *flags);\n#endif' fs/open.c
             fi
 
         else
-            if grep -q "static int filename_lookup" "fs/namei.c" ; then
+            if grep -q "static int filename_lookup" "fs/namei.c" >/dev/null 2>&1; then
                 sed -i '/SYSCALL_DEFINE3(faccessat/i #ifdef CONFIG_KSU_SUSFS\nextern struct static_key_true ksu_su_compat_enabled;\nextern bool __ksu_is_allow_uid_for_current(uid_t uid);\nextern int ksu_handle_faccessat(int *dfd, struct filename **filename, int *mode,\n             int *flags);\nextern int filename_lookup(int dfd, struct filename *name, unsigned flags,\n\t\t\t\tstruct path *path, struct path *root);\n#endif' fs/open.c
             else
                 sed -i '/SYSCALL_DEFINE3(faccessat/i #ifdef CONFIG_KSU_SUSFS\nextern struct static_key_true ksu_su_compat_enabled;\nextern bool __ksu_is_allow_uid_for_current(uid_t uid);\nextern int ksu_handle_faccessat(int *dfd, struct filename **filename, int *mode,\n             int *flags);\n#endif' fs/open.c
@@ -136,14 +136,14 @@ for i in "${patch_files[@]}"; do
             sed -i '/#include <asm\/uaccess.h>/a\#ifdef CONFIG_KSU_SUSFS\n#include <linux\/susfs_def.h>\n#include "mount.h"\n#endif\n#ifdef CONFIG_KSU_SUSFS\nextern struct static_key_true ksu_is_init_rc_hook_enabled;\nextern void ksu_handle_vfs_fstat(int fd, loff_t *kstat_size_ptr);\nextern struct static_key_true ksu_su_compat_enabled;\nextern bool __ksu_is_allow_uid_for_current(uid_t uid);\nextern int ksu_handle_stat(int *dfd, struct filename **filename, int *flags);\n#endif \/\/ #ifdef CONFIG_KSU_SUSFS' fs/stat.c
         fi
 
-        if ! grep -q "internal.h" "fs/stat.c" && ! grep "static int filename_lookup" "fs/namei.c"; then
+        if ! grep -q "internal.h" "fs/stat.c" && ! grep "static int filename_lookup" "fs/namei.c" >/dev/null 2>&1; then
             sed -i '/#include <asm\/unistd.h>/a\#include "internal.h"' fs/stat.c
         fi
 
-        if grep -q "static int filename_lookup" "fs/namei.c" ; then
-            sed -i '/if ((flags & ~(AT_SYMLINK_NOFOLLOW | AT_NO_AUTOMOUNT |/i\#ifdef CONFIG_KSU_SUSFS\n\tstruct filename *fname = NULL;\nextern int filename_lookup(int dfd, struct filename *name, unsigned flags,\n\t\t\t\tstruct path *path, struct path *root);\n#endif\n' fs/stat.c
+        if grep -q "static int filename_lookup" "fs/namei.c" >/dev/null 2>&1; then
+            sed -i '/unsigned int lookup_flags = 0;/a\#ifdef CONFIG_KSU_SUSFS\n\tstruct filename *fname = NULL;\n\textern int filename_lookup(int dfd, struct filename *name, unsigned flags,\n\t\t\t\t\tstruct path *path, struct path *root);\n#endif\n' fs/stat.c
         else
-            sed -i '/if ((flags & ~(AT_SYMLINK_NOFOLLOW | AT_NO_AUTOMOUNT |/i\#ifdef CONFIG_KSU_SUSFS\n\tstruct filename *fname = NULL;\n#endif\n' fs/stat.c
+            sed -i '/unsigned int lookup_flags = 0;/a\#ifdef CONFIG_KSU_SUSFS\n\tstruct filename *fname = NULL;\n#endif\n' fs/stat.c
         fi
         sed -i '/error = user_path_at(dfd, filename, lookup_flags, \&path);/i\#ifdef CONFIG_KSU_SUSFS\n\tfname = getname_flags(filename, lookup_flags, NULL);\n\n\tif (likely(susfs_is_current_proc_no_su()))\n\t\tgoto orig_flow;\n\n\tif (static_branch_likely(\&ksu_su_compat_enabled)) {\n\t\tif (unlikely(__ksu_is_allow_uid_for_current(current_uid().val)))\n\t\t\tksu_handle_stat(\&dfd, \&fname, \&flags);\n\t}\n\norig_flow:\n\terror = filename_lookup(dfd, fname, lookup_flags, \&path, NULL);\n\t\/\/ no putname(fname) here as filename_lookup() has it done for us already;\n#else' fs/stat.c
         sed -i '/error = user_path_at(dfd, filename, lookup_flags, \&path);/a\#endif' fs/stat.c
@@ -160,7 +160,7 @@ for i in "${patch_files[@]}"; do
         ;;
     ## namei.c
     fs/namei.c)
-        if grep "static int filename_lookup" "fs/namei.c" ; then
+        if grep -q "static int filename_lookup" "fs/namei.c" >/dev/null 2>&1; then
             sed -i 's/static int filename_lookup(int dfd, struct filename \*name, unsigned flags,/int filename_lookup(int dfd, struct filename *name, unsigned flags,/' fs/namei.c
             echo "[+] fs/namei.c removed static status."
         fi
