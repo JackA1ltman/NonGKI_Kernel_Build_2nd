@@ -149,7 +149,7 @@ for i in "${patch_files[@]}"; do
             fi
 
         else
-            if grep -q "unsigned int lookup_flags = 0" "fs/namei.c" >/dev/null 2>&1; then
+            if grep -q "unsigned int lookup_flags = 0" "fs/stat.c" >/dev/null 2>&1; then
                 sed -i '/unsigned int lookup_flags = 0;/a\#ifdef CONFIG_KSU_SUSFS\n\tstruct filename *fname = NULL;\n#endif\n' fs/stat.c
             else
                 sed -i '/unsigned int lookup_flags = LOOKUP_FOLLOW | LOOKUP_AUTOMOUNT;/a\#ifdef CONFIG_KSU_SUSFS\n\tstruct filename *fname = NULL;\n#endif\n' fs/stat.c
