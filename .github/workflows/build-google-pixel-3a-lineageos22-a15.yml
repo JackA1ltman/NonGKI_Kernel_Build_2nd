@@ -1,0 +1,129 @@
+name: Build Google Pixel 3a (LineageOS 22.2 A15)
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+env:
+  # Device identity
+  DEVICE_NAME: "google_pixel_3a"
+  DEVICE_CODENAME: "bonito"
+
+  # build.config.common.clang uses Clang with this target triple. The GCC
+  # toolchains below provide the AArch64 and ARM32 binutils/cross-compilers.
+  CUSTOM_CMDS: "CLANG_TRIPLE=aarch64-linux-gnu-"
+  EXTRA_CMDS: "LD_LIBRARY_PATH=$GITHUB_WORKSPACE/clang-custom/lib64"
+
+  # Kernel source
+  KERNEL_SOURCE: "https://github.com/LineageOS/android_kernel_google_msm-4.9.git"
+  KERNEL_BRANCH: "lineage-22.2"
+
+  # build.config.common selects clang-r416183b.
+  CLANG_SOURCE: "https://github.com/LineageOS/android_prebuilts_clang_kernel_linux-x86_clang-r416183b.git"
+  CLANG_BRANCH: "lineage-20.0"
+
+  # These match the Android 4.9 GCC toolchain families referenced by build.config.common.
+  GCC_64_SOURCE: "https://github.com/LineageOS/android_prebuilts_gcc_linux-x86_aarch64_aarch64-linux-android-4.9.git"
+  GCC_64_BRANCH: "lineage-19.1"
+  GCC_32_SOURCE: "https://github.com/LineageOS/android_prebuilts_gcc_linux-x86_arm_arm-linux-androideabi-4.9.git"
+  GCC_32_BRANCH: "lineage-19.1"
+
+  # Defconfig
+  DEFCONFIG_NAME: "bonito_defconfig"
+
+  # KernelSU: ReSukiSU with SUSFS
+  KERNELSU_AUTO_GET: "true"
+  KERNELSU_AUTO_FORK: "resukisu"
+  KERNELSU_METHOD: "shell" # shell, manual, or only.
+
+  SUSFS_ENABLE: "true"
+  SUSFS_FIXED: "true" # Set true only when a device-specific secondary patch is supplied below.
+  PATCHES_SOURCE: "smmauck/NonGKI_Kernel_Patches" # GitHub owner/repository, without a URL or .git suffix.
+  PATCHES_BRANCH: "main"
+  SUSFS_FOLDER_FIXED: "pixel_3a_lineageos22_2_a15"
+  SUSFS_PATCH_FIXED: "susfs_patch_to_4.9_secondary" # Comma-separated patch names without .patch.
+
+  # Packaging
+  PACK_METHOD: "AnyKernel3"
+  AK3_SOURCE: "https://github.com/osm0sis/AnyKernel3.git"
+  AK3_BRANCH: "master"
+  PACK_KMODULES: "false"
+  ROM_TEXT: "lineageos22_2_a15"
+
+  # NoMount
+  NOMOUNT_ENABLE: "true"
+
+  # SUSFS builds use the inline hook path in patch-no-kprobe; syscall is the fallback without SUSFS.
+  HOOK_METHOD: "syscall"
+
+  # Runner setup
+  PYTHON_VERSION: "3"
+
+jobs:
+  build-kernel:
+    name: Google Pixel 3a (LineageOS 22.2 A15)
+    runs-on: ubuntu-22.04
+    # Supported alternatives used by mainline are ubuntu-24.04/22.04 and
+    # containers such as ubuntu:focal or archlinux/archlinux:latest.
+    env:
+      CCACHE_COMPILERCHECK: "%compiler% -dumpmachine; %compiler% -dumpversion"
+      CCACHE_NOHASHDIR: "true"
+      CCACHE_HARDLINK: "true"
+
+    steps:
+      - name: ⏰ Checkout repository
+        uses: actions/checkout@v6
+
+      - name: ⌛️ Compilation environment preparation
+        uses: ./.github/workflows/build-env
+
+      - name: ⚙️ Get necessary tools
+        uses: ./.github/workflows/build-ready
+
+      - name: 🔗 Patch for no-kprobe
+        uses: ./.github/workflows/patch-no-kprobe
+
+      - name: 🪝 Patch Kernel of SUSFS
+        uses: ./.github/workflows/patch-susfs
+
+      - name: 🛡️ Patch Kernel of NoMount
+        uses: ./.github/workflows/patch-nomount
+
+      - name: 🪛 Extra Kernel Options
+        run: |
+          # Only ${{ env.DEVICE_NAME }} use it.
+          cd $GITHUB_WORKSPACE/device_kernel
+
+          # Match build.config.bonito_no-cfi: disable Clang LTO and CFI.
+          # Also compile WLAN driver into kernel to avoid the need for a separate module.
+          ./scripts/config --file "arch/${KERNEL_ARCH}/configs/${DEFCONFIG_NAME}" \
+            -d LTO \
+            -d LTO_CLANG \
+            -d CFI \
+            -d CFI_PERMISSIVE \
+            -d CFI_CLANG \
+            -e CONFIG_QCA_CLD_WLAN
+
+          # Preserve the clean LineageOS release format (for example,
+          # 4.9.337-gb929452c5c49) using only the kernel checkout's commit.
+          # The .scmversion override prevents setlocalversion from appending
+          # nested-repository revisions or a -dirty suffix.
+          printf -- '-g%s' "$(git rev-parse --short=12 HEAD)" > .scmversion
+
+      - name: 🧰 Patch Kernel of Re:Kernel
+        uses: ./.github/workflows/patch-rekernel
+
+      - name: 💿 Patch Kernel of Droidspaces
+        uses: ./.github/workflows/patch-droidspaces
+
+      - name: 🔒 Patch Kernel of Baseband Guard
+        uses: ./.github/workflows/patch-baseband-guard
+
+      - name: 🚀 Build Process
+        uses: ./.github/workflows/build-process
+
+      - name: 🔩 Pack Process
+        uses: ./.github/workflows/pack-process
+
+      - name: ✏️ Upload Artifacts
+        uses: ./.github/workflows/upload-files

@@ -8,6 +8,14 @@ on:
   workflow_call:
 
 jobs:
+  # Google
+  build-google-pixel-3a-lineageos22-a15:
+    name: "Google Pixel 3a (LineageOS 22.2 A15)"
+    strategy:
+      fail-fast: true
+    uses: ./.github/workflows/build-google-pixel-3a-lineageos22-a15.yml
+    secrets: inherit
+
   # Nothing
   build-nothing-phone-1-lineageos23-a16:
     name: "Nothing Phone (1) (LineageOS 23.2 A16)"
