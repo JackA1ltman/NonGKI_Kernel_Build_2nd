@@ -33,7 +33,7 @@ jobs:
 
   release-kernel:
     name: "Step Release Kernel"
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs:
       - build-kernel
     if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.release-kernel == true)

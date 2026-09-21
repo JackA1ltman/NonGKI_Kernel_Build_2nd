@@ -10,7 +10,6 @@
 
 > [!NOTE]
 > **Version 2.0**  
-> **Get Sample：[sample](https://github.com/JackA1ltman/NonGKI_Kernel_Build_2nd/tree/sample)**
 
 ### Introduction
 
