@@ -78,6 +78,7 @@ jobs:
         uses: actions/download-artifact@v8
         with:
           path: ./downloaded-artifacts
+          merge-multiple: true
           skip-decompress: true
 
       # Get the Latest Tag from GitHub
