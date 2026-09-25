@@ -79,6 +79,7 @@ jobs:
         uses: actions/download-artifact@v8
         with:
           path: ./downloaded-artifacts
+          merge-multiple: true
           skip-decompress: true
 
       # Get the Latest Tag from GitHub
@@ -106,7 +107,7 @@ jobs:
 
           # Get KernelSU version
           git clone -b master https://github.com/backslashxx/KernelSU.git KernelSU-xxKSU
-          KSU_XXKSU_VERSION=$(cd KernelSU-xxKSU && expr $(/usr/bin/git rev-list --count HEAD) + 30000 - 80)
+          KSU_XXKSU_VERSION=$(cd KernelSU-xxKSU && expr $(/usr/bin/git rev-list --count HEAD) + 30000 - 82)
           git clone -b main https://github.com/rsuntk/KernelSU.git KernelSU-rsuntk
           KSU_RSUNTK_VERSION=$(cd KernelSU-rsuntk && expr $(/usr/bin/git rev-list --count HEAD) + 29971)
           git clone -b builtin https://github.com/ShirkNeko/SukiSU-Ultra.git KernelSU-SukiSU-Ultra
