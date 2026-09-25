@@ -1665,7 +1665,7 @@ index 004dd77..3f16c0a 100644
  	generic_fillattr(inode, stat);
  	return 0;
 diff --git a/fs/statfs.c b/fs/statfs.c
-index 083dc0a..3ba543f 100644
+index 083dc0a..b59b646 100644
 --- a/fs/statfs.c
 +++ b/fs/statfs.c
 @@ -7,6 +7,9 @@
@@ -1678,7 +1678,7 @@ index 083dc0a..3ba543f 100644
  #include "internal.h"
  
  static int flags_by_mnt(int mnt_flags)
-@@ -63,9 +66,71 @@ static int statfs_by_dentry(struct dentry *dentry, struct kstatfs *buf)
+@@ -63,9 +66,85 @@ static int statfs_by_dentry(struct dentry *dentry, struct kstatfs *buf)
  	return retval;
  }
  
@@ -1691,7 +1691,16 @@ index 083dc0a..3ba543f 100644
 +#endif //#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
 +
 +#ifdef CONFIG_KSU_SUSFS_SUS_KSTAT
-+static int susfs_statfs_by_dentry(struct dentry *dentry, struct kstatfs *buf, bool *is_fuse)
++int statfs_by_dentry_wrapper(struct dentry *dentry, struct kstatfs *buf){
++	return statfs_by_dentry(dentry, buf);
++}
++
++int calculate_f_flags_wrapper(struct vfsmount *mnt)
++{
++	return calculate_f_flags(mnt);
++}
++
++static int susfs_statfs_by_dentry(struct dentry *dentry, struct vfsmount *mnt, struct kstatfs *buf, bool *is_fuse)
 +{
 +	int retval;
 +
@@ -1702,12 +1711,17 @@ index 083dc0a..3ba543f 100644
 +	retval = security_sb_statfs(dentry);
 +	if (retval)
 +		return retval;
-+	if (susfs_sus_kstat_spoof_vfs_statfs(d_backing_inode(dentry), buf, is_fuse))
-+		goto bypass_orig_flow;
++	if (!susfs_sus_kstat_spoof_vfs_statfs(d_backing_inode(dentry), buf, is_fuse)) {
++		if (buf->f_frsize == 0)
++			buf->f_frsize = buf->f_bsize;
++		return retval;
++	}
 +	retval = dentry->d_sb->s_op->statfs(dentry, buf);
-+bypass_orig_flow:
-+	if (retval == 0 && buf->f_frsize == 0)
-+		buf->f_frsize = buf->f_bsize;
++	if (retval == 0) {
++		buf->f_flags = calculate_f_flags(mnt);
++		if (buf->f_frsize == 0)
++			buf->f_frsize = buf->f_bsize;
++	}
 +	return retval;
 +}
 +#endif // #ifdef CONFIG_KSU_SUSFS_SUS_KSTAT
@@ -1720,9 +1734,9 @@ index 083dc0a..3ba543f 100644
 +		struct inode *inode = d_backing_inode(path->dentry);
 +		bool is_fuse = false;
 +		if (susfs_is_inode_sus_kstat(inode, &is_fuse)) {
-+			// - here we do not call calculate_f_flags() as buf->f_flags will be spoofed
-+			//   by susfs_statfs_by_dentry().
-+			return susfs_statfs_by_dentry(path->dentry, buf, &is_fuse);
++			// - here we do not call calculate_f_flags() here as buf->f_flags on the
++			//   sus_kstat path will be handled by susfs_statfs_by_dentry().
++			return susfs_statfs_by_dentry(path->dentry, path->mnt, buf, &is_fuse);
 +		}
 +	}
 +#endif // #ifdef CONFIG_KSU_SUSFS_SUS_KSTAT
@@ -1796,10 +1810,10 @@ index 55cd884..c273ba6 100644
  		return -ENOMEM;
 diff --git a/fs/susfs.c b/fs/susfs.c
 new file mode 100644
-index 0000000..f879857
+index 0000000..7dca01d
 --- /dev/null
 +++ b/fs/susfs.c
-@@ -0,0 +1,1568 @@
+@@ -0,0 +1,1558 @@
 +#include <linux/version.h>
 +#include <linux/cred.h>
 +#include <linux/fs.h>
@@ -2077,22 +2091,8 @@ index 0000000..f879857
 +static DEFINE_MUTEX(susfs_mutex_lock_sus_kstat);
 +static DEFINE_HASHTABLE(SUS_KSTAT_HLIST, 14);
 +
-+static int statfs_by_dentry(struct dentry *dentry, struct kstatfs *buf)
-+{
-+	int retval;
-+
-+	if (!dentry->d_sb->s_op->statfs)
-+		return -ENOSYS;
-+
-+	memset(buf, 0, sizeof(*buf));
-+	retval = security_sb_statfs(dentry);
-+	if (retval)
-+		return retval;
-+	retval = dentry->d_sb->s_op->statfs(dentry, buf);
-+	if (retval == 0 && buf->f_frsize == 0)
-+		buf->f_frsize = buf->f_bsize;
-+	return retval;
-+}
++extern int calculate_f_flags_wrapper(struct vfsmount *mnt);
++extern int statfs_by_dentry_wrapper(struct dentry *dentry, struct kstatfs *buf);
 +
 +static int susfs_mark_inode_sus_kstat(char *target_pathname, struct st_susfs_sus_kstat_hlist *new_entry, bool is_update) {
 +	struct path path;
@@ -2128,7 +2128,9 @@ index 0000000..f879857
 +		new_entry->target_dev = fi->inode.i_sb->s_dev;
 +		new_entry->spoofed_mnt_id = susfs_get_non_sus_mnt_id_from_mnt(real_mount(path.mnt));
 +		no_sus_vfsmnt = susfs_get_non_sus_vfsmnt_from_vfsmnt(path.mnt);
-+		err = statfs_by_dentry(no_sus_vfsmnt->mnt_root, &new_entry->spoofed_kstatfs);
++		err = statfs_by_dentry_wrapper(no_sus_vfsmnt->mnt_root, &new_entry->spoofed_kstatfs);
++		if (!err)
++			new_entry->spoofed_kstatfs.f_flags = calculate_f_flags_wrapper(no_sus_vfsmnt);
 +		dput(no_sus_vfsmnt->mnt_root);
 +		mntput(no_sus_vfsmnt);
 +		if (err)
@@ -2147,7 +2149,9 @@ index 0000000..f879857
 +	new_entry->target_dev = inode->i_sb->s_dev;
 +	new_entry->spoofed_mnt_id = susfs_get_non_sus_mnt_id_from_mnt(real_mount(path.mnt));
 +	no_sus_vfsmnt = susfs_get_non_sus_vfsmnt_from_vfsmnt(path.mnt);
-+	err = statfs_by_dentry(no_sus_vfsmnt->mnt_root, &new_entry->spoofed_kstatfs);
++	err = statfs_by_dentry_wrapper(no_sus_vfsmnt->mnt_root, &new_entry->spoofed_kstatfs);
++	if (!err)
++		new_entry->spoofed_kstatfs.f_flags = calculate_f_flags_wrapper(no_sus_vfsmnt);
 +	dput(no_sus_vfsmnt->mnt_root);
 +	mntput(no_sus_vfsmnt);
 +	if (err)
