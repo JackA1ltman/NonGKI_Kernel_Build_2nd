@@ -3,11 +3,6 @@ name: Build Google Pixel 4a (Stock A13)
 on:
   workflow_call:
   workflow_dispatch:
-  push:
-    branches:
-      - mainline
-    paths:
-      - '.github/workflows/build-google-pixel4a-a13.yml'
 
 env:
   # Device env
