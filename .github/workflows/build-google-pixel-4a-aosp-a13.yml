@@ -1,0 +1,193 @@
+name: Build Google Pixel 4a (Stock A13)
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+env:
+  # Device env
+  DEVICE_NAME : "google_pixel_4a"
+  DEVICE_CODENAME : "sunfish"
+
+  CUSTOM_CMDS : "CROSS_COMPILE=aarch64-linux-gnu- CROSS_COMPILE_ARM32=arm-linux-gnueabi- CROSS_COMPILE_COMPAT=arm-linux-gnueabi-"
+  EXTRA_CMDS : "CLANG_TRIPLE=aarch64-linux-gnu- LLVM=1 LLVM_IAS=1 CC=clang LD=ld.lld AR=llvm-ar NM=llvm-nm OBJCOPY=llvm-objcopy OBJDUMP=llvm-objdump STRIP=llvm-strip READELF=llvm-readelf HOSTCC=clang HOSTCXX=clang++"
+
+  KERNEL_SOURCE : "https://github.com/engstk/pxl4a"
+  KERNEL_BRANCH : "blu_spark-13"
+
+  # Proton Clang (Clang 13)
+  CLANG_SOURCE : "https://github.com/kdrag0n/proton-clang.git"
+  CLANG_BRANCH : "master"
+
+  GCC_GNU : true
+  GCC_64_SOURCE : ""
+  GCC_64_BRANCH : ""
+  GCC_32_SOURCE : ""
+  GCC_32_BRANCH : ""
+
+  DEFCONFIG_SOURCE: ""
+  DEFCONFIG_NAME : "blu_spark_defconfig"
+  DEFCONFIG_ORIGIN_IMAGE: ""
+  DEFCONFIG_FROM_BOOT: false
+
+  KERNELSU_SOURCE : ""
+  KERNELSU_BRANCH : ""
+
+  KERNELSU_AUTO_GET : "true" # if u want easy setting kernelsu, u can true.
+  KERNELSU_AUTO_FORK : "resukisu" # xxksu, rsuntk, next, resukisu and sukisu
+
+  SUSFS_ENABLE : "true"
+  SUSFS_FIXED : "true"
+
+  AK3_SOURCE : "https://github.com/osm0sis/AnyKernel3.git"
+  AK3_BRANCH : "master"
+
+  BOOT_SOURCE : ""
+
+  NEED_DTBO : false
+  NEED_SAFE_DTBO : false
+
+  ROM_TEXT : "stock_a13"
+
+  # Other env
+  PYTHON_VERSION: "3" # Only 2(Ubuntu 22.04 and Ubuntu 20.04) or 3(Any OS Versions).
+
+  PACK_METHOD: "AnyKernel3" # Anykernel3 need SOURCE and BRANCH, MKBOOTIMG needn't it.
+  PACK_KMODULES: "false" # if u want pack kernel modules (.ko) into Anykernel3.
+
+  KERNELSU_METHOD: "shell" # shell, manual and only.
+
+  PATCHES_SOURCE: "JackA1ltman/NonGKI_Kernel_Patches" # [your_name]/[your_patch] -> gooder123/NonGKI_Patcher
+  PATCHES_BRANCH: "pixel_kernel" # [your_branch] -> main
+
+  SUSFS_FOLDER_FIXED: "pixel_4_series_official" # Fill in your patch prefix directory here. Leave it blank if there isn't one. -> your_folder
+  SUSFS_PATCH_FIXED: "susfs_fixed" # Fill in your patches here. If there are multiple patches, please separate them with a comma. Leave it blank if there isn't one. -> patch1,patch2
+
+  REKERNEL_ENABLE: "true" # if u need Re:Kernel.
+  DROIDSPACES_ENABLE: "false" # if u need Droidspaces or LXC/Docker.
+  NOMOUNT_ENABLE: "true" # if u need NoMount.
+
+  HOOK_METHOD: "syscall" # Manual hook method -> syscall.
+
+  KERNEL_PATCH: "false" # If your kernel version is <= 4.9, you have the option of enabling the patch to patch the kernel_write and kernel_read functions.
+
+  KPM_ENABLE: "false" # Anyone devices.
+  KPM_INLINE: "false" # Only use it for SukiSU-Ultra.
+  KPM_KPATCH_NEXT: "false" # If u want hook KPatch-Next in build step.
+  KPM_PATCH_SOURCE: ""
+
+  BASEBAND_GUARD_ENABLE: "true" # if u want prevent unauthorized writes to critical partitions/device nodes.
+  BASEBAND_GUARD_BOOT: "false" # if u want to protect boot partition.
+
+  GENERATE_DTB: "false" # if u kernel need DTB , but cannot auto generate it. (Only Anykernel3).
+  GENERATE_CHIP: "google/qcom-base" # only supported for qcom and mediatek.
+
+  BUILD_DEBUGGER: "false" # Output build errors.
+  SKIP_PATCH: "false" # Ignore errors found in Patch Debugger.
+
+  BUILD_OTHER_CONFIG: "false" # Merge config files.
+  MERGE_CONFIG_FILES: ""
+
+  FREE_MORE_SPACE: "false" # if u want get more space, enabled it.
+
+jobs:
+  build-kernel:
+    name: Google Pixel 4a
+    runs-on: ubuntu-latest # u can changed to ubuntu 22.04, and need container set ubuntu-latest
+    container: ubuntu:focal # if u need use arch linux -> archlinux/archlinux:latest or ubuntu 20.04 -> ubuntu:focal
+    env:
+      CCACHE_COMPILERCHECK: "%compiler% -dumpmachine; %compiler% -dumpversion"
+      CCACHE_NOHASHDIR: "true"
+      CCACHE_HARDLINK: "true"
+      DEBIAN_FRONTEND: noninteractive
+
+    steps:
+      - name: ⏰ Checkout repository
+        uses: actions/checkout@v6
+
+      - name: 🛠️ Setup Container Environment
+        run: |
+          echo 'APT::Get::Assume-Yes "true";' > /etc/apt/apt.conf.d/90assumeyes
+          export DEBIAN_FRONTEND=noninteractive
+          apt-get update -y
+          apt-get remove -y g++-multilib gcc-multilib || true
+          apt-get autoremove -y || true
+          apt-get install -y --no-install-recommends \
+            sudo git wget ca-certificates \
+            binutils-aarch64-linux-gnu gcc-aarch64-linux-gnu gcc-arm-linux-gnueabi \
+            device-tree-compiler python3 python3-setuptools python-is-python3 \
+            bc flex bison libssl-dev libelf-dev libncurses5 libtinfo5 \
+            libc6-dev libncurses-dev lz4 zip unzip
+          git config --global --add safe.directory '*'
+        shell: bash
+
+      - name: ⌛️ Compilation environment preparation
+        uses: ./.github/workflows/build-env
+
+      - name: ⚙️ Get neccssary tools
+        uses: ./.github/workflows/build-ready
+
+      - name: 🪝 Patch Kernel of SUSFS
+        uses: ./.github/workflows/patch-susfs
+
+      - name: 🔗 Patch for no-kprobe
+        uses: ./.github/workflows/patch-no-kprobe
+
+      - name: 🪛 Extra Kernel Options
+        run: |
+          # Only ${{ env.DEVICE_NAME }} use it.
+          cd $GITHUB_WORKSPACE/device_kernel
+          echo "[+] Disabling problematic 32-bit VDSO"
+          sed -i 's/CONFIG_VDSO32=y/# CONFIG_VDSO32 is not set/g' arch/arm64/configs/$DEFCONFIG_NAME
+          sed -i 's/CONFIG_COMPAT_VDSO=y/# CONFIG_COMPAT_VDSO is not set/g' arch/arm64/configs/$DEFCONFIG_NAME
+          echo "# CONFIG_VDSO32 is not set" >> arch/arm64/configs/$DEFCONFIG_NAME
+          echo "# CONFIG_COMPAT_VDSO is not set" >> arch/arm64/configs/$DEFCONFIG_NAME
+          echo "[+] Disabling LTO"
+          sed -i 's/CONFIG_LTO_CLANG=y/# CONFIG_LTO_CLANG is not set/g' arch/arm64/configs/$DEFCONFIG_NAME
+          echo "CONFIG_LTO_NONE=y" >> arch/arm64/configs/$DEFCONFIG_NAME
+          echo "[+] Disabling Stack Protector"
+          sed -i '/CONFIG_CC_STACKPROTECTOR/d' arch/arm64/configs/$DEFCONFIG_NAME
+          echo "# CONFIG_CC_STACKPROTECTOR_STRONG is not set" >> arch/arm64/configs/$DEFCONFIG_NAME
+          echo "CONFIG_CC_STACKPROTECTOR_NONE=y" >> arch/arm64/configs/$DEFCONFIG_NAME
+          echo "[+] Fix kernel version string"
+          echo '#!/bin/sh' > scripts/setlocalversion
+          chmod +x scripts/setlocalversion
+          sed -i 's/CONFIG_LOCALVERSION_AUTO=y/# CONFIG_LOCALVERSION_AUTO is not set/g' arch/arm64/configs/$DEFCONFIG_NAME
+          echo "[+] Fixing compiler version"
+          sed -i 's/.*LINUX_COMPILER.*/echo "#define LINUX_COMPILER \\"Proton Clang 13\\""/g' scripts/mkcompile_h
+          # Patch Makefile to suppress unknown warnings and GNU layout structures
+          echo "[+] Patching Makefile to bypass errors"
+          echo "KBUILD_CFLAGS += -Wno-error -Wno-unknown-warning-option -Wno-gnu-variable-sized-type-not-at-end -Wno-initializer-overrides -Wno-pointer-sign -Wno-asm-operand-widths -Wno-tautological-compare -Wno-implicit-function-declaration -w" >> Makefile
+          echo "KBUILD_HOSTCFLAGS += -Wno-error -Wno-unknown-warning-option -w" >> Makefile
+          echo "HOSTCFLAGS += -Wno-error -Wno-unknown-warning-option -w" >> Makefile
+          # Fix missing haptic function causing build failure
+          echo "[+] Fix a critical bug"
+          sed -i 's/hap_ignore_next_request();/;/g' drivers/input/misc/fpc1020_platform_tee.c
+          sed -i 's/CONFIG_INCREMENTAL_FS=m/CONFIG_INCREMENTAL_FS=y/g' arch/arm64/configs/$DEFCONFIG_NAME
+
+      - name: 🧰 Patch Kernel of Re:Kernel
+        uses: ./.github/workflows/patch-rekernel
+
+      - name: 💿 Patch Kernel of Droidspaces
+        uses: ./.github/workflows/patch-droidspaces
+
+      - name: 🔒 Patch Kernel of Baseband Guard
+        uses: ./.github/workflows/patch-baseband-guard
+
+      - name: ❗ Pixel 4a BBG Only
+        if: env.BASEBAND_GUARD_ENABLE == 'true'
+        shell: bash
+        run: |
+          # Only ${{ env.DEVICE_NAME }} use it.
+          cd $GITHUB_WORKSPACE/device_kernel
+          echo "[+] Fixed BBG"
+          sed -i "s|grep -q '#define DEFINE_LSM(lsm)'|grep -q '\\\#define DEFINE_LSM(lsm)'|" security/selinux/Makefile    
+      
+      - name: 🚀 Build Process
+        uses: ./.github/workflows/build-process
+
+      - name: 🔩 Pack Process
+        uses: ./.github/workflows/pack-process
+
+      - name: ✏️ Upload Artifacts
+        uses: ./.github/workflows/upload-files
