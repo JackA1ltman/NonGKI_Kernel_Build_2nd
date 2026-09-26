@@ -10,6 +10,7 @@ body:
     attributes:
       label: Device Name
       placeholder: ex. OnePlus8
+      description: Please note that due to reduced maintenance time, we may no longer accept requests for new device compatibility.
     validations:
       required: true
 
