@@ -1,4 +1,4 @@
-name: Build Google Pixel 4a (Stock A13)
+name: Build Google Pixel 4a (AOSP Based A13)
 
 on:
   workflow_call:
@@ -47,7 +47,7 @@ env:
   NEED_DTBO : false
   NEED_SAFE_DTBO : false
 
-  ROM_TEXT : "stock_a13"
+  ROM_TEXT : "aosp_a13"
 
   # Other env
   PYTHON_VERSION: "3" # Only 2(Ubuntu 22.04 and Ubuntu 20.04) or 3(Any OS Versions).
@@ -92,7 +92,7 @@ env:
 
 jobs:
   build-kernel:
-    name: Google Pixel 4a
+    name: Google Pixel 4a (AOSP Based A13)
     runs-on: ubuntu-latest # u can changed to ubuntu 22.04, and need container set ubuntu-latest
     container: ubuntu:focal # if u need use arch linux -> archlinux/archlinux:latest or ubuntu 20.04 -> ubuntu:focal
     env:

@@ -16,6 +16,13 @@ jobs:
     uses: ./.github/workflows/build-google-pixel-3a-lineageos22-a15.yml
     secrets: inherit
 
+  build-google-pixel-4a-aosp-a13:
+    name: "Google Pixel 4a (AOSP Based A13)"
+    strategy:
+      fail-fast: true
+    uses: ./.github/workflows/build-google-pixel-4a-aosp-a13.yml
+    secrets: inherit
+
   # Nothing
   build-nothing-phone-1-lineageos23-a16:
     name: "Nothing Phone (1) (LineageOS 23.2 A16)"

@@ -1,6 +1,7 @@
 | Device | Location | Codename | Kernel/Author/Name | OS | Android | Pack Method | KernelSU | SUSFS | Hook | KPM | Re:Kernel | BBG | NoMount | Status |  
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|  
-| Google Pixel 3a | All | bonito | [4.9/LineageOS/google msm-4.9](https://github.com/LineageOS/android_kernel_google_msm-4.9) | LineageOS 22.2 | 15 | AnyKernel3 | ReSukiSU | ✅ | Inline | ❌ | ❌ | ❌ | ✅ | Stable |
+| Google Pixel 3a | All | bonito | [4.9/LineageOS/google msm-4.9](https://github.com/LineageOS/android_kernel_google_msm-4.9) | LineageOS 22.2 | 15 | AnyKernel3 | ReSukiSU | ✅ | Inline | ❌ | ❌ | ❌ | ✅ | Stable |  
+| Google Pixel 4a | All | sunfish | [4.14/engstk/blu_spark](https://github.com/engstk/pxl4a) | AOSP Based | 13 | AnyKernel3 | ReSukiSU | ✅ | Inline | ❌ | ❌ | ✅ | ❌ | Stable |  
 | Nothing Phone (1) | All | spacewar | [5.4/cyberc3dr/sm7325](https://github.com/cyberc3dr/android_kernel_nothing_sm7325) | LineageOS 23.2 | 16 | AnyKernel3 | ReSukiSU | ✅ | Inline | ❌ | ❌ | ❌ | ❌ | Stable |  
 | OnePlus 8 | All | instantnoodle | [4.19/ppajda/XTD](https://github.com/ppajda/android_kernel_oneplus_sm8250) | OxygenOS 13.1 | 13 | AnyKernel3 | ReSukiSU | ✅ | Inline | ❌ | ❌ | ✅ | ❌ | Stable |  
 | OnePlus 8 | All | instantnoodle | [4.19/toraidl/sm8250](https://github.com/toraidl/android_kernel_oneplus_sm8250) | ColorOS 15 | 15 | AnyKernel3 | ReSukiSU | ✅ | Inline | ❌ | ❌ | ✅ | ❌ | Stable |  
