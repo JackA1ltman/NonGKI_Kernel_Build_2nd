@@ -134,6 +134,9 @@ jobs:
           # nested-repository revisions or a -dirty suffix.
           printf -- '-g%s' "$(git rev-parse --short=12 HEAD)" > .scmversion
 
+          sed -i 's/if (!dpath) {/if (IS_ERR(dpath)) {/' fs/notify/fdinfo.c
+          sed -i 's/if (!dpath) {/if (IS_ERR(dpath)) {/' fs/proc/fd.c
+
       - name: 🧰 Patch Kernel of Re:Kernel
         uses: ./.github/workflows/patch-rekernel
 
