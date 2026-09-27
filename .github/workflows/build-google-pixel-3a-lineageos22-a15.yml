@@ -5,66 +5,93 @@ on:
   workflow_dispatch:
 
 env:
-  # Device identity
+  # Device env
   DEVICE_NAME: "google_pixel_3a"
   DEVICE_CODENAME: "bonito"
 
-  # build.config.common.clang uses Clang with this target triple. The GCC
-  # toolchains below provide the AArch64 and ARM32 binutils/cross-compilers.
   CUSTOM_CMDS: "CLANG_TRIPLE=aarch64-linux-gnu-"
   EXTRA_CMDS: "LD_LIBRARY_PATH=$GITHUB_WORKSPACE/clang-custom/lib64"
 
-  # Kernel source
   KERNEL_SOURCE: "https://github.com/LineageOS/android_kernel_google_msm-4.9.git"
   KERNEL_BRANCH: "lineage-22.2"
 
-  # build.config.common selects clang-r416183b.
   CLANG_SOURCE: "https://github.com/LineageOS/android_prebuilts_clang_kernel_linux-x86_clang-r416183b.git"
   CLANG_BRANCH: "lineage-20.0"
 
-  # These match the Android 4.9 GCC toolchain families referenced by build.config.common.
+  GCC_GNU : false
   GCC_64_SOURCE: "https://github.com/LineageOS/android_prebuilts_gcc_linux-x86_aarch64_aarch64-linux-android-4.9.git"
   GCC_64_BRANCH: "lineage-19.1"
   GCC_32_SOURCE: "https://github.com/LineageOS/android_prebuilts_gcc_linux-x86_arm_arm-linux-androideabi-4.9.git"
   GCC_32_BRANCH: "lineage-19.1"
 
-  # Defconfig
+  DEFCONFIG_SOURCE: ""
   DEFCONFIG_NAME: "bonito_defconfig"
+  DEFCONFIG_ORIGIN_IMAGE: ""
+  DEFCONFIG_FROM_BOOT: false
 
-  # KernelSU: ReSukiSU with SUSFS
-  KERNELSU_AUTO_GET: "true"
-  KERNELSU_AUTO_FORK: "resukisu"
-  KERNELSU_METHOD: "shell" # shell, manual, or only.
+  KERNELSU_SOURCE : ""
+  KERNELSU_BRANCH : ""
 
-  SUSFS_ENABLE: "true"
-  SUSFS_FIXED: "true" # Set true only when a device-specific secondary patch is supplied below.
-  PATCHES_SOURCE: "smmauck/NonGKI_Kernel_Patches" # GitHub owner/repository, without a URL or .git suffix.
-  PATCHES_BRANCH: "main"
-  SUSFS_FOLDER_FIXED: "pixel_3a_lineageos22_2_a15"
-  SUSFS_PATCH_FIXED: "susfs_patch_to_4.9_secondary" # Comma-separated patch names without .patch.
+  KERNELSU_AUTO_GET : "true" # if u want easy setting kernelsu, u can true.
+  KERNELSU_AUTO_FORK : "resukisu" # xxksu, rsuntk, next, resukisu and sukisu
 
-  # Packaging
-  PACK_METHOD: "AnyKernel3"
-  AK3_SOURCE: "https://github.com/osm0sis/AnyKernel3.git"
-  AK3_BRANCH: "master"
-  PACK_KMODULES: "false"
+  SUSFS_ENABLE : true
+  SUSFS_FIXED : true
+
+  AK3_SOURCE : "https://github.com/osm0sis/AnyKernel3.git"
+  AK3_BRANCH : "master"
+
+  BOOT_SOURCE : ""
+
+  NEED_DTBO : false
+  NEED_SAFE_DTBO : false
+
   ROM_TEXT: "lineageos22_2_a15"
 
-  # NoMount
-  NOMOUNT_ENABLE: "true"
+  # Other env
+  PYTHON_VERSION: "3" # Only 2(Ubuntu 22.04 and Ubuntu 20.04) or 3(Any OS Versions).
 
-  # SUSFS builds use the inline hook path in patch-no-kprobe; syscall is the fallback without SUSFS.
-  HOOK_METHOD: "syscall"
+  PACK_METHOD: "AnyKernel3" # Anykernel3 need SOURCE and BRANCH, MKBOOTIMG needn't it.
+  PACK_KMODULES: "false" # if u want pack kernel modules (.ko) into Anykernel3.
 
-  # Runner setup
-  PYTHON_VERSION: "3"
+  KERNELSU_METHOD: "shell" # shell, manual and only.
+
+  PATCHES_SOURCE: "JackA1ltman/NonGKI_Kernel_Patches" # [your_name]/[your_patch] -> gooder123/NonGKI_Patcher
+  PATCHES_BRANCH: "pixel_kernel" # [your_branch] -> main
+
+  SUSFS_FOLDER_FIXED: "pixel_3_series_aosp" # Fill in your patch prefix directory here. Leave it blank if there isn't one. -> your_folder
+  SUSFS_PATCH_FIXED: "susfs_fixed" # Fill in your patches here. If there are multiple patches, please separate them with a comma. Leave it blank if there isn't one. -> patch1,patch2
+
+  REKERNEL_ENABLE: "false" # if u need Re:Kernel.
+  DROIDSPACES_ENABLE: "false" # if u need Droidspaces or LXC/Docker.
+  NOMOUNT_ENABLE: "true" # if u need NoMount.
+
+  HOOK_METHOD: "syscall" # Manual hook method -> syscall.
+
+  KPM_ENABLE: "false" # Anyone devices.
+  KPM_INLINE: "false" # Only use it for SukiSU-Ultra.
+  KPM_KPATCH_NEXT: "false" # If u want hook KPatch-Next in build step.
+  KPM_PATCH_SOURCE: "https://raw.githubusercontent.com/SukiSU-Ultra/SukiSU_patch/refs/heads/main/kpm/patch_linux" # If u want to use KPM Inline,so you need set patch exec file source -> raw.githubusercontent.com/Test/Test/patch .
+
+  BASEBAND_GUARD_ENABLE: "false" #if u want prevent unauthorized writes to critical partitions/device nodes.
+  BASEBAND_GUARD_BOOT: "false" #if u want to protect boot partition.
+
+  GENERATE_DTB: "false" # if u kernel need DTB , but cannot auto generate it. (Only Anykernel3).
+  GENERATE_CHIP: "qcom" # only supported for qcom and mediatek.
+
+  BUILD_DEBUGGER: "false" # Output build errors.
+  SKIP_PATCH: "false" # Ignore errors found in Patch Debugger.
+
+  BUILD_OTHER_CONFIG: "false" # Merge config files.
+  MERGE_CONFIG_FILES: "vendor/debugfs.config,vendor/lahaina_QGKI.config"
+
+  FREE_MORE_SPACE: "false" # if u want get more space, enabled it.
 
 jobs:
   build-kernel:
     name: Google Pixel 3a (LineageOS 22.2 A15)
-    runs-on: ubuntu-22.04
-    # Supported alternatives used by mainline are ubuntu-24.04/22.04 and
-    # containers such as ubuntu:focal or archlinux/archlinux:latest.
+    runs-on: ubuntu-22.04 # u can changed to ubuntu 22.04, and need container set ubuntu-24.04
+    # container: archlinux/archlinux:latest # if u need use arch linux -> archlinux/archlinux:latest or ubuntu 20.04 -> ubuntu:focal
     env:
       CCACHE_COMPILERCHECK: "%compiler% -dumpmachine; %compiler% -dumpversion"
       CCACHE_NOHASHDIR: "true"
@@ -77,17 +104,14 @@ jobs:
       - name: ⌛️ Compilation environment preparation
         uses: ./.github/workflows/build-env
 
-      - name: ⚙️ Get necessary tools
+      - name: ⚙️ Get neccssary tools
         uses: ./.github/workflows/build-ready
-
-      - name: 🔗 Patch for no-kprobe
-        uses: ./.github/workflows/patch-no-kprobe
 
       - name: 🪝 Patch Kernel of SUSFS
         uses: ./.github/workflows/patch-susfs
 
-      - name: 🛡️ Patch Kernel of NoMount
-        uses: ./.github/workflows/patch-nomount
+      - name: 🔗 Patch for no-kprobe
+        uses: ./.github/workflows/patch-no-kprobe
 
       - name: 🪛 Extra Kernel Options
         run: |
@@ -118,6 +142,9 @@ jobs:
 
       - name: 🔒 Patch Kernel of Baseband Guard
         uses: ./.github/workflows/patch-baseband-guard
+
+      - name: 🛡️ Patch Kernel of NoMount
+        uses: ./.github/workflows/patch-nomount
 
       - name: 🚀 Build Process
         uses: ./.github/workflows/build-process
