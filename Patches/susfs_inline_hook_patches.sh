@@ -129,17 +129,11 @@ for i in "${patch_files[@]}"; do
     ## stat.c
     fs/stat.c)
         if grep -q "unistd" "fs/stat.c"; then
-            sed -i '/#include <asm\/unistd.h>/a\#ifdef CONFIG_KSU_SUSFS\n#include <linux\/susfs_def.h>\n#include "mount.h"\n#endif\n#ifdef CONFIG_KSU_SUSFS\nextern struct static_key_true ksu_is_init_rc_hook_enabled;\nextern void ksu_handle_vfs_fstat(int fd, loff_t *kstat_size_ptr);\nextern struct static_key_true ksu_su_compat_enabled;\nextern bool __ksu_is_allow_uid_for_current(uid_t uid);\n#endif \/\/ #ifdef CONFIG_KSU_SUSFS' fs/stat.c
+            sed -i '/#include <asm\/unistd.h>/a\#ifdef CONFIG_KSU_SUSFS\n#include <linux\/susfs_def.h>\n#include "mount.h"\n#endif\n#ifdef CONFIG_KSU_SUSFS\nextern struct static_key_true ksu_is_init_rc_hook_enabled;\nextern void ksu_handle_vfs_fstat(int fd, loff_t *kstat_size_ptr);\nextern struct static_key_true ksu_su_compat_enabled;\nextern bool __ksu_is_allow_uid_for_current(uid_t uid);\nextern int ksu_handle_stat(int *dfd, struct filename **filename, int *flags);\n#endif \/\/ #ifdef CONFIG_KSU_SUSFS' fs/stat.c
         elif grep -q "vmalloc.h" "fs/stat.c"; then
-            sed -i '/#include <linux\/vmalloc.h>/a\#ifdef CONFIG_KSU_SUSFS\n#include <linux\/susfs_def.h>\n#include "mount.h"\n#endif\n#ifdef CONFIG_KSU_SUSFS\nextern struct static_key_true ksu_is_init_rc_hook_enabled;\nextern void ksu_handle_vfs_fstat(int fd, loff_t *kstat_size_ptr);\nextern struct static_key_true ksu_su_compat_enabled;\nextern bool __ksu_is_allow_uid_for_current(uid_t uid);\n#endif \/\/ #ifdef CONFIG_KSU_SUSFS' fs/stat.c
+            sed -i '/#include <linux\/vmalloc.h>/a\#ifdef CONFIG_KSU_SUSFS\n#include <linux\/susfs_def.h>\n#include "mount.h"\n#endif\n#ifdef CONFIG_KSU_SUSFS\nextern struct static_key_true ksu_is_init_rc_hook_enabled;\nextern void ksu_handle_vfs_fstat(int fd, loff_t *kstat_size_ptr);\nextern struct static_key_true ksu_su_compat_enabled;\nextern bool __ksu_is_allow_uid_for_current(uid_t uid);\nextern int ksu_handle_stat(int *dfd, struct filename **filename, int *flags);\n#endif \/\/ #ifdef CONFIG_KSU_SUSFS' fs/stat.c
         else
-            sed -i '/#include <asm\/uaccess.h>/a\#ifdef CONFIG_KSU_SUSFS\n#include <linux\/susfs_def.h>\n#include "mount.h"\n#endif\n#ifdef CONFIG_KSU_SUSFS\nextern struct static_key_true ksu_is_init_rc_hook_enabled;\nextern void ksu_handle_vfs_fstat(int fd, loff_t *kstat_size_ptr);\nextern struct static_key_true ksu_su_compat_enabled;\nextern bool __ksu_is_allow_uid_for_current(uid_t uid);\n#endif \/\/ #ifdef CONFIG_KSU_SUSFS' fs/stat.c
-        fi
-
-        if grep -q "vfs_statx"; then
-            sed -i '/extern bool __ksu_is_allow_uid_for_current(uid_t uid);/a\extern int ksu_handle_stat(int *dfd, struct filename **filename, int *flags);' fs/stat.c
-        else
-            sed -i '/extern bool __ksu_is_allow_uid_for_current(uid_t uid);/a\extern int ksu_handle_stat(int *dfd, struct filename **filename, int *flag);' fs/stat.c
+            sed -i '/#include <asm\/uaccess.h>/a\#ifdef CONFIG_KSU_SUSFS\n#include <linux\/susfs_def.h>\n#include "mount.h"\n#endif\n#ifdef CONFIG_KSU_SUSFS\nextern struct static_key_true ksu_is_init_rc_hook_enabled;\nextern void ksu_handle_vfs_fstat(int fd, loff_t *kstat_size_ptr);\nextern struct static_key_true ksu_su_compat_enabled;\nextern bool __ksu_is_allow_uid_for_current(uid_t uid);\nextern int ksu_handle_stat(int *dfd, struct filename **filename, int *flags);\n#endif \/\/ #ifdef CONFIG_KSU_SUSFS' fs/stat.c
         fi
 
         if ! grep -q "internal.h" "fs/stat.c" && ! grep "static int filename_lookup" "fs/namei.c" >/dev/null 2>&1; then
@@ -148,7 +142,6 @@ for i in "${patch_files[@]}"; do
 
         if grep -q "static int filename_lookup" "fs/namei.c" >/dev/null 2>&1; then
             if grep -q "unsigned int lookup_flags = 0" "fs/stat.c" >/dev/null 2>&1; then
-                echo "1"
                 sed -i '/unsigned int lookup_flags = 0;/a\#ifdef CONFIG_KSU_SUSFS\n\tstruct filename *fname = NULL;\n\textern int filename_lookup(int dfd, struct filename *name, unsigned flags,\n\t\t\t\t\tstruct path *path, struct path *root);\n#endif\n' fs/stat.c
             else
                 sed -i '/unsigned int lookup_flags = LOOKUP_FOLLOW | LOOKUP_AUTOMOUNT;/a\#ifdef CONFIG_KSU_SUSFS\n\tstruct filename *fname = NULL;\n\textern int filename_lookup(int dfd, struct filename *name, unsigned flags,\n\t\t\t\t\tstruct path *path, struct path *root);\n#endif\n' fs/stat.c
@@ -163,7 +156,14 @@ for i in "${patch_files[@]}"; do
 
         fi
 
-        sed -i '/error = user_path_at(dfd, filename, lookup_flags, \&path);/i\#ifdef CONFIG_KSU_SUSFS\n\tfname = getname_flags(filename, lookup_flags, NULL);\n\n\tif (likely(susfs_is_current_proc_no_su()))\n\t\tgoto orig_flow;\n\n\tif (static_branch_likely(\&ksu_su_compat_enabled)) {\n\t\tif (unlikely(__ksu_is_allow_uid_for_current(current_uid().val)))\n\t\t\tksu_handle_stat(\&dfd, \&fname, \&flags);\n\t}\n\norig_flow:\n\terror = filename_lookup(dfd, fname, lookup_flags, \&path, NULL);\n\t\/\/ no putname(fname) here as filename_lookup() has it done for us already;\n#else' fs/stat.c
+        sed -i '/error = user_path_at(dfd, filename, lookup_flags, \&path);/i\#ifdef CONFIG_KSU_SUSFS\n\tfname = getname_flags(filename, lookup_flags, NULL);\n\n\tif (likely(susfs_is_current_proc_no_su()))\n\t\tgoto orig_flow;\n\n\tif (static_branch_likely(\&ksu_su_compat_enabled)) {\n\t\tif (unlikely(__ksu_is_allow_uid_for_current(current_uid().val)))\n\t}\n\norig_flow:\n\terror = filename_lookup(dfd, fname, lookup_flags, \&path, NULL);\n\t\/\/ no putname(fname) here as filename_lookup() has it done for us already;\n#else' fs/stat.c
+
+        if grep -q "vfs_statx"; then
+            sed -i '/if (unlikely(__ksu_is_allow_uid_for_current(current_uid().val)))/a\\t\t\tksu_handle_stat(\&dfd, \&fname, \&flags);' fs/stat.c
+        else
+            sed -i '/if (unlikely(__ksu_is_allow_uid_for_current(current_uid().val)))/a\\t\t\tksu_handle_stat(\&dfd, \&fname, \&flag);' fs/stat.c
+        fi
+
         sed -i '/error = user_path_at(dfd, filename, lookup_flags, \&path);/a\#endif' fs/stat.c
         sed -i '/fdput(f);/i\#ifdef CONFIG_KSU_SUSFS\n\t\tif (static_branch_unlikely(\&ksu_is_init_rc_hook_enabled))\n\t\t\tksu_handle_vfs_fstat(fd, \&stat->size);\n#endif \/\/ #ifdef CONFIG_KSU_SUSFS\n' fs/stat.c
 
