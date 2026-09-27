@@ -1593,7 +1593,7 @@ index 3494d7a..e58dd1f 100644
  	return error;
  }
 diff --git a/fs/stat.c b/fs/stat.c
-index 004dd77..3f16c0a 100644
+index 004dd77..e818ae7 100644
 --- a/fs/stat.c
 +++ b/fs/stat.c
 @@ -18,6 +18,11 @@
@@ -1608,26 +1608,22 @@ index 004dd77..3f16c0a 100644
  void generic_fillattr(struct inode *inode, struct kstat *stat)
  {
  	stat->dev = inode->i_sb->s_dev;
-@@ -53,8 +58,55 @@ int vfs_getattr_nosec(struct path *path, struct kstat *stat)
+@@ -52,11 +57,44 @@ EXPORT_SYMBOL(generic_fillattr);
+ int vfs_getattr_nosec(struct path *path, struct kstat *stat)
  {
  	struct inode *inode = d_backing_inode(path->dentry);
- 
 +#ifdef CONFIG_KSU_SUSFS_SUS_KSTAT
-+	if (susfs_is_current_app_uid()) {
-+		bool is_fuse = false;
-+		if (susfs_is_inode_sus_kstat(d_backing_inode(path->dentry), &is_fuse)) {
-+			if (!is_fuse) {
-+				// stat->mnt_id = real_mount(path->mnt)->mnt_id;
-+				// only for 5.10 kernel
-+				stat->result_mask |= STATX_SUS_KSTAT;
-+			}
-+			// stat->mnt_id = real_mount(path->mnt)->mnt_id;
-+			// only for 5.10 kernel
-+			stat->result_mask |= STATX_SUS_KSTAT_FUSE;
-+		}
-+	}
-+#endif // #ifdef CONFIG_KSU_SUSFS_SUS_KSTAT
++	u32 result_mask = 0;
++	bool is_fuse = false;
++#endif
 +
++#ifdef CONFIG_KSU_SUSFS_SUS_KSTAT
++	if (susfs_is_current_app_uid() &&
++	    susfs_is_inode_sus_kstat(inode, &is_fuse))
++		result_mask = is_fuse ? STATX_SUS_KSTAT_FUSE :
++			STATX_SUS_KSTAT;
++#endif
+ 
 +#ifdef CONFIG_KSU_SUSFS_SUS_KSTAT
 +	if (inode->i_op->getattr) {
 +#else
@@ -1635,35 +1631,28 @@ index 004dd77..3f16c0a 100644
 +#endif
 +
 +#ifdef CONFIG_KSU_SUSFS_SUS_KSTAT
-+		int err = inode->i_op->getattr(path->mnt, path->dentry, stat);
-+		if (!err) {
-+			if (stat->result_mask & STATX_SUS_KSTAT) {
-+				susfs_sus_kstat_spoof_generic_fillattr(inode, stat, STATX_SUS_KSTAT);
-+				return err;
-+			}
-+			if (stat->result_mask & STATX_SUS_KSTAT_FUSE) {
-+				susfs_sus_kstat_spoof_generic_fillattr(inode, stat, STATX_SUS_KSTAT_FUSE);
-+				return err;
-+			}
-+		}
++		int err;
++
++		err = inode->i_op->getattr(path->mnt, path->dentry, stat);
++
++		if (!err && result_mask)
++			susfs_sus_kstat_spoof_generic_fillattr(inode, stat,
++					result_mask);
++
 +		return err;
-+	}
-+	if (stat->result_mask & STATX_SUS_KSTAT) {
-+		generic_fillattr(inode, stat);
-+		susfs_sus_kstat_spoof_generic_fillattr(inode, stat, STATX_SUS_KSTAT);
-+		return 0;
-+	}
-+	if (stat->result_mask & STATX_SUS_KSTAT_FUSE) {
-+		generic_fillattr(inode, stat);
-+		susfs_sus_kstat_spoof_generic_fillattr(inode, stat, STATX_SUS_KSTAT_FUSE);
-+		return 0;
 +	}
 +#else
  		return inode->i_op->getattr(path->mnt, path->dentry, stat);
 +#endif // #ifdef CONFIG_KSU_SUSFS_SUS_KSTAT
  
  	generic_fillattr(inode, stat);
++#ifdef CONFIG_KSU_SUSFS_SUS_KSTAT
++	if (result_mask)
++		susfs_sus_kstat_spoof_generic_fillattr(inode, stat, result_mask);
++#endif
  	return 0;
+ }
+ 
 diff --git a/fs/statfs.c b/fs/statfs.c
 index 083dc0a..b59b646 100644
 --- a/fs/statfs.c
