@@ -158,7 +158,7 @@ for i in "${patch_files[@]}"; do
 
         sed -i '/error = user_path_at(dfd, filename, lookup_flags, \&path);/i\#ifdef CONFIG_KSU_SUSFS\n\tfname = getname_flags(filename, lookup_flags, NULL);\n\n\tif (likely(susfs_is_current_proc_no_su()))\n\t\tgoto orig_flow;\n\n\tif (static_branch_likely(\&ksu_su_compat_enabled)) {\n\t\tif (unlikely(__ksu_is_allow_uid_for_current(current_uid().val)))\n\t}\n\norig_flow:\n\terror = filename_lookup(dfd, fname, lookup_flags, \&path, NULL);\n\t\/\/ no putname(fname) here as filename_lookup() has it done for us already;\n#else' fs/stat.c
 
-        if grep -q "vfs_statx"; then
+        if grep -q "vfs_statx" "fs/stat.c"; then
             sed -i '/if (unlikely(__ksu_is_allow_uid_for_current(current_uid().val)))/a\\t\t\tksu_handle_stat(\&dfd, \&fname, \&flags);' fs/stat.c
         else
             sed -i '/if (unlikely(__ksu_is_allow_uid_for_current(current_uid().val)))/a\\t\t\tksu_handle_stat(\&dfd, \&fname, \&flag);' fs/stat.c
