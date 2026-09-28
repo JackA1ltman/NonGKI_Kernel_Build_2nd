@@ -129,11 +129,8 @@ runs:
             echo "[+] Coccinelle is installed."
 
             # Get MKDTBO tool to System
-            mkdir $GITHUB_WORKSPACE/mkdtbo
-            cd $GITHUB_WORKSPACE/mkdtbo
-            ${{ env.CURLX }} https://android.googlesource.com/platform/system/libufdt/+archive/refs/heads/main/utils/src.tar.gz src.tar.gz
-            tar zxvf src.tar.gz
-            rm -f src.tar.gz
+            git clone --depth=1 https://android.googlesource.com/platform/system/libufdt $GITHUB_WORKSPACE/mkdtbo
+            mv $GITHUB_WORKSPACE/mkdtbo/utils/src/* $GITHUB_WORKSPACE/mkdtbo/
             chmod +x "$GITHUB_WORKSPACE/mkdtbo/mkdtboimg.py"
             ln -sfn "$GITHUB_WORKSPACE/mkdtbo/mkdtboimg.py" /usr/bin/mkdtboimg
             ln -sfn "$GITHUB_WORKSPACE/mkdtbo/mkdtboimg.py" /usr/bin/mkdtimg
@@ -181,11 +178,8 @@ runs:
             echo "[+] Coccinelle is installed."
 
             # Get MKDTBO tool to System
-            mkdir $GITHUB_WORKSPACE/mkdtbo
-            cd $GITHUB_WORKSPACE/mkdtbo
-            ${{ env.CURLX }} https://android.googlesource.com/platform/system/libufdt/+archive/refs/heads/main/utils/src.tar.gz src.tar.gz
-            tar zxvf src.tar.gz
-            rm -f src.tar.gz
+            git clone --depth=1 https://android.googlesource.com/platform/system/libufdt $GITHUB_WORKSPACE/mkdtbo
+            mv $GITHUB_WORKSPACE/mkdtbo/utils/src/* $GITHUB_WORKSPACE/mkdtbo/
             chmod +x "$GITHUB_WORKSPACE/mkdtbo/mkdtboimg.py"
             sudo ln -sfn "$GITHUB_WORKSPACE/mkdtbo/mkdtboimg.py" /usr/bin/mkdtboimg
             sudo ln -sfn "$GITHUB_WORKSPACE/mkdtbo/mkdtboimg.py" /usr/bin/mkdtimg
@@ -237,11 +231,8 @@ runs:
             rm -f libtinfo5.deb
 
             # Get MKDTBO tool to System
-            mkdir $GITHUB_WORKSPACE/mkdtbo
-            cd $GITHUB_WORKSPACE/mkdtbo
-            ${{ env.CURLX }} https://android.googlesource.com/platform/system/libufdt/+archive/refs/heads/main/utils/src.tar.gz src.tar.gz
-            tar zxvf src.tar.gz
-            rm -f src.tar.gz
+            git clone --depth=1 https://android.googlesource.com/platform/system/libufdt $GITHUB_WORKSPACE/mkdtbo
+            mv $GITHUB_WORKSPACE/mkdtbo/utils/src/* $GITHUB_WORKSPACE/mkdtbo/
             chmod +x "$GITHUB_WORKSPACE/mkdtbo/mkdtboimg.py"
             sudo ln -sfn "$GITHUB_WORKSPACE/mkdtbo/mkdtboimg.py" /usr/bin/mkdtboimg
             sudo ln -sfn "$GITHUB_WORKSPACE/mkdtbo/mkdtboimg.py" /usr/bin/mkdtimg
@@ -294,11 +285,8 @@ runs:
             echo "[+] Coccinelle is installed."
 
             # Get MKDTBO tool to System
-            mkdir $GITHUB_WORKSPACE/mkdtbo
-            cd $GITHUB_WORKSPACE/mkdtbo
-            ${{ env.CURLX }} https://android.googlesource.com/platform/system/libufdt/+archive/refs/heads/main/utils/src.tar.gz src.tar.gz
-            tar zxvf src.tar.gz
-            rm -f src.tar.gz
+            git clone --depth=1 https://android.googlesource.com/platform/system/libufdt $GITHUB_WORKSPACE/mkdtbo
+            mv $GITHUB_WORKSPACE/mkdtbo/utils/src/* $GITHUB_WORKSPACE/mkdtbo/
             chmod +x "$GITHUB_WORKSPACE/mkdtbo/mkdtboimg.py"
             ln -sfn "$GITHUB_WORKSPACE/mkdtbo/mkdtboimg.py" /usr/bin/mkdtboimg
             ln -sfn "$GITHUB_WORKSPACE/mkdtbo/mkdtboimg.py" /usr/bin/mkdtimg
