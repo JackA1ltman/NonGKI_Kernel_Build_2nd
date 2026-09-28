@@ -118,9 +118,9 @@ runs:
             # Install Coccinelle
             echo "::group::[+] Starting build coccinelle..."
             apt-get install pkg-config ocaml-nox ocaml-findlib autoconf libpcre3-dev python3-dev menhir libparmap-ocaml-dev libpcre-ocaml-dev -y
-            ${{ env.CURLX }} "https://coccinelle.gitlabpages.inria.fr/website/distrib/coccinelle-1.3.tar.gz" "coccinelle.tar.gz"
+            ${{ env.CURLX }} "https://github.com/coccinelle/coccinelle/archive/refs/tags/1.3.0.tar.gz" "coccinelle.tar.gz"
             tar zxf coccinelle.tar.gz
-            cd coccinelle-1.3
+            cd coccinelle-1.3.0
             ./autogen
             ./configure
             make
@@ -129,8 +129,11 @@ runs:
             echo "[+] Coccinelle is installed."
 
             # Get MKDTBO tool to System
-            git clone --depth=1 https://android.googlesource.com/platform/system/libufdt $GITHUB_WORKSPACE/mkdtbo
-            mv $GITHUB_WORKSPACE/mkdtbo/utils/src/* $GITHUB_WORKSPACE/mkdtbo/
+            mkdir $GITHUB_WORKSPACE/mkdtbo
+            cd $GITHUB_WORKSPACE/mkdtbo
+            ${{ env.CURLX }} https://android.googlesource.com/platform/system/libufdt/+archive/refs/heads/main/utils/src.tar.gz src.tar.gz
+            tar zxvf src.tar.gz
+            rm -f src.tar.gz
             chmod +x "$GITHUB_WORKSPACE/mkdtbo/mkdtboimg.py"
             ln -sfn "$GITHUB_WORKSPACE/mkdtbo/mkdtboimg.py" /usr/bin/mkdtboimg
             ln -sfn "$GITHUB_WORKSPACE/mkdtbo/mkdtboimg.py" /usr/bin/mkdtimg
@@ -178,8 +181,11 @@ runs:
             echo "[+] Coccinelle is installed."
 
             # Get MKDTBO tool to System
-            git clone --depth=1 https://android.googlesource.com/platform/system/libufdt $GITHUB_WORKSPACE/mkdtbo
-            mv $GITHUB_WORKSPACE/mkdtbo/utils/src/* $GITHUB_WORKSPACE/mkdtbo/
+            mkdir $GITHUB_WORKSPACE/mkdtbo
+            cd $GITHUB_WORKSPACE/mkdtbo
+            ${{ env.CURLX }} https://android.googlesource.com/platform/system/libufdt/+archive/refs/heads/main/utils/src.tar.gz src.tar.gz
+            tar zxvf src.tar.gz
+            rm -f src.tar.gz
             chmod +x "$GITHUB_WORKSPACE/mkdtbo/mkdtboimg.py"
             sudo ln -sfn "$GITHUB_WORKSPACE/mkdtbo/mkdtboimg.py" /usr/bin/mkdtboimg
             sudo ln -sfn "$GITHUB_WORKSPACE/mkdtbo/mkdtboimg.py" /usr/bin/mkdtimg
@@ -215,9 +221,9 @@ runs:
             # Install Coccinelle
             echo "::group::[+] Starting build coccinelle..."
             sudo apt-get install pkg-config ocaml-nox ocaml-findlib autoconf libpcre3-dev python3-dev menhir libparmap-ocaml-dev libpcre-ocaml-dev -y
-            ${{ env.CURLX }} "https://coccinelle.gitlabpages.inria.fr/website/distrib/coccinelle-1.3.tar.gz" "coccinelle.tar.gz"
+            ${{ env.CURLX }} "https://github.com/coccinelle/coccinelle/archive/refs/tags/1.3.0.tar.gz" "coccinelle.tar.gz"
             tar zxf coccinelle.tar.gz
-            cd coccinelle-1.3
+            cd coccinelle-1.3.0
             ./autogen
             ./configure
             make
@@ -231,8 +237,11 @@ runs:
             rm -f libtinfo5.deb
 
             # Get MKDTBO tool to System
-            git clone --depth=1 https://android.googlesource.com/platform/system/libufdt $GITHUB_WORKSPACE/mkdtbo
-            mv $GITHUB_WORKSPACE/mkdtbo/utils/src/* $GITHUB_WORKSPACE/mkdtbo/
+            mkdir $GITHUB_WORKSPACE/mkdtbo
+            cd $GITHUB_WORKSPACE/mkdtbo
+            ${{ env.CURLX }} https://android.googlesource.com/platform/system/libufdt/+archive/refs/heads/main/utils/src.tar.gz src.tar.gz
+            tar zxvf src.tar.gz
+            rm -f src.tar.gz
             chmod +x "$GITHUB_WORKSPACE/mkdtbo/mkdtboimg.py"
             sudo ln -sfn "$GITHUB_WORKSPACE/mkdtbo/mkdtboimg.py" /usr/bin/mkdtboimg
             sudo ln -sfn "$GITHUB_WORKSPACE/mkdtbo/mkdtboimg.py" /usr/bin/mkdtimg
@@ -285,8 +294,11 @@ runs:
             echo "[+] Coccinelle is installed."
 
             # Get MKDTBO tool to System
-            git clone --depth=1 https://android.googlesource.com/platform/system/libufdt $GITHUB_WORKSPACE/mkdtbo
-            mv $GITHUB_WORKSPACE/mkdtbo/utils/src/* $GITHUB_WORKSPACE/mkdtbo/
+            mkdir $GITHUB_WORKSPACE/mkdtbo
+            cd $GITHUB_WORKSPACE/mkdtbo
+            ${{ env.CURLX }} https://android.googlesource.com/platform/system/libufdt/+archive/refs/heads/main/utils/src.tar.gz src.tar.gz
+            tar zxvf src.tar.gz
+            rm -f src.tar.gz
             chmod +x "$GITHUB_WORKSPACE/mkdtbo/mkdtboimg.py"
             ln -sfn "$GITHUB_WORKSPACE/mkdtbo/mkdtboimg.py" /usr/bin/mkdtboimg
             ln -sfn "$GITHUB_WORKSPACE/mkdtbo/mkdtboimg.py" /usr/bin/mkdtimg
