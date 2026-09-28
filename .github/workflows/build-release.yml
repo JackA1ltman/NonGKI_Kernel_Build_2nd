@@ -63,6 +63,7 @@ jobs:
         | Xiaomi Mi Pad 4 | clover | 4.19 | LineageOS 22 | 15 | AnyKernel3 | ReSukiSU | ✅ | ❌ | ❌ | ❌ |
         | Xiaomi Redmi 8 | olive | 4.19 | AOSP Based | 15 | AnyKernel3 | ReSukiSU | ✅ | ✅ | ✅ | ❌ |
         | Xiaomi Redmi K20 Pro | raphael | 4.14 | AOSP Based | 15 | AnyKernel3 | ReSukiSU | ✅ | ❌ | ❌ | ❌ |
+        | Xiaomi Redmi K20 Pro | raphael | 4.14 | MIUI 12.5 | 11 | AnyKernel3 | ReSukiSU | ✅ | ❌ | ❌ | ❌ |
         | Xiaomi Redmi K30 Ultra | cezanne | 4.14 | AOSP Based | 14 | AnyKernel3 | ReSukiSU | ✅ | ✅ | ✅ | ❌ |
         | Xiaomi Redmi Note 7 | lavender | 4.19 | AOSP Based | 15 | AnyKernel3 | ReSukiSU | ✅ | ❌ | ❌ | ❌ |
         | Xiaomi Redmi Note 11 Pro 5G | veux | 5.4 | AOSP Based | 16 | AnyKernel3 | ReSukiSU | ✅ | ❌ | ❌ | ❌ |
