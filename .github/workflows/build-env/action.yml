@@ -118,9 +118,9 @@ runs:
             # Install Coccinelle
             echo "::group::[+] Starting build coccinelle..."
             apt-get install pkg-config ocaml-nox ocaml-findlib autoconf libpcre3-dev python3-dev menhir libparmap-ocaml-dev libpcre-ocaml-dev -y
-            ${{ env.CURLX }} "https://coccinelle.gitlabpages.inria.fr/website/distrib/coccinelle-1.3.tar.gz" "coccinelle.tar.gz"
+            ${{ env.CURLX }} "https://github.com/coccinelle/coccinelle/archive/refs/tags/1.3.0.tar.gz" "coccinelle.tar.gz"
             tar zxf coccinelle.tar.gz
-            cd coccinelle-1.3
+            cd coccinelle-1.3.0
             ./autogen
             ./configure
             make
@@ -215,9 +215,9 @@ runs:
             # Install Coccinelle
             echo "::group::[+] Starting build coccinelle..."
             sudo apt-get install pkg-config ocaml-nox ocaml-findlib autoconf libpcre3-dev python3-dev menhir libparmap-ocaml-dev libpcre-ocaml-dev -y
-            ${{ env.CURLX }} "https://coccinelle.gitlabpages.inria.fr/website/distrib/coccinelle-1.3.tar.gz" "coccinelle.tar.gz"
+            ${{ env.CURLX }} "https://github.com/coccinelle/coccinelle/archive/refs/tags/1.3.0.tar.gz" "coccinelle.tar.gz"
             tar zxf coccinelle.tar.gz
-            cd coccinelle-1.3
+            cd coccinelle-1.3.0
             ./autogen
             ./configure
             make
