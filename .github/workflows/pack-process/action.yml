@@ -35,6 +35,10 @@ runs:
             cp -fp $IMAGE_DIR/Image.gz-dtb tmp
             echo "Found Image.gz-dtb !"
 
+          elif [[ -f "$IMAGE_DIR/Image-dtb" ]]; then
+            cp -fp $IMAGE_DIR/Image-dtb tmp
+            echo "Found Image-dtb !"
+
           elif [[ -f "$IMAGE_DIR/Image.gz" ]]; then
             cp -fp $IMAGE_DIR/Image.gz tmp
             echo "Found Image.gz !"
@@ -124,6 +128,11 @@ runs:
             rm -f out/kernel
             cp -fp $IMAGE_DIR/Image.gz-dtb out/kernel
             echo "Found Image.gz-dtb !"
+
+          elif [[ -f "$IMAGE_DIR/Image-dtb" ]]; then
+            rm -f out/kernel
+            cp -fp $IMAGE_DIR/Image-dtb out/kernel
+            echo "Found Image-dtb !"
 
           elif [[ -f "$IMAGE_DIR/Image.gz" ]]; then
             rm -f out/kernel
