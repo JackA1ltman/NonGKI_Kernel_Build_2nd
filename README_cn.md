@@ -73,7 +73,7 @@
         - [rsuntk-SUSFS](https://github.com/cyberc3dr/KernelSU) - @cyberc3dr
     - [xxKSU](https://github.com/backslashxx/KernelSU) - @backslashxx
     - [SukiSU-Ultra](https://github.com/SukiSU-Ultra/SukiSU-Ultra) - @ShirkNeko
-        - [ReSukiSU](https://github.com/ReSukiSU/ReSukiSU) - @ReSukiSU Development
+        - [BakaSU](https://github.com/Baka-SU/BakaSU) - @BakaSU Development
             - [ReSukiSU_CI](https://github.com/cctv18/ReSukiSU_CI) - @cctv18
     - [Next](https://github.com/KernelSU-Next/KernelSU-Next) - @rifsxd
 - [SUSFS](https://gitlab.com/simonpunk/susfs4ksu) - @simonpunk

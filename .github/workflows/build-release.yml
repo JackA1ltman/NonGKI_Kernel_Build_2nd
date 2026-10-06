@@ -47,23 +47,23 @@ jobs:
 
         | Device Name | Codename | Kernel | System | Android | Method | KernelSU | SUSFS | Re:Kernel | BBG | NoMount |
         |----------|----------|----------|----------|----------|----------|----------|----------|----------|----------|----------|
-        | Nothing Phone (1) | spacewar | 5.4 | LineageOS 23.2 | 16 | AnyKernel3 | ReSukiSU | ✅ | ❌ | ❌ | ❌ |
-        | OnePlus 8 | instantnoodle | 4.19 | OxygenOS 13.1 | 13 | AnyKernel3 | ReSukiSU | ✅ | ❌ | ✅ | ❌ |
-        | OnePlus 8 | instantnoodle | 4.19 | ColorOS 15 | 15 | AnyKernel3 | ReSukiSU | ✅ | ❌ | ✅ | ❌ |
-        | Samsung Galaxy A71 | a71 | 4.14 | AOSP Based & OneUI | 16 | AnyKernel3 | ReSukiSU | ✅ | ✅ | ✅ | ❌ |
-        | Samsung Galaxy Note10 | d1 | 4.14 | OneUI 7 | 15 | AnyKernel3 | ReSukiSU | ✅ | ❌ | ❌ | ❌ |
-        | Samsung Galaxy Note10+ | d2s | 4.14 | OneUI 7 | 15 | AnyKernel3 | ReSukiSU | ✅ | ❌ | ❌ | ❌ |
+        | Nothing Phone (1) | spacewar | 5.4 | LineageOS 23.2 | 16 | AnyKernel3 | BakaSU | ✅ | ❌ | ❌ | ❌ |
+        | OnePlus 8 | instantnoodle | 4.19 | OxygenOS 13.1 | 13 | AnyKernel3 | BakaSU | ✅ | ❌ | ✅ | ❌ |
+        | OnePlus 8 | instantnoodle | 4.19 | ColorOS 15 | 15 | AnyKernel3 | BakaSU | ✅ | ❌ | ✅ | ❌ |
+        | Samsung Galaxy A71 | a71 | 4.14 | AOSP Based & OneUI | 16 | AnyKernel3 | BakaSU | ✅ | ✅ | ✅ | ❌ |
+        | Samsung Galaxy Note10 | d1 | 4.14 | OneUI 7 | 15 | AnyKernel3 | BakaSU | ✅ | ❌ | ❌ | ❌ |
+        | Samsung Galaxy Note10+ | d2s | 4.14 | OneUI 7 | 15 | AnyKernel3 | BakaSU | ✅ | ❌ | ❌ | ❌ |
         | Smartisan R1 | trident | 4.9 | Smartisan OS | 8.1 | AnyKernel3 | xxKSU | ❌ | ❌ | ❌ | ❌ |
         | Smartisan U3 Pro | osborn | 4.4 | LineageOS 18 | 11 | AnyKernel3 | xxKSU | ❌ | ❌ | ❌ | ❌ |
-        | Xiaomi Mi 11 | venus | 5.4 | Evolution X 11.X | 16 | AnyKernel3 | ReSukiSU | ✅ | ✅ | ❌ | ❌ |
-        | Xiaomi Mi MIX 2S | polaris | 4.9 | Evolution X 10.X | 15 | AnyKernel3 | ReSukiSU | ✅ | ✅ | ✅ | ❌ |
-        | Xiaomi Mi MIX 2S | polaris | 4.19 | AOSP Based | 16 | AnyKernel3 | ReSukiSU | ✅ | ❌ | ❌ | ❌ |
-        | Xiaomi Mi Pad 4 | clover | 4.19 | LineageOS 22 | 15 | AnyKernel3 | ReSukiSU | ✅ | ❌ | ❌ | ❌ |
-        | Xiaomi Redmi 8 | olive | 4.19 | AOSP Based | 15 | AnyKernel3 | ReSukiSU | ✅ | ✅ | ✅ | ❌ |
-        | Xiaomi Redmi K20 Pro | raphael | 4.14 | AOSP Based | 15 | AnyKernel3 | ReSukiSU | ✅ | ❌ | ❌ | ❌ |
-        | Xiaomi Redmi K30 Ultra | cezanne | 4.14 | AOSP Based | 14 | AnyKernel3 | ReSukiSU | ✅ | ✅ | ✅ | ❌ |
-        | Xiaomi Redmi Note 7 | lavender | 4.19 | AOSP Based | 15 | AnyKernel3 | ReSukiSU | ✅ | ❌ | ❌ | ❌ |
-        | Xiaomi Redmi Note 11 Pro 5G | veux | 5.4 | AOSP Based | 16 | AnyKernel3 | ReSukiSU | ✅ | ❌ | ❌ | ❌ |
+        | Xiaomi Mi 11 | venus | 5.4 | Evolution X 11.X | 16 | AnyKernel3 | BakaSU | ✅ | ✅ | ❌ | ❌ |
+        | Xiaomi Mi MIX 2S | polaris | 4.9 | Evolution X 10.X | 15 | AnyKernel3 | BakaSU | ✅ | ✅ | ✅ | ❌ |
+        | Xiaomi Mi MIX 2S | polaris | 4.19 | AOSP Based | 16 | AnyKernel3 | BakaSU | ✅ | ❌ | ❌ | ❌ |
+        | Xiaomi Mi Pad 4 | clover | 4.19 | LineageOS 22 | 15 | AnyKernel3 | BakaSU | ✅ | ❌ | ❌ | ❌ |
+        | Xiaomi Redmi 8 | olive | 4.19 | AOSP Based | 15 | AnyKernel3 | BakaSU | ✅ | ✅ | ✅ | ❌ |
+        | Xiaomi Redmi K20 Pro | raphael | 4.14 | AOSP Based | 15 | AnyKernel3 | BakaSU | ✅ | ❌ | ❌ | ❌ |
+        | Xiaomi Redmi K30 Ultra | cezanne | 4.14 | AOSP Based | 14 | AnyKernel3 | BakaSU | ✅ | ✅ | ✅ | ❌ |
+        | Xiaomi Redmi Note 7 | lavender | 4.19 | AOSP Based | 15 | AnyKernel3 | BakaSU | ✅ | ❌ | ❌ | ❌ |
+        | Xiaomi Redmi Note 11 Pro 5G | veux | 5.4 | AOSP Based | 16 | AnyKernel3 | BakaSU | ✅ | ❌ | ❌ | ❌ |
 
         - Specific device information: [Supported List](Supported_list.md).
         - The KernelSU version is for reference only. It is normal for the KernelSU version embedded in SUSFS to be lower.
@@ -113,8 +113,8 @@ jobs:
           KSU_SUKISU_ULTRA_VERSION=$(cd KernelSU-SukiSU-Ultra && expr $(/usr/bin/git rev-list --count HEAD) + 40000 - 2815)
           git clone -b legacy https://github.com/KernelSU-Next/KernelSU-Next.git KernelSU-Next
           KSU_NEXT_VERSION=$(cd KernelSU-Next && expr $(/usr/bin/git rev-list --count HEAD) + 30000)
-          git clone -b main https://github.com/ReSukiSU/ReSukiSU.git KernelSU-ReSukiSU
-          KSU_RESUKISU_VERSION=$(cd KernelSU-ReSukiSU && expr $(/usr/bin/git rev-list --count HEAD) + 30000 + 700)
+          git clone -b main https://github.com/BakaSU/BakaSU.git KernelSU-BakaSU
+          KSU_RESUKISU_VERSION=$(cd KernelSU-BakaSU && expr $(/usr/bin/git rev-list --count HEAD) + 30000 + 700)
 
           # Input release note
           echo "RELEASE_NOTES<<EOF" >> $GITHUB_ENV
@@ -123,8 +123,8 @@ jobs:
           echo "[KernelSU-rsuntk](https://github.com/rsuntk/KernelSU) Version: $KSU_RSUNTK_VERSION  " >> $GITHUB_ENV
           echo "[KernelSU-SukiSU-Ultra](https://github.com/ShirkNeko/SukiSU-Ultra) Version: $KSU_SUKISU_ULTRA_VERSION  " >> $GITHUB_ENV
           echo "[KernelSU-Next](https://github.com/KernelSU-Next/KernelSU-Next) Version: $KSU_NEXT_VERSION  " >> $GITHUB_ENV
-          echo "[KernelSU-ReSukiSU](https://github.com/ReSukiSU/ReSukiSU) Version: $KSU_RESUKISU_VERSION  " >> $GITHUB_ENV
-          echo "[KernelSU-ReSukiSU-CI](https://github.com/cctv18/ReSukiSU_CI) Version: $KSU_RESUKISU_VERSION  " >> $GITHUB_ENV
+          echo "[KernelSU-BakaSU](https://github.com/BakaSU/BakaSU) Version: $KSU_RESUKISU_VERSION  " >> $GITHUB_ENV
+          echo "[KernelSU-BakaSU-CI](https://github.com/cctv18/BakaSU_CI) Version: $KSU_RESUKISU_VERSION  " >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
 
       # Create GitHub Release and upload files if make_release is true
