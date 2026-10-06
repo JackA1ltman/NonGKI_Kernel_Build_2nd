@@ -33,7 +33,7 @@ env:
   KERNELSU_BRANCH : ""
 
   KERNELSU_AUTO_GET : "true"
-  KERNELSU_AUTO_FORK : "resukisu"
+  KERNELSU_AUTO_FORK : "bakasu"
 
   SUSFS_ENABLE : true
   SUSFS_FIXED : true
@@ -119,7 +119,7 @@ jobs:
         run: |
           cd $GITHUB_WORKSPACE/device_kernel
           sed -i 's/CONFIG_LOCALVERSION="-Paradigm"/CONFIG_LOCALVERSION="-HaoticKernel"/g' arch/arm64/configs/sdmmagpie_defconfig
-          echo "[+] Kernel name has been updated to -HaoticKernel-ReSukiSU"
+          echo "[+] Kernel name has been updated to -HaoticKernel-BakaSU"
           sed -i -e '/CONFIG_DEBUG_KERNEL/d' -e '/CONFIG_KALLSYMS/d' -e '/CONFIG_KALLSYMS_ALL/d' arch/arm64/configs/sdmmagpie_defconfig
           cat <<EOF >> arch/arm64/configs/sdmmagpie_defconfig
           CONFIG_DEBUG_KERNEL=y
