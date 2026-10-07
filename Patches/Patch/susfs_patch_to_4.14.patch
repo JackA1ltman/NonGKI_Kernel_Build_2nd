@@ -3765,7 +3765,7 @@ index 0000000..4b9d7cc
 +#define KSTAT_SPOOF_ATIME_TV_NSEC (1 << 5)
 +#define KSTAT_SPOOF_MTIME_TV_SEC (1 << 6)
 +#define KSTAT_SPOOF_MTIME_TV_NSEC (1 << 7)
-+#define KSTAT_SPOOF_CTIME_TV_SEC (1 < 8)
++#define KSTAT_SPOOF_CTIME_TV_SEC (1 << 8)
 +#define KSTAT_SPOOF_CTIME_TV_NSEC (1 << 9)
 +#define KSTAT_SPOOF_BLOCKS (1 << 10)
 +#define KSTAT_SPOOF_BLKSIZE (1 << 11)
