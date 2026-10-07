@@ -48,21 +48,21 @@ runs:
         run: |
           # Set ${{ env.PACK_METHOD }}
 
-          if [[ "${{ env.PACK_METHOD }}" == "Anykernel3" ]]; then
+          if [[ "${{ env.PACK_METHOD }}" == "AnyKernel3" ]]; then
             cd $GITHUB_WORKSPACE/device_kernel
 
-            if [[ -d "Anykernel3" ]]; then
-              echo "[+] Found Anykernel3 in Kernel!"
+            if [[ -d "AnyKernel3" ]]; then
+              echo "[+] Found AnyKernel3 in Kernel!"
 
             elif [[ "${{ env.AK3_SOURCE }}" == *"osm0sis/AnyKernel3.git" ]]; then
-              git clone "${{ env.AK3_SOURCE }}" -b "${{ env.AK3_BRANCH }}" Anykernel3
-              cd Anykernel3
+              git clone "${{ env.AK3_SOURCE }}" -b "${{ env.AK3_BRANCH }}" AnyKernel3
+              cd AnyKernel3
               git checkout dca9dc370838d919d56c1f59ec78b27a14a72c68
               cd ../
-              echo "[+] Get Anykernel3 successfully!"
+              echo "[+] Get AnyKernel3 successfully!"
 
             else
-              git clone "${{ env.AK3_SOURCE }}" -b "${{ env.AK3_BRANCH }}" Anykernel3 --depth=1
+              git clone "${{ env.AK3_SOURCE }}" -b "${{ env.AK3_BRANCH }}" AnyKernel3 --depth=1
 
             fi
           elif [[ "${{ env.PACK_METHOD }}" == "MKBOOTIMG" ]] || [ "${{ env.DEFCONFIG_FROM_BOOT }}" == "true" ]; then
@@ -128,7 +128,7 @@ runs:
                 KERNELSU_NAME="KernelSU"
                 KERNELSU_ORIGIN_BRANCH="master"
                 if [[ "${{ env.SUSFS_ENABLE }}" == "true" ]]; then
-                    echo "[-] ${{ env.KERNELSU_AUTO_FORK }} doesn't support SuSFS! "
+                    echo "[-] ${{ env.KERNELSU_AUTO_FORK }} doesn't support SUSFS! "
                     false
                 else
                     KERNELSU_BRANCH="master"
@@ -139,7 +139,7 @@ runs:
                 KERNELSU_NAME="KernelSU"
                 KERNELSU_ORIGIN_BRANCH="main"
                 if [[ "${{ env.SUSFS_ENABLE }}" == "true" ]]; then
-                    echo "[-] ${{ env.KERNELSU_AUTO_FORK }} doesn't support SuSFS! "
+                    echo "[-] ${{ env.KERNELSU_AUTO_FORK }} doesn't support SUSFS! "
                     false
                 else
                     KERNELSU_BRANCH="main"
@@ -160,15 +160,15 @@ runs:
                 KERNELSU_NAME="KernelSU-Next"
                 KERNELSU_ORIGIN_BRANCH="legacy"
                 if [[ "${{ env.SUSFS_ENABLE }}" == "true" ]]; then
-                    echo "[-] ${{ env.KERNELSU_AUTO_FORK }} doesn't support SuSFS! "
+                    echo "[-] ${{ env.KERNELSU_AUTO_FORK }} doesn't support SUSFS! "
                     false
                 else
                     KERNELSU_BRANCH="legacy"
                 fi
 
-            elif [[ "${{ env.KERNELSU_AUTO_FORK }}" == "resukisu" ]]; then
-                KERNELSU_AUTHOR="ReSukiSU"
-                KERNELSU_NAME="ReSukiSU"
+            elif [[ "${{ env.KERNELSU_AUTO_FORK }}" == "bakasu" ]]; then
+                KERNELSU_AUTHOR="BakaSU"
+                KERNELSU_NAME="BakaSU"
                 KERNELSU_ORIGIN_BRANCH="main"
                 if [[ "${{ env.SUSFS_ENABLE }}" == "true" ]]; then
                     KERNELSU_BRANCH="main"
@@ -345,7 +345,7 @@ runs:
           echo "CONFIG_KSU=y" >> ./arch/${{ env.KERNEL_ARCH }}/configs/${{ env.DEFCONFIG_NAME }}
 
           # Fork
-          if [[ "${{ env.KERNELSU_SOURCE }}" == *rsuntk* ]] || [[ "${{ env.KERNELSU_SOURCE }}" == *Next* ]] || [[ "${{ env.KERNELSU_AUTO_FORK }}" == "rsuntk" ]] || [[ "${{ env.KERNELSU_AUTO_FORK }}" == "next" ]] || [[ "${{ env.KERNELSU_SOURCE }}" == *ReSukiSU* ]] || [[ "${{ env.KERNELSU_AUTO_FORK }}" == "resukisu" ]]; then
+          if [[ "${{ env.KERNELSU_SOURCE }}" == *rsuntk* ]] || [[ "${{ env.KERNELSU_SOURCE }}" == *Next* ]] || [[ "${{ env.KERNELSU_AUTO_FORK }}" == "rsuntk" ]] || [[ "${{ env.KERNELSU_AUTO_FORK }}" == "next" ]] || [[ "${{ env.KERNELSU_SOURCE }}" == *BakaSU* ]] || [[ "${{ env.KERNELSU_AUTO_FORK }}" == "bakasu" ]]; then
             if [[ ${{ env.SUSFS_ENABLE }} != "true" ]]; then
                 echo "CONFIG_KSU_MANUAL_HOOK=y" >> ./arch/${{ env.KERNEL_ARCH }}/configs/${{ env.DEFCONFIG_NAME }}
 
@@ -357,7 +357,7 @@ runs:
 
           fi
 
-          if [[ "${{ env.KERNELSU_SOURCE }}" == *SukiSU* ]] || [[ "${{ env.KERNELSU_AUTO_FORK }}" == "sukisu" ]] || [[ "${{ env.KERNELSU_SOURCE }}" == *ReSukiSU* ]] || [[ "${{ env.KERNELSU_AUTO_FORK }}" == "resukisu" ]]; then
+          if [[ "${{ env.KERNELSU_SOURCE }}" == *SukiSU* ]] || [[ "${{ env.KERNELSU_AUTO_FORK }}" == "sukisu" ]] || [[ "${{ env.KERNELSU_SOURCE }}" == *BakaSU* ]] || [[ "${{ env.KERNELSU_AUTO_FORK }}" == "bakasu" ]]; then
             if [[ "${{ env.SUSFS_ENABLE }}" != "true" ]]; then
                 echo "CONFIG_KSU_SUSFS=n" >> ./arch/${{ env.KERNEL_ARCH }}/configs/${{ env.DEFCONFIG_NAME }}
 

@@ -1,4 +1,4 @@
-name: Build Xiaomi Mi Pad 4 (LineageOS 22 A15)
+name: Build Smartisan R1 (Smartisan OS A8.1)
 
 on:
   workflow_call:
@@ -6,26 +6,26 @@ on:
 
 env:
   # Device env
-  DEVICE_NAME : "xiaomi_mipad4"
-  DEVICE_CODENAME : "clover"
+  DEVICE_NAME : "smartisan_r1"
+  DEVICE_CODENAME : "trident"
 
-  CUSTOM_CMDS : "CLANG_TRIPLE=aarch64-linux-gnu-"
-  EXTRA_CMDS : "LD=ld.lld LLVM=1 LLVM_IAS=1"
+  CUSTOM_CMDS : ""
+  EXTRA_CMDS : ""
 
-  KERNEL_SOURCE : "https://github.com/pix106/android_kernel_xiaomi_southwest-4.19.git"
-  KERNEL_BRANCH : "main"
+  KERNEL_SOURCE : "https://github.com/Ephemera42/android_kernel_smartisan_sdm845.git"
+  KERNEL_BRANCH : "android-4.9-o-mr1"
 
-  CLANG_SOURCE : "https://github.com/llvm/llvm-project/releases/download/llvmorg-19.1.7/LLVM-19.1.7-Linux-X64.tar.xz"
+  CLANG_SOURCE : ""
   CLANG_BRANCH : ""
 
   GCC_GNU : false
-  GCC_64_SOURCE : "https://android.googlesource.com/platform/prebuilts/gcc/linux-x86/aarch64/aarch64-linux-android-4.9.git"
-  GCC_64_BRANCH : "android12L-release"
-  GCC_32_SOURCE : "https://android.googlesource.com/platform/prebuilts/gcc/linux-x86/arm/arm-linux-androideabi-4.9.git"
-  GCC_32_BRANCH : "android12L-release"
+  GCC_64_SOURCE : "https://github.com/LineageOS/android_prebuilts_gcc_linux-x86_aarch64_aarch64-linux-android-4.9.git"
+  GCC_64_BRANCH : "lineage-19.1"
+  GCC_32_SOURCE : "https://github.com/LineageOS/android_prebuilts_gcc_linux-x86_arm_arm-linux-androideabi-4.9.git"
+  GCC_32_BRANCH : "lineage-19.1"
 
   DEFCONFIG_SOURCE: ""
-  DEFCONFIG_NAME : "clover_defconfig"
+  DEFCONFIG_NAME : "trident_defconfig"
   DEFCONFIG_ORIGIN_IMAGE: ""
   DEFCONFIG_FROM_BOOT: false
 
@@ -33,9 +33,9 @@ env:
   KERNELSU_BRANCH : ""
 
   KERNELSU_AUTO_GET : "true" # if u want easy setting kernelsu, u can true.
-  KERNELSU_AUTO_FORK : "bakasu" # magic, rsuntk, next, bakasu and sukisu
+  KERNELSU_AUTO_FORK : "xxksu" # magic, rsuntk, next, bakasu and sukisu
 
-  SUSFS_ENABLE : true
+  SUSFS_ENABLE : false
   SUSFS_FIXED : false
 
   AK3_SOURCE : "https://github.com/osm0sis/AnyKernel3.git"
@@ -46,10 +46,10 @@ env:
   NEED_DTBO : false
   NEED_SAFE_DTBO : false
 
-  ROM_TEXT : "lineageos22_a15"
+  ROM_TEXT : "smartisanos_a8"
 
   # Other env
-  PYTHON_VERSION: "3" # Only 2(Ubuntu 22.04 and Ubuntu 20.04) or 3(Any OS Versions).
+  PYTHON_VERSION: "2" # Only 2(Ubuntu 22.04 and Ubuntu 20.04) or 3(Any OS Versions).
 
   PACK_METHOD: "AnyKernel3" # AnyKernel3 need SOURCE and BRANCH, MKBOOTIMG needn't it.
   PACK_KMODULES: "false" # if u want pack kernel modules (.ko) into AnyKernel3.
@@ -89,7 +89,7 @@ env:
 
 jobs:
   build-kernel:
-    name: Xiaomi Mi Pad 4 (LineageOS 22 A15)
+    name: Smartisan R1 (Smartisan OS A8.1)
     runs-on: ubuntu-24.04 # u can changed to ubuntu 22.04, and need container set ubuntu-24.04
     # container: archlinux/archlinux:latest # if u need use arch linux -> archlinux/archlinux:latest or ubuntu 20.04 -> ubuntu:focal
     env:
@@ -111,13 +111,44 @@ jobs:
         uses: ./.github/workflows/patch-susfs
 
       - name: 🔗 Patch for no-kprobe
-        uses: ./.github/workflows/patch-no-kprobe
+        run: |
+          # Needn't manual hook.
 
       - name: 🪛 Extra Kernel Options
         run: |
-          # Only ${{ env.DEVICE_NAME }} use it.
+          # KernelSU
           cd $GITHUB_WORKSPACE/device_kernel
-          # Nothing
+          echo "CONFIG_KSU_TAMPER_SYSCALL_TABLE=y" >> ./arch/arm64/configs/trident_defconfig
+          sed -i 's/^static DEFINE_RWLOCK(policy_rwlock);$/DEFINE_RWLOCK(policy_rwlock);/' security/selinux/ss/services.c
+          sed -i '/KBUILD_CFLAGS   :=/s//& -w/' Makefile
+          # AnyKernel3
+          sed -i '/^\. tools\/ak3-core\.sh;/a \
+          \
+          patch_os_version() {\
+            ui_print " " "Syncing OS version and patch level...";\
+            local prop="/system/build.prop";\
+            local TARGET_VER="";\
+            local TARGET_PATCH="";\
+            if [ -f "$prop" ]; then\
+              TARGET_VER=$(file_getprop "$prop" ro.build.version.release);\
+              TARGET_PATCH=$(file_getprop "$prop" ro.build.version.security_patch | grep -oE '\''^[0-9]{4}-[0-9]{2}'\'');\
+            else\
+              ui_print "- Warning: $prop not found!";\
+            fi\
+            if [ -f "$SPLITIMG/header" ]; then\
+              if [ -n "$TARGET_VER" ] && [ -n "$TARGET_PATCH" ]; then\
+                ui_print "- Updating header: OS $TARGET_VER (Patch: $TARGET_PATCH)";\
+                sed -i "s/^os_version=.*/os_version=$TARGET_VER/" "$SPLITIMG/header";\
+                sed -i "s/^os_patch_level=.*/os_patch_level=$TARGET_PATCH/" "$SPLITIMG/header";\
+              else\
+                ui_print "- Warning: Could not find valid version/patch info in $prop.";\
+              fi\
+            else\
+              ui_print "- Warning: header file not found, skipped.";\
+            fi\
+          }' AnyKernel3/anykernel.sh
+          sed -i 's/^dump_boot;.*/&\n\npatch_os_version;/' AnyKernel3/anykernel.sh
+          sed -i 's/^supported\.versions=.*/supported.versions=8.1.0/' AnyKernel3/anykernel.sh
 
       - name: 🧰 Patch Kernel of Re:Kernel
         uses: ./.github/workflows/patch-rekernel

@@ -65,7 +65,7 @@ runs:
         with:
           # this might remove tools that are actually needed,
           # if set to "true" but frees about 6 GB
-          tool-cache: true
+          preinstalled-runtimes: true
 
           # all of these default to true, but feel free to set to
           # "false" if necessary for your workflow
@@ -118,9 +118,9 @@ runs:
             # Install Coccinelle
             echo "::group::[+] Starting build coccinelle..."
             apt-get install pkg-config ocaml-nox ocaml-findlib autoconf libpcre3-dev python3-dev menhir libparmap-ocaml-dev libpcre-ocaml-dev -y
-            ${{ env.CURLX }} "https://coccinelle.gitlabpages.inria.fr/website/distrib/coccinelle-1.3.tar.gz" "coccinelle.tar.gz"
+            ${{ env.CURLX }} "https://github.com/coccinelle/coccinelle/archive/refs/tags/1.3.0.tar.gz" "coccinelle.tar.gz"
             tar zxf coccinelle.tar.gz
-            cd coccinelle-1.3
+            cd coccinelle-1.3.0
             ./autogen
             ./configure
             make
@@ -129,13 +129,12 @@ runs:
             echo "[+] Coccinelle is installed."
 
             # Get MKDTBO tool to System
-            mkdir $GITHUB_WORKSPACE/mkdtbo
-            cd $GITHUB_WORKSPACE/mkdtbo
-            ${{ env.CURLX }} https://android.googlesource.com/platform/system/libufdt/+archive/refs/heads/main/utils/src.tar.gz src.tar.gz
-            tar zxvf src.tar.gz
-            rm -f src.tar.gz
-            ln -s mkdtboimg.py /usr/bin/mkdtboimg
-            ln -s mkdtboimg.py /usr/bin/mkdtimg
+            git clone --depth=1 https://android.googlesource.com/platform/system/libufdt $GITHUB_WORKSPACE/mkdtbo
+            mv $GITHUB_WORKSPACE/mkdtbo/utils/src/* $GITHUB_WORKSPACE/mkdtbo/
+            chmod +x "$GITHUB_WORKSPACE/mkdtbo/mkdtboimg.py"
+            ln -sfn "$GITHUB_WORKSPACE/mkdtbo/mkdtboimg.py" /usr/bin/mkdtboimg
+            ln -sfn "$GITHUB_WORKSPACE/mkdtbo/mkdtboimg.py" /usr/bin/mkdtimg
+            test -x /usr/bin/mkdtimg
             cd $GITHUB_WORKSPACE
 
             if [ "${{ env.PYTHON_VERSION }}" == "3" ]; then
@@ -179,13 +178,12 @@ runs:
             echo "[+] Coccinelle is installed."
 
             # Get MKDTBO tool to System
-            mkdir $GITHUB_WORKSPACE/mkdtbo
-            cd $GITHUB_WORKSPACE/mkdtbo
-            ${{ env.CURLX }} https://android.googlesource.com/platform/system/libufdt/+archive/refs/heads/main/utils/src.tar.gz src.tar.gz
-            tar zxvf src.tar.gz
-            rm -f src.tar.gz
-            sudo ln -s mkdtboimg.py /usr/bin/mkdtboimg
-            sudo ln -s mkdtboimg.py /usr/bin/mkdtimg
+            git clone --depth=1 https://android.googlesource.com/platform/system/libufdt $GITHUB_WORKSPACE/mkdtbo
+            mv $GITHUB_WORKSPACE/mkdtbo/utils/src/* $GITHUB_WORKSPACE/mkdtbo/
+            chmod +x "$GITHUB_WORKSPACE/mkdtbo/mkdtboimg.py"
+            sudo ln -sfn "$GITHUB_WORKSPACE/mkdtbo/mkdtboimg.py" /usr/bin/mkdtboimg
+            sudo ln -sfn "$GITHUB_WORKSPACE/mkdtbo/mkdtboimg.py" /usr/bin/mkdtimg
+            test -x /usr/bin/mkdtimg
             cd $GITHUB_WORKSPACE
 
             if [ "${{ env.PYTHON_VERSION }}" == "3" ]; then
@@ -217,9 +215,9 @@ runs:
             # Install Coccinelle
             echo "::group::[+] Starting build coccinelle..."
             sudo apt-get install pkg-config ocaml-nox ocaml-findlib autoconf libpcre3-dev python3-dev menhir libparmap-ocaml-dev libpcre-ocaml-dev -y
-            ${{ env.CURLX }} "https://coccinelle.gitlabpages.inria.fr/website/distrib/coccinelle-1.3.tar.gz" "coccinelle.tar.gz"
+            ${{ env.CURLX }} "https://github.com/coccinelle/coccinelle/archive/refs/tags/1.3.0.tar.gz" "coccinelle.tar.gz"
             tar zxf coccinelle.tar.gz
-            cd coccinelle-1.3
+            cd coccinelle-1.3.0
             ./autogen
             ./configure
             make
@@ -233,13 +231,12 @@ runs:
             rm -f libtinfo5.deb
 
             # Get MKDTBO tool to System
-            mkdir $GITHUB_WORKSPACE/mkdtbo
-            cd $GITHUB_WORKSPACE/mkdtbo
-            ${{ env.CURLX }} https://android.googlesource.com/platform/system/libufdt/+archive/refs/heads/main/utils/src.tar.gz src.tar.gz
-            tar zxvf src.tar.gz
-            rm -f src.tar.gz
-            sudo ln -s mkdtboimg.py /usr/bin/mkdtboimg
-            sudo ln -s mkdtboimg.py /usr/bin/mkdtimg
+            git clone --depth=1 https://android.googlesource.com/platform/system/libufdt $GITHUB_WORKSPACE/mkdtbo
+            mv $GITHUB_WORKSPACE/mkdtbo/utils/src/* $GITHUB_WORKSPACE/mkdtbo/
+            chmod +x "$GITHUB_WORKSPACE/mkdtbo/mkdtboimg.py"
+            sudo ln -sfn "$GITHUB_WORKSPACE/mkdtbo/mkdtboimg.py" /usr/bin/mkdtboimg
+            sudo ln -sfn "$GITHUB_WORKSPACE/mkdtbo/mkdtboimg.py" /usr/bin/mkdtimg
+            test -x /usr/bin/mkdtimg
             cd $GITHUB_WORKSPACE
 
             if [ "${{ env.PYTHON_VERSION }}" == "3" ]; then
@@ -258,7 +255,7 @@ runs:
                 sudo make install
                 curl https://bootstrap.pypa.io/pip/2.7/get-pip.py -o get-pip.py
                 sudo python2.7 get-pip.py
-                sudo update-alternatives --install /usr/bin/python python /usr/local/lib/python2.7 1
+                sudo update-alternatives --install /usr/bin/python python /usr/local/bin/python2.7 1
                 cd ../
                 rm -rf Python-2.7.18 Python-2.7.18.tgz
                 echo "::endgroup::"
@@ -288,13 +285,12 @@ runs:
             echo "[+] Coccinelle is installed."
 
             # Get MKDTBO tool to System
-            mkdir $GITHUB_WORKSPACE/mkdtbo
-            cd $GITHUB_WORKSPACE/mkdtbo
-            ${{ env.CURLX }} https://android.googlesource.com/platform/system/libufdt/+archive/refs/heads/main/utils/src.tar.gz src.tar.gz
-            tar zxvf src.tar.gz
-            rm -f src.tar.gz
-            ln -s mkdtboimg.py /usr/bin/mkdtboimg
-            ln -s mkdtboimg.py /usr/bin/mkdtimg
+            git clone --depth=1 https://android.googlesource.com/platform/system/libufdt $GITHUB_WORKSPACE/mkdtbo
+            mv $GITHUB_WORKSPACE/mkdtbo/utils/src/* $GITHUB_WORKSPACE/mkdtbo/
+            chmod +x "$GITHUB_WORKSPACE/mkdtbo/mkdtboimg.py"
+            ln -sfn "$GITHUB_WORKSPACE/mkdtbo/mkdtboimg.py" /usr/bin/mkdtboimg
+            ln -sfn "$GITHUB_WORKSPACE/mkdtbo/mkdtboimg.py" /usr/bin/mkdtimg
+            test -x /usr/bin/mkdtimg
             cd $GITHUB_WORKSPACE
 
             if [ "${{ env.PYTHON_VERSION }}" == "3" ]; then

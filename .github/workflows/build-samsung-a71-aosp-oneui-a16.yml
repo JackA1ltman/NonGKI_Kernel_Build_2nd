@@ -1,4 +1,4 @@
-name: Build Samsung Galaxy A71 (Based AOSP & OneUI A16)
+name: Build Samsung Galaxy A71 (AOSP Based & OneUI A16)
 
 on:
   workflow_call:
@@ -33,7 +33,7 @@ env:
   KERNELSU_BRANCH : ""
 
   KERNELSU_AUTO_GET : "true"
-  KERNELSU_AUTO_FORK : "resukisu"
+  KERNELSU_AUTO_FORK : "bakasu"
 
   SUSFS_ENABLE : true
   SUSFS_FIXED : true
@@ -49,11 +49,12 @@ env:
   ROM_TEXT : "aosp_oneui_a16"
 
   # Other env
-  PYTHON_VERSION: "3"
-  PACK_METHOD: "Anykernel3"
-  PACK_KMODULES: "false"
+  PYTHON_VERSION: "3" # Only 2(Ubuntu 22.04 and Ubuntu 20.04) or 3(Any OS Versions).
 
-  KERNELSU_METHOD: "shell"
+  PACK_METHOD: "AnyKernel3" # Anykernel3 need SOURCE and BRANCH, MKBOOTIMG needn't it.
+  PACK_KMODULES: "false" # if u want pack kernel modules (.ko) into Anykernel3.
+
+  KERNELSU_METHOD: "shell" # shell, manual and only.
 
   PATCHES_SOURCE: "JackA1ltman/NonGKI_Kernel_Patches"
   PATCHES_BRANCH: "samsung_kernel"
@@ -90,22 +91,22 @@ env:
       
 jobs:
   build-kernel:
-    name: Samsung Galaxy A71 (Based AOSP & OneUI A16)
-    runs-on: ubuntu-latest # u can changed to ubuntu 22.04, and need container set ubuntu-latest
+    name: Samsung Galaxy A71 (AOSP Based & OneUI A16)
+    runs-on: ubuntu-24.04 # u can changed to ubuntu 22.04, and need container set ubuntu-24.04
     # container: archlinux/archlinux:latest # if u need use arch linux -> archlinux/archlinux:latest or ubuntu 20.04 -> ubuntu:focal
     env:
       CCACHE_COMPILERCHECK: "%compiler% -dumpmachine; %compiler% -dumpversion"
       CCACHE_NOHASHDIR: "true"
       CCACHE_HARDLINK: "true"
-      
+
     steps:
       - name: ⏰ Checkout repository
-        uses: actions/checkout@v6 # Đổi thành v4 vì v6 chưa tồn tại, Github Actions có thể báo lỗi
+        uses: actions/checkout@v6
 
       - name: ⌛️ Compilation environment preparation
         uses: ./.github/workflows/build-env
 
-      - name: ⚙️ Get neccssary tools
+      - name: ⚙️ Get necessary tools
         uses: ./.github/workflows/build-ready
 
       - name: 🪝 Patch Kernel of SUSFS
@@ -118,7 +119,7 @@ jobs:
         run: |
           cd $GITHUB_WORKSPACE/device_kernel
           sed -i 's/CONFIG_LOCALVERSION="-Paradigm"/CONFIG_LOCALVERSION="-HaoticKernel"/g' arch/arm64/configs/sdmmagpie_defconfig
-          echo "[+] Kernel name has been updated to -HaoticKernel-ReSukiSU"
+          echo "[+] Kernel name has been updated to -HaoticKernel-BakaSU"
           sed -i -e '/CONFIG_DEBUG_KERNEL/d' -e '/CONFIG_KALLSYMS/d' -e '/CONFIG_KALLSYMS_ALL/d' arch/arm64/configs/sdmmagpie_defconfig
           cat <<EOF >> arch/arm64/configs/sdmmagpie_defconfig
           CONFIG_DEBUG_KERNEL=y
@@ -135,6 +136,9 @@ jobs:
 
       - name: 🔒 Patch Kernel of Baseband Guard
         uses: ./.github/workflows/patch-baseband-guard
+
+      - name: 🛡️ Patch Kernel of NoMount
+        uses: ./.github/workflows/patch-nomount
 
       - name: 🚀 Build Process
         uses: ./.github/workflows/build-process
@@ -175,13 +179,13 @@ jobs:
           mkdir -p tmp
 
           if [[ "${{ env.AK3_SOURCE }}" =~ "osm0sis" ]]; then
-            sed -i 's|ExampleKernel by osm0sis @ xda-developers|NonGKI Kernel Build by JackAltman @ Github\nHaotic Kernel Build by nduykha @ Github|g' Anykernel3/anykernel.sh
-            sed -i 's/do.devicecheck=1/do.devicecheck=0/g' Anykernel3/anykernel.sh
-            sed -i 's!BLOCK=/dev/block/platform/omap/omap_hsmmc.0/by-name/boot;!BLOCK=auto;!g' Anykernel3/anykernel.sh
-            sed -i 's/IS_SLOT_DEVICE=0;/is_slot_device=auto;/g' Anykernel3/anykernel.sh
-            echo "Now using official Anykernel3."
+            sed -i 's|ExampleKernel by osm0sis @ xda-developers|NonGKI Kernel Build by JackAltman @ GitHub\nHaotic Kernel Build by nduykha @ GitHub|g' AnyKernel3/anykernel.sh
+            sed -i 's/do.devicecheck=1/do.devicecheck=0/g' AnyKernel3/anykernel.sh
+            sed -i 's!BLOCK=/dev/block/platform/omap/omap_hsmmc.0/by-name/boot;!BLOCK=auto;!g' AnyKernel3/anykernel.sh
+            sed -i 's/IS_SLOT_DEVICE=0;/is_slot_device=auto;/g' AnyKernel3/anykernel.sh
+            echo "Now using official AnyKernel3."
           else
-            echo "Now using custom Anykernel3."
+            echo "Now using custom AnyKernel3."
           fi
 
           if [[ -f "$IMAGE_DIR/Image.gz-dtb" ]]; then
@@ -242,7 +246,7 @@ jobs:
             fi
           fi
 
-          cp -rp ./Anykernel3/* tmp
+          cp -rp ./AnyKernel3/* tmp
           cd tmp
           7za a -mx9 tmp.zip *
           cd ..

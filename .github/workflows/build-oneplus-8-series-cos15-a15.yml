@@ -1,4 +1,4 @@
-name: Build Oneplus 8 Series (ColorOS 15 A15)
+name: Build OnePlus 8 Series (ColorOS 15 A15)
 
 on:
   workflow_call:
@@ -33,7 +33,7 @@ env:
   KERNELSU_BRANCH : "v0.9.5"
 
   KERNELSU_AUTO_GET : "true" # if u want easy setting kernelsu, u can true.
-  KERNELSU_AUTO_FORK : "resukisu" # xxksu, rsuntk, next, resukisu and sukisu
+  KERNELSU_AUTO_FORK : "bakasu" # xxksu, rsuntk, next, bakasu and sukisu
 
   SUSFS_ENABLE : true
   SUSFS_FIXED : true
@@ -51,8 +51,8 @@ env:
   # Other env
   PYTHON_VERSION: "3" # Only 2(Ubuntu 22.04 and Ubuntu 20.04) or 3(Any OS Versions).
 
-  PACK_METHOD: "Anykernel3" # Anykernel3 need SOURCE and BRANCH, MKBOOTIMG needn't it.
-  PACK_KMODULES: "false" # if u want pack kernel modules (.ko) into Anykernel3.
+  PACK_METHOD: "AnyKernel3" # AnyKernel3 need SOURCE and BRANCH, MKBOOTIMG needn't it.
+  PACK_KMODULES: "false" # if u want pack kernel modules (.ko) into AnyKernel3.
 
   KERNELSU_METHOD: "shell" # shell, manual and only.
 
@@ -68,8 +68,6 @@ env:
 
   HOOK_METHOD: "syscall" # Manual hook method ->  syscall.
 
-  KERNEL_PATCH: "false" # If your kernel version is <= 4.9, you have the option of enabling the patch to patch the kernel_write and kernel_read functions.
-
   KPM_ENABLE: "false" # Anyone devices.
   KPM_INLINE: "false" # Only use it for SukiSU-Ultra.
   KPM_KPATCH_NEXT: "false" # If u want hook KPatch-Next in build step.
@@ -78,7 +76,7 @@ env:
   BASEBAND_GUARD_ENABLE: "true" #if u want prevent unauthorized writes to critical partitions/device nodes.
   BASEBAND_GUARD_BOOT: "false" #if u want to protect boot partition.
 
-  GENERATE_DTB: "false" # if u kernel need DTB , but cannot auto generate it. (Only Anykernel3).
+  GENERATE_DTB: "false" # if u kernel need DTB , but cannot auto generate it. (Only AnyKernel3).
   GENERATE_CHIP: "qcom" # only supported for qcom and mediatek.
 
   BUILD_DEBUGGER: "false" # Output build errors.
@@ -91,8 +89,8 @@ env:
 
 jobs:
   build-kernel:
-    name: Oneplus 8 Series (ColorOS 15 A15)
-    runs-on: ubuntu-latest # u can changed to ubuntu 22.04, and need container set ubuntu-latest
+    name: OnePlus 8 Series (ColorOS 15 A15)
+    runs-on: ubuntu-24.04 # u can changed to ubuntu 22.04, and need container set ubuntu-24.04
     # container: ubuntu:bionic # if u need use arch linux -> archlinux/archlinux:latest or ubuntu 20.04 -> ubuntu:focal
     env:
       CCACHE_COMPILERCHECK: "%compiler% -dumpmachine; %compiler% -dumpversion"
@@ -106,7 +104,7 @@ jobs:
       - name: ⌛️ Compilation environment preparation
         uses: ./.github/workflows/build-env
 
-      - name: ⚙️ Get neccssary tools
+      - name: ⚙️ Get necessary tools
         uses: ./.github/workflows/build-ready
 
       - name: 🪝 Patch Kernel of SUSFS
@@ -119,7 +117,6 @@ jobs:
         run: |
           # Only ${{ env.DEVICE_NAME }} use it.
           cd $GITHUB_WORKSPACE/device_kernel
-
           # Nothing
 
       - name: 🧰 Patch Kernel of Re:Kernel
@@ -131,17 +128,20 @@ jobs:
       - name: 🔒 Patch Kernel of Baseband Guard
         uses: ./.github/workflows/patch-baseband-guard
 
+      - name: 🛡️ Patch Kernel of NoMount
+        uses: ./.github/workflows/patch-nomount
+
       - name: 🚀 Build Process
         uses: ./.github/workflows/build-process
 
-      - name: ❗ Oneplus 8 Remove files
+      - name: ❗ OnePlus 8 Remove files
         run: |
           # Only ${{ env.DEVICE_NAME }} use it.
           cd $GITHUB_WORKSPACE/device_kernel
 
           rm -f out/arch/arm64/boot/dtbo.img
           rm -f out/arch/arm64/boot/dtb
-          echo "Removed dtbo.img and dtb for Oneplus 8."
+          echo "Removed dtbo.img and dtb for OnePlus 8."
 
       - name: 🔩 Pack Process
         uses: ./.github/workflows/pack-process

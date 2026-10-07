@@ -1,4 +1,4 @@
-name: Build Xiaomi Mi Pad 4 (LineageOS 22 A15)
+name: Build Google Pixel 3a (LineageOS 22.2 A15)
 
 on:
   workflow_call:
@@ -6,26 +6,26 @@ on:
 
 env:
   # Device env
-  DEVICE_NAME : "xiaomi_mipad4"
-  DEVICE_CODENAME : "clover"
+  DEVICE_NAME: "google_pixel_3a"
+  DEVICE_CODENAME: "bonito"
 
-  CUSTOM_CMDS : "CLANG_TRIPLE=aarch64-linux-gnu-"
-  EXTRA_CMDS : "LD=ld.lld LLVM=1 LLVM_IAS=1"
+  CUSTOM_CMDS: "CLANG_TRIPLE=aarch64-linux-gnu-"
+  EXTRA_CMDS: "LD_LIBRARY_PATH=$GITHUB_WORKSPACE/clang-custom/lib64"
 
-  KERNEL_SOURCE : "https://github.com/pix106/android_kernel_xiaomi_southwest-4.19.git"
-  KERNEL_BRANCH : "main"
+  KERNEL_SOURCE: "https://github.com/LineageOS/android_kernel_google_msm-4.9.git"
+  KERNEL_BRANCH: "lineage-22.2"
 
-  CLANG_SOURCE : "https://github.com/llvm/llvm-project/releases/download/llvmorg-19.1.7/LLVM-19.1.7-Linux-X64.tar.xz"
-  CLANG_BRANCH : ""
+  CLANG_SOURCE: "https://github.com/LineageOS/android_prebuilts_clang_kernel_linux-x86_clang-r416183b.git"
+  CLANG_BRANCH: "lineage-20.0"
 
   GCC_GNU : false
-  GCC_64_SOURCE : "https://android.googlesource.com/platform/prebuilts/gcc/linux-x86/aarch64/aarch64-linux-android-4.9.git"
-  GCC_64_BRANCH : "android12L-release"
-  GCC_32_SOURCE : "https://android.googlesource.com/platform/prebuilts/gcc/linux-x86/arm/arm-linux-androideabi-4.9.git"
-  GCC_32_BRANCH : "android12L-release"
+  GCC_64_SOURCE: "https://github.com/LineageOS/android_prebuilts_gcc_linux-x86_aarch64_aarch64-linux-android-4.9.git"
+  GCC_64_BRANCH: "lineage-19.1"
+  GCC_32_SOURCE: "https://github.com/LineageOS/android_prebuilts_gcc_linux-x86_arm_arm-linux-androideabi-4.9.git"
+  GCC_32_BRANCH: "lineage-19.1"
 
   DEFCONFIG_SOURCE: ""
-  DEFCONFIG_NAME : "clover_defconfig"
+  DEFCONFIG_NAME: "bonito_defconfig"
   DEFCONFIG_ORIGIN_IMAGE: ""
   DEFCONFIG_FROM_BOOT: false
 
@@ -33,10 +33,10 @@ env:
   KERNELSU_BRANCH : ""
 
   KERNELSU_AUTO_GET : "true" # if u want easy setting kernelsu, u can true.
-  KERNELSU_AUTO_FORK : "bakasu" # magic, rsuntk, next, bakasu and sukisu
+  KERNELSU_AUTO_FORK : "bakasu" # xxksu, rsuntk, next, bakasu and sukisu
 
   SUSFS_ENABLE : true
-  SUSFS_FIXED : false
+  SUSFS_FIXED : true
 
   AK3_SOURCE : "https://github.com/osm0sis/AnyKernel3.git"
   AK3_BRANCH : "master"
@@ -46,25 +46,25 @@ env:
   NEED_DTBO : false
   NEED_SAFE_DTBO : false
 
-  ROM_TEXT : "lineageos22_a15"
+  ROM_TEXT: "lineageos22_2_a15"
 
   # Other env
   PYTHON_VERSION: "3" # Only 2(Ubuntu 22.04 and Ubuntu 20.04) or 3(Any OS Versions).
 
-  PACK_METHOD: "AnyKernel3" # AnyKernel3 need SOURCE and BRANCH, MKBOOTIMG needn't it.
-  PACK_KMODULES: "false" # if u want pack kernel modules (.ko) into AnyKernel3.
+  PACK_METHOD: "AnyKernel3" # Anykernel3 need SOURCE and BRANCH, MKBOOTIMG needn't it.
+  PACK_KMODULES: "false" # if u want pack kernel modules (.ko) into Anykernel3.
 
   KERNELSU_METHOD: "shell" # shell, manual and only.
 
-  PATCHES_SOURCE: "author/source" # [your_name]/[your_patch] -> gooder123/NonGKI_Patcher
-  PATCHES_BRANCH: "branch" # [your_branch] -> main
+  PATCHES_SOURCE: "JackA1ltman/NonGKI_Kernel_Patches" # [your_name]/[your_patch] -> gooder123/NonGKI_Patcher
+  PATCHES_BRANCH: "pixel_kernel" # [your_branch] -> main
 
-  SUSFS_FOLDER_FIXED: "" # Fill in your patch prefix directory here. Leave it blank if there isn't one. -> your_folder
-  SUSFS_PATCH_FIXED: "" # Fill in your patches here. If there are multiple patches, please separate them with a comma. Leave it blank if there isn't one. -> patch1,patch2
+  SUSFS_FOLDER_FIXED: "pixel_3_series_aosp" # Fill in your patch prefix directory here. Leave it blank if there isn't one. -> your_folder
+  SUSFS_PATCH_FIXED: "susfs_fixed" # Fill in your patches here. If there are multiple patches, please separate them with a comma. Leave it blank if there isn't one. -> patch1,patch2
 
   REKERNEL_ENABLE: "false" # if u need Re:Kernel.
   DROIDSPACES_ENABLE: "false" # if u need Droidspaces or LXC/Docker.
-  NOMOUNT_ENABLE: "false" # if u need NoMount.
+  NOMOUNT_ENABLE: "true" # if u need NoMount.
 
   HOOK_METHOD: "syscall" # Manual hook method -> syscall.
 
@@ -76,7 +76,7 @@ env:
   BASEBAND_GUARD_ENABLE: "false" #if u want prevent unauthorized writes to critical partitions/device nodes.
   BASEBAND_GUARD_BOOT: "false" #if u want to protect boot partition.
 
-  GENERATE_DTB: "false" # if u kernel need DTB , but cannot auto generate it. (Only AnyKernel3).
+  GENERATE_DTB: "false" # if u kernel need DTB , but cannot auto generate it. (Only Anykernel3).
   GENERATE_CHIP: "qcom" # only supported for qcom and mediatek.
 
   BUILD_DEBUGGER: "false" # Output build errors.
@@ -89,8 +89,8 @@ env:
 
 jobs:
   build-kernel:
-    name: Xiaomi Mi Pad 4 (LineageOS 22 A15)
-    runs-on: ubuntu-24.04 # u can changed to ubuntu 22.04, and need container set ubuntu-24.04
+    name: Google Pixel 3a (LineageOS 22.2 A15)
+    runs-on: ubuntu-22.04 # u can changed to ubuntu 22.04, and need container set ubuntu-24.04
     # container: archlinux/archlinux:latest # if u need use arch linux -> archlinux/archlinux:latest or ubuntu 20.04 -> ubuntu:focal
     env:
       CCACHE_COMPILERCHECK: "%compiler% -dumpmachine; %compiler% -dumpversion"
@@ -104,7 +104,7 @@ jobs:
       - name: ⌛️ Compilation environment preparation
         uses: ./.github/workflows/build-env
 
-      - name: ⚙️ Get necessary tools
+      - name: ⚙️ Get neccssary tools
         uses: ./.github/workflows/build-ready
 
       - name: 🪝 Patch Kernel of SUSFS
@@ -117,7 +117,25 @@ jobs:
         run: |
           # Only ${{ env.DEVICE_NAME }} use it.
           cd $GITHUB_WORKSPACE/device_kernel
-          # Nothing
+
+          # Match build.config.bonito_no-cfi: disable Clang LTO and CFI.
+          # Also compile WLAN driver into kernel to avoid the need for a separate module.
+          ./scripts/config --file "arch/${KERNEL_ARCH}/configs/${DEFCONFIG_NAME}" \
+            -d LTO \
+            -d LTO_CLANG \
+            -d CFI \
+            -d CFI_PERMISSIVE \
+            -d CFI_CLANG \
+            -e CONFIG_QCA_CLD_WLAN
+
+          # Preserve the clean LineageOS release format (for example,
+          # 4.9.337-gb929452c5c49) using only the kernel checkout's commit.
+          # The .scmversion override prevents setlocalversion from appending
+          # nested-repository revisions or a -dirty suffix.
+          printf -- '-g%s' "$(git rev-parse --short=12 HEAD)" > .scmversion
+
+          sed -i 's/if (!dpath) {/if (IS_ERR(dpath)) {/' fs/notify/fdinfo.c
+          sed -i 's/if (!dpath) {/if (IS_ERR(dpath)) {/' fs/proc/fd.c
 
       - name: 🧰 Patch Kernel of Re:Kernel
         uses: ./.github/workflows/patch-rekernel

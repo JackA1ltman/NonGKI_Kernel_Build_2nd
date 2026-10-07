@@ -8,13 +8,13 @@ runs:
         run: |
           cd $GITHUB_WORKSPACE/device_kernel
 
-          # Detect SuSFS is used to enable the SuSFS inline hook
+          # Detect SUSFS is used to enable the SUSFS inline hook
           if [[ ${{ env.SUSFS_ENABLE }} == "true" ]]; then
             # Core
             cp /tmp/Patches/susfs_inline_hook_patches.sh ./
             bash susfs_inline_hook_patches.sh ./
 
-            echo "[+] executed SuSFS inline hook successfully."
+            echo "[+] executed SUSFS inline hook successfully."
 
           # Check syscall hook
           elif [[ ${{ env.HOOK_METHOD }} == "syscall" ]]; then

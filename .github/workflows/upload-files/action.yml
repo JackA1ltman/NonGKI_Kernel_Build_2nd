@@ -3,18 +3,18 @@ name: 'Upload files.'
 runs:
   using: 'composite'
   steps:
-      - name: Upload Build Artifacts For Anykernel3
-        if: env.PACK_METHOD == 'Anykernel3'
+      - name: Upload Build Artifacts For AnyKernel3
+        if: env.PACK_METHOD == 'AnyKernel3'
         uses: actions/upload-artifact@v7
         with:
-          name: Kernel-${{ env.PACK_NAME }}
           path: |
             device_kernel/${{ env.PACK_NAME }}
+          archive: false
 
       - name: Upload Build Artifacts For Boot Image
         if: env.PACK_METHOD == 'MKBOOTIMG'
         uses: actions/upload-artifact@v7
         with:
-          name: Kernel-${{ env.PACK_NAME }}
           path: |
             ${{ env.PACK_NAME }}
+          archive: false
