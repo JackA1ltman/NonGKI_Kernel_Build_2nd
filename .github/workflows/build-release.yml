@@ -113,7 +113,7 @@ jobs:
           KSU_SUKISU_ULTRA_VERSION=$(cd KernelSU-SukiSU-Ultra && expr $(/usr/bin/git rev-list --count HEAD) + 40000 - 2815)
           git clone -b legacy https://github.com/KernelSU-Next/KernelSU-Next.git KernelSU-Next
           KSU_NEXT_VERSION=$(cd KernelSU-Next && expr $(/usr/bin/git rev-list --count HEAD) + 30000)
-          git clone -b main https://github.com/BakaSU/BakaSU.git KernelSU-BakaSU
+          git clone -b main https://github.com/Baka-SU/BakaSU.git KernelSU-BakaSU
           KSU_RESUKISU_VERSION=$(cd KernelSU-BakaSU && expr $(/usr/bin/git rev-list --count HEAD) + 30000 + 700)
 
           # Input release note
@@ -123,7 +123,7 @@ jobs:
           echo "[KernelSU-rsuntk](https://github.com/rsuntk/KernelSU) Version: $KSU_RSUNTK_VERSION  " >> $GITHUB_ENV
           echo "[KernelSU-SukiSU-Ultra](https://github.com/ShirkNeko/SukiSU-Ultra) Version: $KSU_SUKISU_ULTRA_VERSION  " >> $GITHUB_ENV
           echo "[KernelSU-Next](https://github.com/KernelSU-Next/KernelSU-Next) Version: $KSU_NEXT_VERSION  " >> $GITHUB_ENV
-          echo "[KernelSU-BakaSU](https://github.com/BakaSU/BakaSU) Version: $KSU_RESUKISU_VERSION  " >> $GITHUB_ENV
+          echo "[KernelSU-BakaSU](https://github.com/Baka-SU/BakaSU) Version: $KSU_RESUKISU_VERSION  " >> $GITHUB_ENV
           echo "[KernelSU-BakaSU-CI](https://github.com/cctv18/BakaSU_CI) Version: $KSU_RESUKISU_VERSION  " >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
 
