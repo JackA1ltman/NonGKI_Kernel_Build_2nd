@@ -54,7 +54,11 @@ runs:
             fi
             sed -i 's/^static const struct file_operations sel_handle_status_ops = {/const struct file_operations sel_handle_status_ops = {/' security/selinux/selinuxfs.c
 
-            echo "[+] Removed write_op and sel_handle_status_ops static state."
+            sed -i 's/static void security_dump_masked_av(struct policydb \*policydb,/void security_dump_masked_av(struct policydb *policydb,/' security/selinux/ss/services.c
+
+            sed -i 's/static void context_struct_compute_av(struct policydb \*policydb,/void context_struct_compute_av(struct policydb *policydb,/' security/selinux/ss/services.c
+
+            echo "[+] Removed write_op, sel_handle_status_ops, security_dump_masked_av and context_struct_compute_av static state."
 
             if [ "$FIRST_VERSION" -lt 5 ] && [ "$SECOND_VERSION" -lt 15 ]; then
                 if grep -q "sel_mutex" "security/selinux/selinuxfs.c" >/dev/null 2>&1; then
