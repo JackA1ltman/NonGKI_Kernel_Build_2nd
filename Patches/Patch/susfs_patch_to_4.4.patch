@@ -321,7 +321,7 @@ index 9ec0013..bd89b9b 100644
  	if (inode->i_op->put_link)
  		inode->i_op->put_link(inode, cookie);
 diff --git a/fs/namespace.c b/fs/namespace.c
-index 6f9a6be..2db9710 100644
+index 6f9a6be..65a54d5 100644
 --- a/fs/namespace.c
 +++ b/fs/namespace.c
 @@ -24,9 +24,20 @@
@@ -600,23 +600,21 @@ index 6f9a6be..2db9710 100644
  	if (!mnt)
  		return ERR_PTR(-ENOMEM);
  
-@@ -1062,6 +1271,15 @@ static struct mount *clone_mnt(struct mount *old, struct dentry *root,
+@@ -1062,6 +1271,13 @@ static struct mount *clone_mnt(struct mount *old, struct dentry *root,
  
  	mnt->mnt.mnt_flags = old->mnt.mnt_flags;
  	mnt->mnt.mnt_flags &= ~(MNT_WRITE_HOLD|MNT_MARKED|MNT_INTERNAL);
 +
 +
 +#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
-+	if (static_branch_unlikely(&susfs_is_sdcard_android_data_not_decrypted)) {
-+		if (susfs_is_current_ksu_domain() && (flag & CL_COPY_MNT_NS))
++	if (unlikely(is_mnt_ksu_unshared))
 +		mnt->mnt.mnt_flags |= VFSMOUNT_MNT_FLAGS_KSU_UNSHARED_MNT;
-+	}
 +#endif // #ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
 +
  	/* Don't allow unprivileged users to change mount flags */
  	if (flag & CL_UNPRIVILEGED) {
  		mnt->mnt.mnt_flags |= MNT_LOCK_ATIME;
-@@ -1089,6 +1307,7 @@ static struct mount *clone_mnt(struct mount *old, struct dentry *root,
+@@ -1089,6 +1305,7 @@ static struct mount *clone_mnt(struct mount *old, struct dentry *root,
  	mnt->mnt.mnt_root = dget(root);
  	mnt->mnt_mountpoint = mnt->mnt.mnt_root;
  	mnt->mnt_parent = mnt;
@@ -624,7 +622,7 @@ index 6f9a6be..2db9710 100644
  	lock_mount_hash();
  	list_add_tail(&mnt->mnt_instance, &sb->s_mounts);
  	unlock_mount_hash();
-@@ -1681,7 +1900,7 @@ out_unlock:
+@@ -1681,7 +1898,7 @@ out_unlock:
  	namespace_unlock();
  }
  
@@ -633,7 +631,7 @@ index 6f9a6be..2db9710 100644
   * Is the caller allowed to modify his namespace?
   */
  static inline bool may_mount(void)
-@@ -1823,6 +2042,7 @@ struct mount *copy_tree(struct mount *mnt, struct dentry *dentry,
+@@ -1823,6 +2040,7 @@ struct mount *copy_tree(struct mount *mnt, struct dentry *dentry,
  			q = clone_mnt(p, p->mnt.mnt_root, flag);
  			if (IS_ERR(q))
  				goto out;
@@ -641,7 +639,7 @@ index 6f9a6be..2db9710 100644
  			lock_mount_hash();
  			list_add_tail(&q->mnt_list, &res->mnt_list);
  			attach_mnt(q, parent, p->mnt_mp);
-@@ -2247,7 +2467,7 @@ static int do_loopback(struct path *path, const char *old_name,
+@@ -2247,7 +2465,7 @@ static int do_loopback(struct path *path, const char *old_name,
  
  	err = -EINVAL;
  	if (mnt_ns_loop(old_path.dentry))
@@ -650,7 +648,7 @@ index 6f9a6be..2db9710 100644
  
  	mp = lock_mount(path);
  	err = PTR_ERR(mp);
-@@ -2968,6 +3188,9 @@ struct mnt_namespace *copy_mnt_ns(unsigned long flags, struct mnt_namespace *ns,
+@@ -2968,6 +3186,9 @@ struct mnt_namespace *copy_mnt_ns(unsigned long flags, struct mnt_namespace *ns,
  	copy_flags = CL_COPY_UNBINDABLE | CL_EXPIRE;
  	if (user_ns != ns->user_ns)
  		copy_flags |= CL_SHARED_TO_SLAVE | CL_UNPRIVILEGED;
@@ -660,7 +658,7 @@ index 6f9a6be..2db9710 100644
  	new = copy_tree(old, old->mnt.mnt_root, copy_flags);
  	if (IS_ERR(new)) {
  		namespace_unlock();
-@@ -3527,3 +3750,44 @@ const struct proc_ns_operations mntns_operations = {
+@@ -3527,3 +3748,44 @@ const struct proc_ns_operations mntns_operations = {
  	.install	= mntns_install,
  	.owner		= mntns_owner,
  };
@@ -3363,7 +3361,7 @@ index 0000000..7dca01d
 +
 diff --git a/include/linux/susfs.h b/include/linux/susfs.h
 new file mode 100644
-index 0000000..4b9d7cc
+index 0000000..1e0ae04
 --- /dev/null
 +++ b/include/linux/susfs.h
 @@ -0,0 +1,243 @@
