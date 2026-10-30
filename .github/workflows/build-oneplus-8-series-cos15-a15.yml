@@ -117,7 +117,27 @@ jobs:
         run: |
           # Only ${{ env.DEVICE_NAME }} use it.
           cd $GITHUB_WORKSPACE/device_kernel
-          # Nothing
+
+          # Install Some packages
+          sudo sed -i 's/^Types: deb$/Types: deb deb-src/' /etc/apt/sources.list.d/ubuntu.sources
+          sudo apt install libbpf-dev -y
+
+          # Install Pahole
+          sudo apt build-dep pahole
+          sudo apt install cmake libbpf-dev libdw-dev
+
+          git clone https://github.com/acmel/dwarves.git  --depth 1
+          cd dwarves
+          mkdir build && cd build
+
+          cmake -DCMAKE_BUILD_TYPE=Release ..
+          make -j$(nproc)
+          sudo make install
+          sudo ldconfig
+
+          pahole --version
+
+          cd ../../
 
       - name: 🧰 Patch Kernel of Re:Kernel
         uses: ./.github/workflows/patch-rekernel
