@@ -13,7 +13,7 @@ env:
   EXTRA_CMDS : "BRAND_SHOW_FLAG=oneplus LD=ld.lld LLVM=1 LLVM_IAS=1"
 
   KERNEL_SOURCE : "https://github.com/JackA1ltman/android_kernel_oneplus_sm8250_los_noksu.git"
-  KERNEL_BRANCH : "upstream-latest"
+  KERNEL_BRANCH : "stable/android17"
 
   CLANG_SOURCE : "https://github.com/llvm/llvm-project/releases/download/llvmorg-20.1.0/LLVM-20.1.0-Linux-X64.tar.xz"
   CLANG_BRANCH : ""
