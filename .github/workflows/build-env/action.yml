@@ -48,6 +48,8 @@ runs:
                   echo "SYSTEM_VERSION=older" >> $GITHUB_ENV
               elif [ "$VERSION_ID" = "24.04" ]; then
                   echo "SYSTEM_VERSION=newer" >> $GITHUB_ENV
+              elif [ "$VERSION_ID" = "26.04" ]; then
+                  echo "SYSTEM_VERSION=newer" >> $GITHUB_ENV
               else
                   echo "[-] Not supported ubuntu version: $VERSION_ID."
                   false
