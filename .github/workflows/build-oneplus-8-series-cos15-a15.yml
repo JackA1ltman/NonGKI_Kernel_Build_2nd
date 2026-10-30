@@ -120,6 +120,7 @@ jobs:
 
           # Install Some packages
           sudo sed -i 's/^Types: deb$/Types: deb deb-src/' /etc/apt/sources.list.d/ubuntu.sources
+          sudo apt update
           sudo apt install libbpf-dev -y
 
           # Install Pahole
