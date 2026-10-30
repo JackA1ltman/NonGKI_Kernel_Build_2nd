@@ -5,7 +5,6 @@
 | Nothing Phone (1) | All | spacewar | [5.4/cyberc3dr/sm7325](https://github.com/cyberc3dr/android_kernel_nothing_sm7325) | LineageOS 23.2 | 16 | AnyKernel3 | BakaSU | ✅ | Inline | ❌ | ❌ | ❌ | ❌ | Stable |  
 | OnePlus 8 | All | instantnoodle | [4.19/ppajda/XTD](https://github.com/ppajda/android_kernel_oneplus_sm8250) | OxygenOS 13.1 | 13 | AnyKernel3 | BakaSU | ✅ | Inline | ❌ | ❌ | ✅ | ❌ | Stable |  
 | OnePlus 8 | All | instantnoodle | [4.19/toraidl/sm8250](https://github.com/toraidl/android_kernel_oneplus_sm8250) | ColorOS 15 | 15 | AnyKernel3 | BakaSU | ✅ | Inline | ❌ | ❌ | ✅ | ❌ | Stable |  
-| Samsung Galaxy A71 | All | a71 | [4.14/nduykha/kernel_samsung_sm7150](https://github.com/nduykha/kernel_samsung_sm7150) | AOSP Based & OneUI | 16 | AnyKernel3 | BakaSU | ✅ | Inline | ❌ | ✅ | ✅ | ❌ | Stable |   
 | Samsung Galaxy Note10 | EU | d1 | [4.14/Ocin4ever/ExtremeKernel](https://github.com/Ocin4ever/ExtremeKernel) | OneUI 7 | 15 | AnyKernel3 | BakaSU | ✅ | Inline | ❌ | ❌ | ❌ | ❌ | Stable |  
 | Samsung Galaxy Note10+ | EU | d2s | [4.14/Ocin4ever/ExtremeKernel](https://github.com/Ocin4ever/ExtremeKernel) | OneUI 7 | 15 | AnyKernel3 | BakaSU | ✅ | Inline | ❌ | ❌ | ❌ | ❌ | Stable |  
 | Smartisan R1 | All | trident | [4.9/Ephemera42/SmartisanOS](https://github.com/Ephemera42/android_kernel_smartisan_sdm845) | Smartisan OS | 8.1 | AnyKernel3 | xxKSU | ❌ | Syscall | ❌ | ❌ | ❌ | ❌ | Stable |  

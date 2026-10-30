@@ -47,13 +47,6 @@ jobs:
     secrets: inherit
 
   # Samsung
-  build-samsung-a71-aosp-oneui-a16:
-    name: "Samsung Galaxy A71 (AOSP Based & OneUI A16)"
-    strategy:
-      fail-fast: true
-    uses: ./.github/workflows/build-samsung-a71-aosp-oneui-a16.yml
-    secrets: inherit
-
   build-samsung-note10-oneui-a15:
     name: "Samsung Galaxy Note10 (OneUI A15)"
     strategy:
