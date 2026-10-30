@@ -9,7 +9,7 @@ env:
   DEVICE_NAME: "google_pixel_3a"
   DEVICE_CODENAME: "bonito"
 
-  CUSTOM_CMDS: "CLANG_TRIPLE=aarch64-linux-gnu-"
+  CUSTOM_CMDS: "CLANG_TRIPLE=aarch64-linux-gnu- --eval='export CLANG_FLAGS"
   EXTRA_CMDS: "LD_LIBRARY_PATH=$GITHUB_WORKSPACE/clang-custom/lib64"
 
   KERNEL_SOURCE: "https://github.com/LineageOS/android_kernel_google_msm-4.9.git"
