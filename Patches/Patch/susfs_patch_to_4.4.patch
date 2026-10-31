@@ -1844,10 +1844,10 @@ index 55cd884..c273ba6 100644
  		return -ENOMEM;
 diff --git a/fs/susfs.c b/fs/susfs.c
 new file mode 100644
-index 0000000..6eb8d4f
+index 0000000..cad51a2
 --- /dev/null
 +++ b/fs/susfs.c
-@@ -0,0 +1,2007 @@
+@@ -0,0 +1,2009 @@
 +#include <linux/version.h>
 +#include <linux/cred.h>
 +#include <linux/fs.h>
@@ -3352,7 +3352,8 @@ index 0000000..6eb8d4f
 +		is_uid_filter_set_before = true;
 +	mutex_unlock(&susfs_mutex_lock_priority_uid_filter);
 +	synchronize_rcu();
-+	kfree_rcu(old_bitmap, rcu);
++	if (old_bitmap)
++		kfree_rcu(old_bitmap, rcu);
 +
 +	SUSFS_LOGI("the priority uid filter is set\n");
 +	err = 0;
@@ -3430,7 +3431,8 @@ index 0000000..6eb8d4f
 +	new_bitmap = NULL;
 +	mutex_unlock(&susfs_mutex_lock_priority_uid_filter);
 +	synchronize_rcu();
-+	kfree_rcu(old_bitmap, rcu);
++	if (old_bitmap)
++		kfree_rcu(old_bitmap, rcu);
 +
 +	SUSFS_LOGI("the uids of the priority uid filter are resolved again\n");
 +
