@@ -2172,10 +2172,10 @@ index e6019ed..f298278 100644
  		return -ENOMEM;
 diff --git a/fs/susfs.c b/fs/susfs.c
 new file mode 100644
-index 0000000..33a04ab
+index 0000000..6eb8d4f
 --- /dev/null
 +++ b/fs/susfs.c
-@@ -0,0 +1,1995 @@
+@@ -0,0 +1,2007 @@
 +#include <linux/version.h>
 +#include <linux/cred.h>
 +#include <linux/fs.h>
@@ -2220,7 +2220,7 @@ index 0000000..33a04ab
 + * have kvfree(), so only kvmalloc() needs a fallback here.
 + */
 +#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 12, 0)
-+static inline void *kvmalloc(size_t size, gfp_t flags)
++static inline void *susfs_kvmalloc(size_t size, gfp_t flags)
 +{
 +	void *p;
 +
@@ -3591,7 +3591,11 @@ index 0000000..33a04ab
 +	int err = 0;
 +	static bool is_uid_filter_set_before = false;
 +
++#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 12, 0)
++	info = susfs_kvmalloc(sizeof(*info), GFP_KERNEL | __GFP_ZERO);
++#else
 +	info = kvmalloc(sizeof(*info), GFP_KERNEL | __GFP_ZERO);
++#endif
 +	if (!info) {
 +		err = -ENOMEM;
 +		goto out_copy_to_user;
@@ -3621,7 +3625,11 @@ index 0000000..33a04ab
 +	 * The app names are stored as they are, so that the uids of the apps can
 +	 * be resolved again later on, when the apps are installed or uninstalled.
 +	 */
++#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 12, 0)
++	new_app_strings = susfs_kvmalloc(app_str_len + 1, GFP_KERNEL | __GFP_ZERO);
++#else
 +	new_app_strings = kvmalloc(app_str_len + 1, GFP_KERNEL | __GFP_ZERO);
++#endif
 +	if (!new_app_strings) {
 +		err = -ENOMEM;
 +		goto out_copy_to_user;
@@ -3718,7 +3726,11 @@ index 0000000..33a04ab
 +	mutex_lock(&susfs_mutex_lock_priority_uid_filter);
 +	if (susfs_priority_app_strings) {
 +		app_str_len = strlen(susfs_priority_app_strings);
++#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 12, 0)
++		app_strings = susfs_kvmalloc(app_str_len + 1, GFP_KERNEL | __GFP_ZERO);
++#else
 +		app_strings = kvmalloc(app_str_len + 1, GFP_KERNEL | __GFP_ZERO);
++#endif
 +		if (app_strings)
 +			memcpy(app_strings, susfs_priority_app_strings, app_str_len + 1);
 +	}
