@@ -248,22 +248,6 @@ runs:
           fi
           echo "KERNELSU_METHOD=${{ env.KERNELSU_METHOD }}" >> $GITHUB_ENV
 
-      - name: SukiSU-Ultra Fixed
-        shell: bash
-        run: |
-          cd $GITHUB_WORKSPACE/device_kernel/drivers/kernelsu
-
-          if [[ "${{ env.KERNELSU_SOURCE }}" == *SukiSU* ]] || [[ "${{ env.KERNELSU_AUTO_FORK }}" == "sukisu" ]]; then
-            cp /tmp/Patches/Patch/sukisu_ultra_fixed.patch ./
-            patch -p1 < sukisu_ultra_fixed.patch
-
-            echo "[+] SukiSU-Ultra mitigation measures implemented."
-
-          else
-            echo "[-] Your KernelSU Fork needn't it, Skipped."
-
-          fi
-
       - name: KPM Function Support
         if: env.KPM_ENABLE == 'true'
         shell: bash
