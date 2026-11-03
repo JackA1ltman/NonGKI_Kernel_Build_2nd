@@ -1,14 +1,14 @@
 diff --git a/block/ioprio.c b/block/ioprio.c
-index 35bbbca..4ac4720 100644
+index 35bbbca..c10bd07 100644
 --- a/block/ioprio.c
 +++ b/block/ioprio.c
 @@ -61,6 +61,10 @@ int set_task_ioprio(struct task_struct *task, int ioprio)
  }
  EXPORT_SYMBOL_GPL(set_task_ioprio);
  
-+#ifdef CONFIG_KSU_SUSFS
++#ifdef CONFIG_KSU_SUSFS_PRIORITY_UID_FILTER
 +extern bool susfs_is_priority_uid_filtered(uid_t uid);
-+#endif // #ifdef CONFIG_KSU_SUSFS
++#endif // #ifdef CONFIG_KSU_SUSFS_PRIORITY_UID_FILTER
 +
  SYSCALL_DEFINE3(ioprio_set, int, which, int, who, int, ioprio)
  {
@@ -17,7 +17,7 @@ index 35bbbca..4ac4720 100644
  			if (!who)
  				user = current_user();
  			else
-+#ifdef CONFIG_KSU_SUSFS
++#ifdef CONFIG_KSU_SUSFS_PRIORITY_UID_FILTER
 +			{
 +				if (current_uid().val >= 10000 && susfs_is_priority_uid_filtered(uid.val))
 +					break;
@@ -25,7 +25,7 @@ index 35bbbca..4ac4720 100644
 +			}
 +#else
  				user = find_user(uid);
-+#endif // #ifdef CONFIG_KSU_SUSFS
++#endif // #ifdef CONFIG_KSU_SUSFS_PRIORITY_UID_FILTER
  
  			if (!user)
  				break;
@@ -33,7 +33,7 @@ index 35bbbca..4ac4720 100644
  			if (!who)
  				user = current_user();
  			else
-+#ifdef CONFIG_KSU_SUSFS
++#ifdef CONFIG_KSU_SUSFS_PRIORITY_UID_FILTER
 +			{
 +				if (current_uid().val >= 10000 && susfs_is_priority_uid_filtered(uid.val))
 +					break;
@@ -41,7 +41,7 @@ index 35bbbca..4ac4720 100644
 +			}
 +#else
  				user = find_user(uid);
-+#endif // #ifdef CONFIG_KSU_SUSFS
++#endif // #ifdef CONFIG_KSU_SUSFS_PRIORITY_UID_FILTER
  
  			if (!user)
  				break;
@@ -2172,10 +2172,10 @@ index e6019ed..f298278 100644
  		return -ENOMEM;
 diff --git a/fs/susfs.c b/fs/susfs.c
 new file mode 100644
-index 0000000..6ca9d0b
+index 0000000..668e850
 --- /dev/null
 +++ b/fs/susfs.c
-@@ -0,0 +1,2174 @@
+@@ -0,0 +1,2206 @@
 +#include <linux/version.h>
 +#include <linux/cred.h>
 +#include <linux/fs.h>
@@ -2204,6 +2204,7 @@ index 0000000..6ca9d0b
 +#include <linux/limits.h>
 +#include <linux/rcupdate.h>
 +#include <linux/string.h>
++#include <linux/vmalloc.h>
 +#include <linux/hash.h>
 +#include <linux/susfs.h>
 +#include "fuse/fuse_i.h"
@@ -2214,6 +2215,24 @@ index 0000000..6ca9d0b
 +extern struct cred *ksu_cred;
 +extern int susfs_get_non_sus_mnt_id_from_mnt(struct mount *orig_mnt);
 +extern struct vfsmount *susfs_get_non_sus_vfsmnt_from_vfsmnt(struct vfsmount *vfsmnt);
++
++/*
++ * kvmalloc() was introduced in v4.12. 4.4 / 4.9 do not have it, but they do
++ * have kvfree(), so only kvmalloc() needs a fallback here.
++ */
++#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 12, 0)
++static inline void *susfs_kvmalloc(size_t size, gfp_t flags)
++{
++	void *p;
++
++	p = kmalloc(size, flags);
++	if (!p)
++		p = vmalloc(size);
++	if (p && (flags & __GFP_ZERO))
++		memset(p, 0, size);
++	return p;
++}
++#endif
 +
 +#ifdef CONFIG_KSU_SUSFS_ENABLE_LOG
 +DEFINE_STATIC_KEY_TRUE(susfs_is_log_enabled);
@@ -3552,6 +3571,19 @@ index 0000000..6ca9d0b
 +#endif // #ifdef CONFIG_KSU_SUSFS_SUS_MAP
 +
 +/* priority uid filter */
++#ifdef CONFIG_KSU_SUSFS_PRIORITY_UID_FILTER
++/*****************************************/
++/* getpriority uid filter (bitmap)       */
++/*****************************************/
++/* The uids that are hidden from the apps that abuse the getpriority syscall
++ * to find out the existing uids. Only the uids within the app uid range
++ * (10000 - 19999) are supported.
++ */
++#define SUSFS_PRIORITY_UID_FILTER_MIN_UID 10000
++#define SUSFS_PRIORITY_UID_FILTER_MAX_UID 19999
++#define SUSFS_PRIORITY_UID_FILTER_UID_NUM (SUSFS_PRIORITY_UID_FILTER_MAX_UID - SUSFS_PRIORITY_UID_FILTER_MIN_UID + 1)
++#define SUSFS_PRIORITY_UID_FILTER_BITMAP_LEN BITS_TO_LONGS(SUSFS_PRIORITY_UID_FILTER_UID_NUM)
++
 +struct susfs_priority_uid_filter_bitmap {
 +	struct rcu_head			rcu;
 +	unsigned long			bits[SUSFS_PRIORITY_UID_FILTER_BITMAP_LEN];
@@ -3615,7 +3647,7 @@ index 0000000..6ca9d0b
 +	if (!susfs_is_valid_app_name(app_name))
 +		return -EINVAL;
 +
-+	fp = filp_open("/data/system/packages.list", O_RDONLY, 0);
++	fp = filp_open("/data/system/packages.list", O_RDONLY | O_NOATIME, 0);
 +	if (IS_ERR(fp)) {
 +		ret = PTR_ERR(fp);
 +		SUSFS_LOGE("failed to open /data/system/packages.list: %d\n", ret);
@@ -4352,10 +4384,10 @@ index 0000000..6ca9d0b
 +
 diff --git a/include/linux/susfs.h b/include/linux/susfs.h
 new file mode 100644
-index 0000000..58128c7
+index 0000000..02038d5
 --- /dev/null
 +++ b/include/linux/susfs.h
-@@ -0,0 +1,253 @@
+@@ -0,0 +1,260 @@
 +#ifndef KSU_SUSFS_H
 +#define KSU_SUSFS_H
 +
@@ -4383,6 +4415,7 @@ index 0000000..58128c7
 +/********/
 +/* ENUM */
 +/********/
++#ifdef CONFIG_KSU_SUSFS_OPEN_REDIRECT
 +enum UID_SCHEME {
 +	UID_NON_APP_PROC = 0,
 +	UID_ROOT_PROC_EXCEPT_SU_PROC,
@@ -4390,6 +4423,7 @@ index 0000000..58128c7
 +	UID_UMOUNTED_APP_PROC,
 +	UID_UMOUNTED_PROC,
 +};
++#endif // #ifdef CONFIG_KSU_SUSFS_OPEN_REDIRECT
 +
 +/**********/
 +/* STRUCT */
@@ -4406,7 +4440,7 @@ index 0000000..58128c7
 +	struct st_susfs_sus_path                info;
 +	char                                    target_pathname[SUSFS_MAX_LEN_PATHNAME];
 +};
-+#endif
++#endif // #ifdef CONFIG_KSU_SUSFS_SUS_PATH
 +
 +/* sus_mount */
 +#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
@@ -4460,7 +4494,7 @@ index 0000000..58128c7
 +	bool                                    is_fuse;
 +	struct st_susfs_sus_kstat               info;
 +};
-+#endif
++#endif // #ifdef CONFIG_KSU_SUSFS_SUS_KSTAT
 +
 +/* spoof_uname */
 +#ifdef CONFIG_KSU_SUSFS_SPOOF_UNAME
@@ -4469,7 +4503,7 @@ index 0000000..58128c7
 +	char                                    version[__NEW_UTS_LEN+1];
 +	int                                     err;
 +};
-+#endif
++#endif // #ifdef CONFIG_KSU_SUSFS_SPOOF_UNAME
 +
 +/* enable_log */
 +#ifdef CONFIG_KSU_SUSFS_ENABLE_LOG
@@ -4477,7 +4511,7 @@ index 0000000..58128c7
 +	bool                                    enabled;
 +	int                                     err;
 +};
-+#endif
++#endif // #ifdef CONFIG_KSU_SUSFS_ENABLE_LOG
 +
 +/* spoof_cmdline_or_bootconfig */
 +#ifdef CONFIG_KSU_SUSFS_SPOOF_CMDLINE_OR_BOOTCONFIG
@@ -4485,7 +4519,7 @@ index 0000000..58128c7
 +	char                                    fake_cmdline_or_bootconfig[SUSFS_FAKE_CMDLINE_OR_BOOTCONFIG_SIZE];
 +	int                                     err;
 +};
-+#endif
++#endif // #ifdef CONFIG_KSU_SUSFS_SPOOF_CMDLINE_OR_BOOTCONFIG
 +
 +/* open_redirect */
 +#ifdef CONFIG_KSU_SUSFS_OPEN_REDIRECT
@@ -4507,7 +4541,7 @@ index 0000000..58128c7
 +	struct st_susfs_open_redirect           info;
 +	bool                                    reversed_lookup_only;
 +};
-+#endif
++#endif // #ifdef CONFIG_KSU_SUSFS_OPEN_REDIRECT
 +
 +/* sus_map */
 +#ifdef CONFIG_KSU_SUSFS_SUS_MAP
@@ -4515,13 +4549,16 @@ index 0000000..58128c7
 +	char                                    target_pathname[SUSFS_MAX_LEN_PATHNAME];
 +	int                                     err;
 +};
-+#endif
++#endif // #ifdef CONFIG_KSU_SUSFS_SUS_MAP
 +
 +/* getpriority uid filter */
++#ifdef CONFIG_KSU_SUSFS_PRIORITY_UID_FILTER
++#define SUSFS_APP_STR_BUF_SIZE 65535
 +struct st_susfs_priority_uid_filter {
 +	char                                    app_strings[SUSFS_APP_STR_BUF_SIZE];
 +	int                                     err;
 +};
++#endif // #ifdef CONFIG_KSU_SUSFS_PRIORITY_UID_FILTER
 +
 +/* avc log spoofing */
 +struct st_susfs_avc_log_spoofing {
@@ -4554,7 +4591,7 @@ index 0000000..58128c7
 +#ifdef CONFIG_KSU_SUSFS_SUS_PATH
 +void susfs_add_sus_path(void __user **user_info);
 +void susfs_add_sus_path_loop(void __user **user_info);
-+#endif
++#endif // #ifdef CONFIG_KSU_SUSFS_SUS_PATH
 +
 +/* sus_mount */
 +#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
@@ -4565,37 +4602,39 @@ index 0000000..58128c7
 +#ifdef CONFIG_KSU_SUSFS_SUS_KSTAT
 +void susfs_add_sus_kstat(void __user **user_info);
 +void susfs_update_sus_kstat(void __user **user_info);
-+#endif
++#endif // #ifdef CONFIG_KSU_SUSFS_SUS_KSTAT
 +
 +/* spoof_uname */
 +#ifdef CONFIG_KSU_SUSFS_SPOOF_UNAME
 +void susfs_set_uname(void __user **user_info);
 +void susfs_spoof_uname(struct new_utsname* tmp);
-+#endif
++#endif // #ifdef CONFIG_KSU_SUSFS_SPOOF_UNAME
 +
 +/* enable_log */
 +#ifdef CONFIG_KSU_SUSFS_ENABLE_LOG
 +void susfs_enable_log(void __user **user_info);
-+#endif
++#endif // #ifdef CONFIG_KSU_SUSFS_ENABLE_LOG
 +
 +/* spoof_cmdline_or_bootconfig */
 +#ifdef CONFIG_KSU_SUSFS_SPOOF_CMDLINE_OR_BOOTCONFIG
 +void susfs_set_cmdline_or_bootconfig(void __user **user_info);
-+#endif
++#endif // #ifdef CONFIG_KSU_SUSFS_SPOOF_CMDLINE_OR_BOOTCONFIG
 +
 +/* open_redirect */
 +#ifdef CONFIG_KSU_SUSFS_OPEN_REDIRECT
 +void susfs_add_open_redirect(void __user **user_info);
-+#endif
++#endif // #ifdef CONFIG_KSU_SUSFS_OPEN_REDIRECT
 +
 +/* sus_map */
 +#ifdef CONFIG_KSU_SUSFS_SUS_MAP
 +void susfs_add_sus_map(void __user **user_info);
-+#endif
++#endif // #ifdef CONFIG_KSU_SUSFS_SUS_MAP
 +
 +/* getpriority uid filter */
++#ifdef CONFIG_KSU_SUSFS_PRIORITY_UID_FILTER
 +void susfs_set_priority_uid_filter(void __user **user_info);
 +void susfs_parse_priority_app_strings(void);
++#endif // #ifdef CONFIG_KSU_SUSFS_PRIORITY_UID_FILTER
 +
 +void susfs_set_avc_log_spoofing(void __user **user_info);
 +
@@ -4902,16 +4941,16 @@ index b5bfcdc..8af2521 100644
  }
  
 diff --git a/kernel/sys.c b/kernel/sys.c
-index 30801ea..2079eef 100644
+index 30801ea..bcdacbe 100644
 --- a/kernel/sys.c
 +++ b/kernel/sys.c
 @@ -190,6 +190,10 @@ out:
  	return error;
  }
  
-+#ifdef CONFIG_KSU_SUSFS
++#ifdef CONFIG_KSU_SUSFS_PRIORITY_UID_FILTER
 +extern bool susfs_is_priority_uid_filtered(uid_t uid);
-+#endif // #ifdef CONFIG_KSU_SUSFS
++#endif // #ifdef CONFIG_KSU_SUSFS_PRIORITY_UID_FILTER
 +
  SYSCALL_DEFINE3(setpriority, int, which, int, who, int, niceval)
  {
@@ -4920,10 +4959,10 @@ index 30801ea..2079eef 100644
  		if (!who)
  			uid = cred->uid;
  		else if (!uid_eq(uid, cred->uid)) {
-+#ifdef CONFIG_KSU_SUSFS
++#ifdef CONFIG_KSU_SUSFS_PRIORITY_UID_FILTER
 +			if (cred->uid.val >= 10000 && susfs_is_priority_uid_filtered(uid.val))
 +				goto out_unlock;
-+#endif // #ifdef CONFIG_KSU_SUSFS
++#endif // #ifdef CONFIG_KSU_SUSFS_PRIORITY_UID_FILTER
  			user = find_user(uid);
  			if (!user)
  				goto out_unlock;	/* No processes for this user */
@@ -4931,10 +4970,10 @@ index 30801ea..2079eef 100644
  		if (!who)
  			uid = cred->uid;
  		else if (!uid_eq(uid, cred->uid)) {
-+#ifdef CONFIG_KSU_SUSFS
++#ifdef CONFIG_KSU_SUSFS_PRIORITY_UID_FILTER
 +			if (cred->uid.val >= 10000 && susfs_is_priority_uid_filtered(uid.val))
 +				goto out_unlock;
-+#endif // #ifdef CONFIG_KSU_SUSFS
++#endif // #ifdef CONFIG_KSU_SUSFS_PRIORITY_UID_FILTER
  			user = find_user(uid);
  			if (!user)
  				goto out_unlock;	/* No processes for this user */
