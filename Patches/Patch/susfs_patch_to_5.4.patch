@@ -2124,10 +2124,10 @@ index 8edf44a..1f7cfe5 100644
  	 * Always return at least 1 from get_anon_bdev.
 diff --git a/fs/susfs.c b/fs/susfs.c
 new file mode 100644
-index 0000000..431503f
+index 0000000..f909148
 --- /dev/null
 +++ b/fs/susfs.c
-@@ -0,0 +1,2212 @@
+@@ -0,0 +1,2214 @@
 +#include <linux/version.h>
 +#include <linux/cred.h>
 +#include <linux/fs.h>
@@ -2330,6 +2330,7 @@ index 0000000..431503f
 + * susfs_restore_creds() afterwards.
 + * Returns the original credentials on success, NULL on failure.
 + */
++#ifdef CONFIG_KSU_SUSFS_PRIORITY_UID_FILTER
 +static struct cred *susfs_switch_to_ksu_domain(void) {
 +	struct cred *orig_cred = NULL;
 +	struct cred *cred = NULL;
@@ -2370,6 +2371,7 @@ index 0000000..431503f
 +
 +	commit_creds(orig_cred);
 +}
++#endif // #ifdef CONFIG_KSU_SUSFS_PRIORITY_UID_FILTER
 +
 +/* sus_path */
 +#ifdef CONFIG_KSU_SUSFS_SUS_PATH
