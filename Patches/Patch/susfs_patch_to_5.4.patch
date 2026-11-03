@@ -2127,7 +2127,7 @@ new file mode 100644
 index 0000000..668e850
 --- /dev/null
 +++ b/fs/susfs.c
-@@ -0,0 +1,2206 @@
+@@ -0,0 +1,2207 @@
 +#include <linux/version.h>
 +#include <linux/cred.h>
 +#include <linux/fs.h>
@@ -3966,6 +3966,7 @@ index 0000000..668e850
 +
 +	return false;
 +}
++#endif // #ifdef CONFIG_KSU_SUSFS_PRIORITY_UID_FILTER
 +
 +/* susfs avc log spoofing */
 +DEFINE_STATIC_KEY_FALSE(susfs_is_avc_log_spoofing_enabled);
