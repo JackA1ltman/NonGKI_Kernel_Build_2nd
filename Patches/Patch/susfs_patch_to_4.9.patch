@@ -2024,10 +2024,10 @@ index 206b576..f85c013 100644
  		return -ENOMEM;
 diff --git a/fs/susfs.c b/fs/susfs.c
 new file mode 100644
-index 0000000..668e850
+index 0000000..431503f
 --- /dev/null
 +++ b/fs/susfs.c
-@@ -0,0 +1,2206 @@
+@@ -0,0 +1,2212 @@
 +#include <linux/version.h>
 +#include <linux/cred.h>
 +#include <linux/fs.h>
@@ -3704,7 +3704,7 @@ index 0000000..668e850
 +
 +	if (is_uid_filter_set_before)
 +		SUSFS_LOGI("renewing the priority uid filter\n");
-+	err = susfs_parse_priority_app_names(info->app_strings, new_bitmap->bits, false);
++	err = susfs_parse_priority_app_names(info->app_strings, new_bitmap->bits, true);
 +
 +	susfs_restore_creds(orig_cred);
 +	orig_cred = NULL;
@@ -3866,6 +3866,7 @@ index 0000000..668e850
 +
 +	return false;
 +}
++#endif // #ifdef CONFIG_KSU_SUSFS_PRIORITY_UID_FILTER
 +
 +/* susfs avc log spoofing */
 +DEFINE_STATIC_KEY_FALSE(susfs_is_avc_log_spoofing_enabled);
@@ -3973,6 +3974,11 @@ index 0000000..668e850
 +	if (info->err) goto out_copy_to_user;
 +	buf_ptr = info->enabled_features + copied_size;
 +#endif
++#ifdef CONFIG_KSU_SUSFS_PRIORITY_UID_FILTER
++	info->err = copy_config_to_buf("CONFIG_KSU_SUSFS_PRIORITY_UID_FILTER\n", buf_ptr, &copied_size, SUSFS_ENABLED_FEATURES_SIZE);
++	if (info->err) goto out_copy_to_user;
++	buf_ptr = info->enabled_features + copied_size;
++#endif // #ifdef CONFIG_KSU_SUSFS_PRIORITY_UID_FILTER
 +
 +	info->err = 0;
 +out_copy_to_user:
