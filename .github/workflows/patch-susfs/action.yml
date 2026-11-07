@@ -78,7 +78,25 @@ runs:
           else
             cp /tmp/Patches/Patch/susfs_patch_to_${{ env.KERNEL_VERSION }}.patch ./
 
-            patch -p1 < susfs_patch_to_${{ env.KERNEL_VERSION }}.patch || true
+            if [[ "${{ env.SUSFS_FIX_MERGE }}" == "true" && "${{ env.SUSFS_FIXED }}" == "true" && -n "${{ env.SUSFS_PATCH_FIXED }}" ]]; then
+              FIX_ARGS=()
+              IFS=',' read -ra FIXED_LIST <<< "${{ env.SUSFS_PATCH_FIXED }}"
+              for FIX in "${FIXED_LIST[@]}"; do
+                FIX="$(echo "$FIX" | xargs)"
+                FIX_ARGS+=("NonGKI_Kernel_Patches/${{ env.SUSFS_FOLDER_FIXED }}/${FIX}.patch")
+              done
+
+              python3 /tmp/Bin/susfs_merge.py \
+                susfs_patch_to_${{ env.KERNEL_VERSION }}.patch \
+                susfs_patch_merged_${{ env.KERNEL_VERSION }}.patch \
+                "${FIX_ARGS[@]}"
+              echo "SUSFS_PATCH_MERGED=true" >> $GITHUB_ENV
+
+            else
+              [[ "${{ env.SUSFS_FIX_MERGE }}" == "true" ]] && echo "[-] SUSFS_FIX_MERGE needs SUSFS_FIXED and SUSFS_PATCH_FIXED, using the normal patch."
+              patch -p1 < susfs_patch_to_${{ env.KERNEL_VERSION }}.patch || true
+
+            fi
             echo "[+] SUSFS Patch completed."
 
           fi
@@ -116,7 +134,7 @@ runs:
           fi
 
       - name: SUSFS Patch Fixed
-        if: env.SUSFS_ENABLE == 'true' && env.SUSFS_SKIP != 'true'
+        if: env.SUSFS_ENABLE == 'true' && env.SUSFS_SKIP != 'true' && env.SUSFS_PATCH_MERGED != 'true'
         shell: bash
         run: |
           cd $GITHUB_WORKSPACE/device_kernel/
