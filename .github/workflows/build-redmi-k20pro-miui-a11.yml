@@ -83,6 +83,7 @@ env:
 
   BUILD_DEBUGGER: "false" # Output build errors.
   SKIP_PATCH: "false" # Ignore errors found in Patch Debugger.
+  SUSFS_FIX_MERGE: "false" # Enable if a hunk fails even though your fix patch has it, to merge the fix into the SUSFS patch.
 
   BUILD_OTHER_CONFIG: "false" # Merge config files.
   MERGE_CONFIG_FILES: "vendor/debugfs.config,vendor/lahaina_QGKI.config"
