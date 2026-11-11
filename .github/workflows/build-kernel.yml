@@ -32,11 +32,11 @@ jobs:
     secrets: inherit
 
   # OnePlus
-  build-oneplus-8-series-oos13-a13-xtd:
-    name: "OnePlus 8 Series (ColorOS 13 A13 XTD)"
+  build-oneplus-8-series-oos13-a13-tropsi-x:
+    name: "OnePlus 8 Series (OxygenOS 13 A13 Tropsi-X)"
     strategy:
       fail-fast: true
-    uses: ./.github/workflows/build-oneplus-8-series-oos13-a13-xtd.yml
+    uses: ./.github/workflows/build-oneplus-8-series-oos13-a13-tropsi-x.yml
     secrets: inherit
 
   build-oneplus-8-series-cos15-a15:
