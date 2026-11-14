@@ -38,6 +38,13 @@ on:
         default: 'false'
         type: choice
         options: ['true', 'false']
+  # 兜底触发器：GitHub 只允许在**默认分支**上手动 dispatch workflow。
+  # 这个仓库默认分支是 mainline，而 workflow 在 sample 上 —— 手动按钮不出现。
+  # 所以加一个 push 触发：改 trigger.txt 即开跑，不需要改默认分支、不需要 token。
+  push:
+    branches: [sample]
+    paths:
+      - 'trigger.txt'
 
 env:
   # ══════════════════ 设备 ══════════════════
@@ -147,7 +154,7 @@ jobs:
         shell: bash
         run: |
           set -e
-          PROFILE="${{ inputs.profile }}"
+          PROFILE="${{ inputs.profile || 'safe-defconfig' }}"
           echo "::group::[+] profile = $PROFILE"
           case "$PROFILE" in
             full)
@@ -177,7 +184,7 @@ jobs:
           cd "$GITHUB_WORKSPACE"
           DEF="$GITHUB_WORKSPACE/device_kernel/arch/arm64/configs/${{ env.DEFCONFIG_NAME }}"
           mkdir -p "$(dirname "$DEF")"
-          PROFILE="${{ inputs.profile }}"
+          PROFILE="${{ inputs.profile || 'safe-defconfig' }}"
 
           # 0) safe-defconfig 档：不依赖原厂 boot.img
           #    用途：在没有 stock_boot.img 时先把"编译链能不能过"验出来。
