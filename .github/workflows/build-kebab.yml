@@ -177,6 +177,24 @@ jobs:
           cd "$GITHUB_WORKSPACE"
           DEF="$GITHUB_WORKSPACE/device_kernel/arch/arm64/configs/${{ env.DEFCONFIG_NAME }}"
           mkdir -p "$(dirname "$DEF")"
+          PROFILE="${{ inputs.profile }}"
+
+          # 0) safe-defconfig 档：不依赖原厂 boot.img
+          #    用途：在没有 stock_boot.img 时先把"编译链能不能过"验出来。
+          #    代价：版本串未经镜像证实 —— 这一档的产物**不要刷机**。
+          if [ "$PROFILE" = "safe-defconfig" ]; then
+            echo "[+] profile=safe-defconfig：跳过 stock_boot.img 依赖"
+            echo "    defconfig 用源码自带的 ${{ env.DEFCONFIG_NAME }}，版本串走默认值"
+            echo "    ⚠ 产物仅用于验证编译链，不要刷机（版本串未经镜像证实）"
+            echo "VERSION_SOURCE=fallback" >> "$GITHUB_ENV"
+            echo "SAFE_BUILD=1" >> "$GITHUB_ENV"
+            if [ ! -s "$DEF" ]; then
+              echo "[FATAL] 源码里没有 $DEF，这一档也跑不了"
+              exit 1
+            fi
+            echo "[+] defconfig 行数：$(wc -l < "$DEF")"
+            exit 0
+          fi
 
           # 1) 拿 stock_boot.img
           if [ -n "${{ env.BOOT_SOURCE }}" ]; then
@@ -186,8 +204,9 @@ jobs:
             echo "[+] 使用仓库内 stock_boot.img"
           else
             echo "[-] 既没有 stock_boot.img，也没有 BOOT_SOURCE"
-            echo "    这份文件是版本串与 defconfig 的唯一来源，缺它只能走人工兜底："
-            echo "    Actions 里把 profile 改成 safe-defconfig 再跑（会损失一加定制配置）"
+            echo "    这份文件是版本串与 defconfig 的唯一来源。两种走法："
+            echo "    A. 把 boot.img 传上来（改名 stock_boot.img），或填 BOOT_SOURCE 直链"
+            echo "    B. profile 改成 safe-defconfig，跳过它先验编译链（产物不要刷）"
             exit 1
           fi
           ls -l stock_boot.img
