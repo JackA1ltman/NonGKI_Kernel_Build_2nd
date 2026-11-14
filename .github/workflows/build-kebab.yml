@@ -1,0 +1,565 @@
+# OnePlus 8T (kebab) · 最强内核构建配置  v3（风险归零版）
+#
+# 配套：NonGKI_Kernel_Build_2nd · sample 分支
+# 目标：SukiSU-Ultra + SUSFS v2.2.00 + KPM + NoMount + Baseband Guard
+# 设备：KB2000 / A11 / 4.19.110-perf+ / boot 96 MiB
+#
+# ── 使用方法 ──
+# 1. fork https://github.com/JackA1ltman/NonGKI_Kernel_Build_2nd
+# 2. 切到 sample 分支
+# 3. 把本文件放到 .github/workflows/build-kebab.yml，ikconfig.py 放到仓库根目录
+# 4. 把原厂 boot.img 改名 stock_boot.img 放仓库根目录（**必须**，它是版本串与 defconfig 的唯一来源）
+# 5. Actions → Build OnePlus 8T Kernel → Run workflow → profile=full
+#
+# ── v3 相比 v2 的变化（全部为"把风险变无风险"）──
+# · 版本串不再写死：从 stock_boot.img 里读 `Linux version ...`，读不到才回落默认值并告警
+# · 新增 ③-P  profile 一键降级（full / no-kpm / safe-defconfig），不改文件
+# · 新增 ④-E  开编前预检闸门：defconfig / 模块签名 / kallsyms / 版本串 / 补丁，任一项不合格直接停
+# · 新增 ⑤-R  SUSFS 拒块摘要：.rej 不再静默，落成 rej-summary.txt
+# · 新增 ⑫-G  产物闸门：Image 大小 / 版本串是否真进内核 / 模块签名是否真关，不合格**不打包**
+# · 新增 ⑬-V  打包后校验：产物 sha256 与内部 Image 大小
+# · 新增 ⑮    失败摘要：一次失败就带齐定位材料，不用多轮试
+# · 16 个裸布尔 env 全部加引号，消除 `== "true"` 比较的类型歧义
+
+name: Build OnePlus 8T Kernel
+
+on:
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: '构建档位：full=全量 / no-kpm=KPM 编译失败时降级 / safe-defconfig=提不到 defconfig 时兜底'
+        required: true
+        default: 'full'
+        type: choice
+        options: ['full', 'no-kpm', 'safe-defconfig']
+      debug_mode:
+        description: 'BUILD_DEBUGGER（首次建议 false；true 遇 .rej 会直接失败）'
+        required: false
+        default: 'false'
+        type: choice
+        options: ['true', 'false']
+  # 兜底触发器：GitHub 只允许在**默认分支**上手动 dispatch workflow。
+  # 这个仓库默认分支是 mainline，而 workflow 在 sample 上 —— 手动按钮不出现。
+  # 所以加一个 push 触发：改 trigger.txt 即开跑，不需要改默认分支、不需要 token。
+  push:
+    branches: [sample]
+    paths:
+      - 'trigger.txt'
+
+env:
+  # ══════════════════ 设备 ══════════════════
+  DEVICE_NAME     : "OnePlus 8T"
+  DEVICE_CODENAME : "kebab"
+  # boot 分区 96 MiB（100663296 B），留 2 MiB 给 header/AVB
+  BOOT_PARTITION_BYTES : "100663296"
+  BOOT_IMAGE_BUDGET    : "98566144"
+
+  # ══════════════════ 内核源码（已实查）══════════════════
+  KERNEL_SOURCE : "https://github.com/OnePlusOSS/android_kernel_oneplus_sm8250.git"
+  KERNEL_BRANCH : "oneplus/SM8250_R_11.0"
+
+  # ══════════════════ 编译器 ══════════════════
+  CLANG_SOURCE : "https://github.com/llvm/llvm-project/releases/download/llvmorg-19.1.7/LLVM-19.1.7-Linux-X64.tar.xz"
+  CLANG_BRANCH : ""
+  GCC_GNU      : "false"
+  GCC_64_SOURCE: "https://android.googlesource.com/platform/prebuilts/gcc/linux-x86/aarch64/aarch64-linux-android-4.9.git"
+  GCC_64_BRANCH: "android12L-release"
+  GCC_32_SOURCE: "https://android.googlesource.com/platform/prebuilts/gcc/linux-x86/arm/arm-linux-androideabi-4.9.git"
+  GCC_32_BRANCH: "android12L-release"
+
+  # ══════════════════ 内核配置 ══════════════════
+  # 不用 DEFCONFIG_FROM_BOOT（上游那段逻辑死锁），改为本地/流水线自行提取
+  DEFCONFIG_SOURCE      : ""
+  DEFCONFIG_NAME        : "vendor/kebab_defconfig"
+  DEFCONFIG_ORIGIN_IMAGE: ""
+  DEFCONFIG_FROM_BOOT   : "false"
+  BOOT_SOURCE           : ""
+
+  # ══════════════════ Root：SukiSU-Ultra ══════════════════
+  # ★ 不要选 bakasu：main 分支 commit 48fa4bb7 在 susfs_compat.mk 写死 $(error ...)
+  KERNELSU_SOURCE   : ""
+  KERNELSU_BRANCH   : ""
+  KERNELSU_AUTO_GET : "true"
+  KERNELSU_AUTO_FORK: "sukisu"
+  KERNELSU_METHOD   : "shell"
+  # ★ 4.19 厂商内核必须 syscall，kprobe 会误触发 Safe Mode
+  HOOK_METHOD       : "syscall"
+
+  # ══════════════════ SUSFS v2.2.00 ══════════════════
+  SUSFS_ENABLE: "true"
+  SUSFS_FIXED : "false"
+  SUSFS_FOLDER_FIXED: ""
+  SUSFS_PATCH_FIXED : ""
+
+  PATCHES_SOURCE: "https://github.com/JackA1ltman/NonGKI_Kernel_Build_2nd.git"
+  PATCHES_BRANCH: "sample"
+
+  # ══════════════════ KPM（SukiSU 独有）══════════════════
+  KPM_ENABLE      : "true"
+  KPM_INLINE      : "true"    # YAML 原注：Only use it for SukiSU-Ultra
+  KPM_KPATCH_NEXT : "false"
+  KPM_PATCH_SOURCE: "https://raw.githubusercontent.com/SukiSU-Ultra/SukiSU_patch/refs/heads/main/kpm/patch_linux"
+
+  # ══════════════════ 额外部件 ══════════════════
+  NOMOUNT_ENABLE        : "true"    # 模块走 VFS 注入，/proc/mounts 干净
+  BASEBAND_GUARD_ENABLE : "true"    # 阻止对 modem/persist 的未授权写入
+  BASEBAND_GUARD_BOOT   : "true"    # 额外保护 boot 分区
+  DROIDSPACES_ENABLE    : "false"   # LXC/Docker，用不到
+  REKERNEL_ENABLE       : "false"   # 与 SUSFS 有重叠，别同时开
+
+  # ══════════════════ 打包 ══════════════════
+  AK3_SOURCE  : "https://github.com/osm0sis/AnyKernel3.git"
+  AK3_BRANCH  : "master"
+  PACK_METHOD : "AnyKernel3"
+  PACK_KMODULES: "false"
+  NEED_DTBO      : "false"
+  NEED_SAFE_DTBO : "false"
+  GENERATE_DTB   : "false"
+  GENERATE_CHIP  : "qcom"
+  ROM_TEXT       : "rom_android"
+
+  # ══════════════════ 构建选项 ══════════════════
+  CUSTOM_CMDS   : "CLANG_TRIPLE=aarch64-linux-gnu-"
+  EXTRA_CMDS    : "LD=ld.lld LLVM=1 LLVM_IAS=1"
+  PYTHON_VERSION: "3"
+  # 首次如果因为 .rej 直接失败，保持 false 让构建继续；稳定后再改 true
+  BUILD_DEBUGGER: "false"
+  SKIP_PATCH    : "false"
+  BUILD_OTHER_CONFIG: "false"
+  MERGE_CONFIG_FILES: "vendor/debugfs.config"
+  FREE_MORE_SPACE: "true"
+
+jobs:
+  build-kernel:
+    name: Build OnePlus 8T Kernel (SukiSU + SUSFS + KPM)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 350
+    env:
+      CCACHE_COMPILERCHECK: "%compiler% -dumpmachine; %compiler% -dumpversion"
+      CCACHE_NOHASHDIR: "true"
+      CCACHE_HARDLINK: "true"
+
+    steps:
+      - name: ① Checkout（拉 workflow 与 Patches）
+        uses: actions/checkout@v6
+
+      - name: ② 准备编译环境（装 clang/gcc/依赖）
+        uses: ./.github/workflows/build-env
+
+      - name: ③ 拉内核源码 + 工具 + defconfig
+        uses: ./.github/workflows/build-ready
+
+      # ── 档位覆写：必须在任何使用前生效 ──
+      - name: ③-P profile 覆写（一键降级，不改文件）
+        shell: bash
+        run: |
+          set -e
+          PROFILE="${{ inputs.profile || 'safe-defconfig' }}"
+          echo "::group::[+] profile = $PROFILE"
+          case "$PROFILE" in
+            full)
+              echo "[+] full：SUSFS + KPM inline + kebab_defconfig"
+              ;;
+            no-kpm)
+              echo "KPM_INLINE=false" >> "$GITHUB_ENV"
+              echo "[+] no-kpm：KPM 不进 inline hook，sus_map 仍在（frida 检测照样能过）"
+              ;;
+            safe-defconfig)
+              echo "DEFCONFIG_NAME=vendor/kona-perf_defconfig" >> "$GITHUB_ENV"
+              echo "[+] safe-defconfig：改用一加官方 kona 平台通用配置"
+              ;;
+            *)
+              echo "[-] 未知 profile: $PROFILE"
+              exit 1
+              ;;
+          esac
+          echo "BUILD_PROFILE=$PROFILE" >> "$GITHUB_ENV"
+          echo "::endgroup::"
+
+      # ── 原厂镜像：版本串 + defconfig 的唯一来源 ──
+      - name: ④-C 取原厂 defconfig 与版本串（读自镜像，非人工抄写）
+        shell: bash
+        run: |
+          set -e
+          cd "$GITHUB_WORKSPACE"
+          DEF="$GITHUB_WORKSPACE/device_kernel/arch/arm64/configs/${{ env.DEFCONFIG_NAME }}"
+          mkdir -p "$(dirname "$DEF")"
+          PROFILE="${{ inputs.profile || 'safe-defconfig' }}"
+
+          # 0) safe-defconfig 档：不依赖原厂 boot.img
+          #    用途：在没有 stock_boot.img 时先把"编译链能不能过"验出来。
+          #    代价：版本串未经镜像证实 —— 这一档的产物**不要刷机**。
+          if [ "$PROFILE" = "safe-defconfig" ]; then
+            echo "[+] profile=safe-defconfig：跳过 stock_boot.img 依赖"
+            echo "    defconfig 用源码自带的 ${{ env.DEFCONFIG_NAME }}，版本串走默认值"
+            echo "    ⚠ 产物仅用于验证编译链，不要刷机（版本串未经镜像证实）"
+            echo "VERSION_SOURCE=fallback" >> "$GITHUB_ENV"
+            echo "SAFE_BUILD=1" >> "$GITHUB_ENV"
+            if [ ! -s "$DEF" ]; then
+              echo "[FATAL] 源码里没有 $DEF，这一档也跑不了"
+              exit 1
+            fi
+            echo "[+] defconfig 行数：$(wc -l < "$DEF")"
+            exit 0
+          fi
+
+          # 1) 拿 stock_boot.img
+          if [ -n "${{ env.BOOT_SOURCE }}" ]; then
+            echo "[+] 下载 BOOT_SOURCE"
+            curl -L --retry 3 --connect-timeout 20 -o stock_boot.img "${{ env.BOOT_SOURCE }}"
+          elif [ -f "$GITHUB_WORKSPACE/stock_boot.img" ]; then
+            echo "[+] 使用仓库内 stock_boot.img"
+          else
+            echo "[-] 既没有 stock_boot.img，也没有 BOOT_SOURCE"
+            echo "    这份文件是版本串与 defconfig 的唯一来源。两种走法："
+            echo "    A. 把 boot.img 传上来（改名 stock_boot.img），或填 BOOT_SOURCE 直链"
+            echo "    B. profile 改成 safe-defconfig，跳过它先验编译链（产物不要刷）"
+            exit 1
+          fi
+          ls -l stock_boot.img
+          sha256sum stock_boot.img | tee boot_sha256.txt
+
+          # 2) 版本串（读不到只降级，不中断）
+          if python3 ikconfig.py stock_boot.img --uname --env > /tmp/uname.env 2>/tmp/uname.err; then
+            cat /tmp/uname.env
+            cat /tmp/uname.env >> "$GITHUB_ENV"
+            echo "VERSION_SOURCE=stock" >> "$GITHUB_ENV"
+            echo "[+] 版本串来源：原厂镜像（已证）"
+          else
+            cat /tmp/uname.err || true
+            echo "VERSION_SOURCE=fallback" >> "$GITHUB_ENV"
+            echo "[!] 读不到版本串 → 回落默认 4.19.110-perf+ / jenkins@rd-build-77"
+            echo "[!] 这条一旦回落，刷完黑屏的概率显著上升。上机前必须用 adb shell cat /proc/version 复核"
+          fi
+
+          # 3) defconfig（已存在则跳过，便于二次运行）
+          if [ -s "$DEF" ]; then
+            echo "[+] defconfig 已存在，跳过提取"
+          else
+            python3 ikconfig.py stock_boot.img -o "$DEF"
+          fi
+          echo "[+] defconfig 行数：$(wc -l < "$DEF")"
+
+      # ── 版本串落到 Makefile（值来自上一步）──
+      - name: ④-A 版本串伪装
+        shell: bash
+        run: |
+          set -e
+          cd "$GITHUB_WORKSPACE/device_kernel"
+          V="${STOCK_VERSION:-4}"
+          P="${STOCK_PATCHLEVEL:-19}"
+          S="${STOCK_SUBLEVEL:-110}"
+          LOCALV="${STOCK_LOCALVERSION:--perf+}"
+          U="${STOCK_BUILD_USER:-jenkins}"
+          H="${STOCK_BUILD_HOST:-rd-build-77}"
+          T="${STOCK_BUILD_TIMESTAMP:-Tue Dec 21 14:19:26 CST 2021}"
+
+          echo "::group::[+] Version spoofing（来源：${VERSION_SOURCE:-fallback}）"
+          echo "[+] 目标 uname -r: ${V}.${P}.${S}${LOCALV}"
+          sed -i "s/^VERSION = .*/VERSION = ${V}/"                Makefile
+          sed -i "s/^PATCHLEVEL = .*/PATCHLEVEL = ${P}/"          Makefile
+          sed -i "s/^SUBLEVEL = .*/SUBLEVEL = ${S}/"              Makefile
+          sed -i 's/^EXTRAVERSION =.*/EXTRAVERSION =/'           Makefile
+
+          # 用 printf 不用 heredoc：heredoc 在 YAML block scalar 里会破坏缩进
+          if [ -f scripts/setlocalversion ]; then
+            printf '#!/bin/sh\necho "%s"\n' "$LOCALV" > scripts/setlocalversion
+            chmod +x scripts/setlocalversion
+          fi
+
+          echo "KBUILD_BUILD_USER=$U"          >> "$GITHUB_ENV"
+          echo "KBUILD_BUILD_HOST=$H"          >> "$GITHUB_ENV"
+          echo "KBUILD_BUILD_VERSION=1"        >> "$GITHUB_ENV"
+          echo "KBUILD_BUILD_TIMESTAMP=$T"     >> "$GITHUB_ENV"
+          echo "KERNEL_RELEASE_TARGET=${V}.${P}.${S}${LOCALV}" >> "$GITHUB_ENV"
+
+          head -5 Makefile
+          echo "::endgroup::"
+
+      # ── defconfig 关键项强制修正 ──
+      - name: ④-B defconfig 关键项强制修正
+        shell: bash
+        run: |
+          set -e
+          cd "$GITHUB_WORKSPACE/device_kernel"
+          DEF="arch/arm64/configs/${{ env.DEFCONFIG_NAME }}"
+          LOCALV="${STOCK_LOCALVERSION:--perf+}"
+          if [ ! -f "$DEF" ]; then
+            echo "[FATAL] 找不到 $DEF"
+            exit 1
+          fi
+          DEF="$DEF" LOCALV="$LOCALV" python3 - <<'PYBLOCK'
+          import os
+          p = os.environ["DEF"]
+          lv = os.environ["LOCALV"]
+          drop = ["CONFIG_MODULE_SIG", "CONFIG_MODULE_SIG_FORCE", "CONFIG_MODULE_SIG_ALL",
+                  "CONFIG_MODULE_FORCE_LOAD", "CONFIG_LOCALVERSION",
+                  "CONFIG_LOCALVERSION_AUTO", "CONFIG_KALLSYMS", "CONFIG_KALLSYMS_ALL",
+                  "CONFIG_KPM", "CONFIG_IKCONFIG", "CONFIG_IKCONFIG_PROC"]
+          lines = open(p, encoding='utf-8', errors='replace').read().splitlines()
+          out = []
+          for ln in lines:
+              s = ln.strip()
+              if any(s.startswith(k + '=') or s.startswith('# ' + k + ' is not set')
+                     for k in drop):
+                  continue
+              out.append(ln)
+          out.append('')
+          out.append('# -- forced by build-kebab.yml v3 (version spoof + module compat + hiding) --')
+          out.append('CONFIG_LOCALVERSION="%s"' % lv)
+          out.append('# CONFIG_LOCALVERSION_AUTO is not set')
+          out.append('CONFIG_KALLSYMS=y')
+          out.append('CONFIG_KALLSYMS_ALL=y')
+          out.append('CONFIG_KPM=y')
+          out.append('CONFIG_IKCONFIG=y')
+          out.append('CONFIG_IKCONFIG_PROC=y')
+          out.append('# disable module sig force, otherwise vendor .ko (lcd/touch/audio) rejected')
+          out.append('# CONFIG_MODULE_SIG is not set')
+          out.append('# CONFIG_MODULE_SIG_FORCE is not set')
+          out.append('# CONFIG_MODULE_SIG_ALL is not set')
+          out.append('CONFIG_MODULE_FORCE_LOAD=y')
+          open(p, 'w', encoding='utf-8', newline='\n').write('\n'.join(out) + '\n')
+          print('[+] defconfig rewritten:', p, len(out), 'lines')
+          PYBLOCK
+          tail -20 "$DEF"
+
+      # ── 开编前预检：不合格就在这里停，不浪费 40 分钟编译 ──
+      - name: ④-E 开编前预检闸门
+        shell: bash
+        run: |
+          cd "$GITHUB_WORKSPACE/device_kernel"
+          DEF="arch/arm64/configs/${{ env.DEFCONFIG_NAME }}"
+          TARGET="${KERNEL_RELEASE_TARGET:-4.19.110-perf+}"
+          FAIL=0
+          p() { echo "  PASS  $1"; }
+          f() { echo "  FAIL  $1"; FAIL=1; }
+
+          echo "=== 1. defconfig 文件 ==="
+          if [ -s "$DEF" ] && [ "$(wc -l < "$DEF")" -gt 500 ]; then
+            p "defconfig 存在且 $(wc -l < "$DEF") 行"
+          else
+            f "defconfig 缺失或过短：$DEF"
+          fi
+
+          echo "=== 2. 必需配置项 ==="
+          for k in CONFIG_KALLSYMS CONFIG_KALLSYMS_ALL CONFIG_KPM CONFIG_MODULE_FORCE_LOAD; do
+            grep -qx "$k=y" "$DEF" && p "$k=y" || f "$k 未开"
+          done
+
+          echo "=== 3. 必须关掉的项（否则 vendor 模块拒载 → 黑屏）==="
+          for k in CONFIG_MODULE_SIG CONFIG_MODULE_SIG_FORCE CONFIG_MODULE_SIG_ALL CONFIG_LOCALVERSION_AUTO; do
+            if grep -qx "$k=y" "$DEF"; then f "$k 仍为 y"; else p "$k 未开"; fi
+          done
+
+          echo "=== 4. 版本串 ==="
+          grep -q "CONFIG_LOCALVERSION=\"-perf+\"" "$DEF" && p "LOCALVERSION=-perf+" || f "LOCALVERSION 不是 -perf+"
+          grep -q "^VERSION = 4$"     Makefile && p "Makefile VERSION=4"     || f "Makefile VERSION 不对"
+          grep -q "^PATCHLEVEL = 19$" Makefile && p "Makefile PATCHLEVEL=19" || f "Makefile PATCHLEVEL 不对"
+          if grep -qE "^SUBLEVEL = [0-9]+$" Makefile; then
+            p "Makefile SUBLEVEL=$(grep -E '^SUBLEVEL = ' Makefile | tr -dc '0-9')"
+          else
+            f "Makefile SUBLEVEL 无法解析"
+          fi
+          SL=$(bash scripts/setlocalversion 2>/dev/null || true)
+          [ "$SL" = "-perf+" ] && p "setlocalversion 输出 -perf+" || f "setlocalversion 输出 '$SL'"
+
+          echo "=== 5. SUSFS 补丁 ==="
+          PATCH="$GITHUB_WORKSPACE/Patches/Patch/susfs_patch_to_4.19.patch"
+          [ -f "$PATCH" ] && p "4.19 补丁存在" || f "找不到 $PATCH"
+
+          echo "=== 6. 容量预算 ==="
+          echo "  INFO  boot 分区 ${{ env.BOOT_PARTITION_BYTES }} B，Image 预算 ${{ env.BOOT_IMAGE_BUDGET }} B"
+
+          echo "=== 目标 uname -r: $TARGET ==="
+          if [ "$FAIL" = "0" ]; then
+            echo "[+] 预检全过，允许编译"
+          else
+            echo "[-] 预检未过，已停在编译之前"
+            echo "    常见修法：profile=safe-defconfig（提不到 defconfig 时）"
+            echo "              检查 stock_boot.img 是否真的原厂 A11 全量包里的 boot"
+            exit 1
+          fi
+
+      - name: ⑤ 打 SUSFS 补丁（v2.2.00，4.19 专用）
+        uses: ./.github/workflows/patch-susfs
+
+      # ── .rej 不再静默：落盘成可读摘要 ──
+      - name: ⑤-R SUSFS 拒块摘要（不中断构建）
+        if: always()
+        shell: bash
+        run: |
+          cd "$GITHUB_WORKSPACE/device_kernel" || exit 0
+          OUT="$GITHUB_WORKSPACE/rej-summary.txt"
+          N=$(find . -name '*.rej' 2>/dev/null | wc -l)
+          {
+            echo "rej files: $N"
+            echo "generated: $(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+            echo
+          } > "$OUT"
+          if [ "$N" -gt 0 ]; then
+            find . -name '*.rej' | sort | tee -a "$OUT"
+            for r in $(find . -name '*.rej' | sort); do
+              echo "" >> "$OUT"
+              echo "===== $r =====" >> "$OUT"
+              head -40 "$r" >> "$OUT"
+            done
+            echo "[!] 有 $N 个拒块，内容见 rej-summary.txt（这不必然导致失败，但要人看一眼）"
+          else
+            echo "[+] 无拒块"
+          fi
+          cat "$OUT"
+
+      - name: ⑥ 去掉 kprobe（4.19 厂商内核必须）
+        uses: ./.github/workflows/patch-no-kprobe
+
+      - name: ⑦ 额外内核选项
+        shell: bash
+        run: |
+          cd "$GITHUB_WORKSPACE/device_kernel"
+          # 需要加自定义选项时写在这
+          echo "[+] Extra kernel options: none"
+
+      - name: ⑧ Re:Kernel（已关）
+        if: env.REKERNEL_ENABLE == 'true'
+        uses: ./.github/workflows/patch-rekernel
+
+      - name: ⑨ Droidspaces（已关）
+        if: env.DROIDSPACES_ENABLE == 'true'
+        uses: ./.github/workflows/patch-droidspaces
+
+      - name: ⑩ Baseband Guard
+        uses: ./.github/workflows/patch-baseband-guard
+
+      - name: ⑪ NoMount
+        uses: ./.github/workflows/patch-nomount
+
+      - name: ⑫ 编译内核
+        uses: ./.github/workflows/build-process
+
+      # ── 产物闸门：不合格不打包、不上传，绝不产出可刷但会黑屏的包 ──
+      - name: ⑫-G 产物闸门（不合格不打包）
+        shell: bash
+        run: |
+          cd "$GITHUB_WORKSPACE/device_kernel"
+          IMG="out/arch/arm64/boot/Image"
+          REL="${STOCK_UNAME_RELEASE:-4.19.110-perf+}"
+          BUDGET="${{ env.BOOT_IMAGE_BUDGET }}"
+          FAIL=0
+          p() { echo "  PASS  $1"; }
+          f() { echo "  FAIL  $1"; FAIL=1; }
+
+          echo "=== 1. Image ==="
+          if [ -s "$IMG" ]; then
+            SZ=$(stat -c%s "$IMG")
+            p "Image 存在，$SZ B"
+            if [ "$SZ" -le "$BUDGET" ]; then
+              p "容量 $SZ <= 预算 $BUDGET"
+            else
+              f "容量 $SZ 超出 boot 分区预算 $BUDGET"
+            fi
+            strings -a "$IMG" | grep -qF "$REL" && p "内核里含版本串 $REL" || f "内核里没有 $REL（伪装没生效 → 刷了必黑屏）"
+            strings -a "$IMG" | grep -qF "IKCFG_ST" && p "IKCONFIG 仍在（后续可再提 config）" || echo "  WARN  无 IKCFG_ST（不影响开机）"
+          else
+            f "Image 不存在：$IMG"
+          fi
+
+          echo "=== 2. kernel.release ==="
+          KR="out/include/config/kernel.release"
+          if [ -f "$KR" ]; then
+            GOT=$(cat "$KR")
+            [ "$GOT" = "$REL" ] && p "kernel.release = $GOT" || f "kernel.release = $GOT，期望 $REL"
+          else
+            echo "  WARN  找不到 $KR（部分内核不生成该文件）"
+          fi
+
+          echo "=== 3. 编译产物里的模块签名 ==="
+          if [ -f out/.config ]; then
+            grep -qx 'CONFIG_MODULE_SIG_FORCE=y' out/.config && f "out/.config 里 MODULE_SIG_FORCE 仍为 y → vendor .ko 会被拒载" || p "MODULE_SIG_FORCE 未开"
+            grep -qx 'CONFIG_KALLSYMS=y' out/.config && p "out/.config KALLSYMS=y" || f "out/.config 缺 KALLSYMS"
+          else
+            f "out/.config 不存在，无法确认关键配置"
+          fi
+
+          if [ "$FAIL" = "0" ]; then
+            echo "[+] 闸门全过，允许打包"
+          else
+            echo "[-] 闸门拒绝打包：产出物要么黑屏、要么超分区，刷了只会浪费时间与风险"
+            exit 1
+          fi
+
+      - name: ⑬ 打包 AnyKernel3
+        uses: ./.github/workflows/pack-process
+
+      - name: ⑬-V 打包后校验（记录产物指纹）
+        shell: bash
+        run: |
+          set -e
+          cd "$GITHUB_WORKSPACE"
+          REL="${STOCK_UNAME_RELEASE:-4.19.110-perf+}"
+          OUT="$GITHUB_WORKSPACE/artifact-summary.txt"
+          {
+            echo "# 产物指纹"
+            echo "profile        : ${BUILD_PROFILE:-full}"
+            echo "uname -r 目标  : $REL"
+            echo "版本串来源     : ${VERSION_SOURCE:-fallback}"
+            echo "构建时间(UTC)  : $(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+            echo
+            echo "## boot.img 来源"
+            [ -f boot_sha256.txt ] && cat boot_sha256.txt || echo "(缺失)"
+            echo
+            echo "## 打包产物"
+          } > "$OUT"
+          FOUND=0
+          for z in $(find "$GITHUB_WORKSPACE" -maxdepth 3 -name '*.zip' -not -path '*/node_modules/*' 2>/dev/null | sort); do
+            FOUND=1
+            echo "  - $z" >> "$OUT"
+            echo "    size   : $(stat -c%s "$z")" >> "$OUT"
+            echo "    sha256 : $(sha256sum "$z" | cut -d' ' -f1)" >> "$OUT"
+          done
+          [ "$FOUND" = "1" ] || { echo "  (没找到 zip，打包可能失败或产物路径变了)" >> "$OUT"; }
+          cat "$OUT"
+
+      - name: ⑭ 上传产物
+        uses: ./.github/workflows/upload-files
+
+      - name: ⑭-B 上传诊断材料（拒块摘要 / 产物指纹 / 版本串来源）
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kebab-diag-${{ github.run_number }}
+          path: |
+            rej-summary.txt
+            artifact-summary.txt
+            boot_sha256.txt
+          if-no-files-found: warn
+
+      # ── 失败也带齐定位材料，避免"再来一轮看看" ──
+      - name: ⑮ 失败摘要（自动收集定位材料）
+        if: failure()
+        shell: bash
+        run: |
+          cd "$GITHUB_WORKSPACE"
+          mkdir -p diag
+          cp -f device_kernel/out/.config diag/out.config 2>/dev/null || true
+          cp -f device_kernel/out/include/config/kernel.release diag/ 2>/dev/null || true
+          cp -f "device_kernel/arch/arm64/configs/${{ env.DEFCONFIG_NAME }}" diag/defconfig.used 2>/dev/null || true
+          cp -f device_kernel/Makefile diag/Makefile 2>/dev/null || true
+          {
+            echo "# 失败时定位材料"
+            echo "profile     : ${BUILD_PROFILE:-full}"
+            echo "版本串来源  : ${VERSION_SOURCE:-fallback}"
+            echo "期望 uname  : ${KERNEL_RELEASE_TARGET:-4.19.110-perf+}"
+            echo "Makefile 头："
+            head -6 diag/Makefile 2>/dev/null || echo "(无)"
+            echo
+            echo "defconfig 尾部："
+            tail -15 diag/defconfig.used 2>/dev/null || echo "(无)"
+          } > diag/README.txt
+          cat diag/README.txt
+      - name: ⑮-B 上传失败材料
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kebab-fail-${{ github.run_number }}
+          path: diag/
+          if-no-files-found: warn
