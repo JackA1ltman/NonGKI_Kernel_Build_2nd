@@ -364,8 +364,17 @@ jobs:
           [ "$SL" = "-perf+" ] && p "setlocalversion 输出 -perf+" || f "setlocalversion 输出 '$SL'"
 
           echo "=== 5. SUSFS 补丁 ==="
-          PATCH="$GITHUB_WORKSPACE/Patches/Patch/susfs_patch_to_4.19.patch"
-          [ -f "$PATCH" ] && p "4.19 补丁存在" || f "找不到 $PATCH"
+          # 注意：② build-env 里有 `mv $GITHUB_WORKSPACE/Patches /tmp/`，
+          # 所以 ④-E 这个时点补丁已经在 /tmp/Patches 下（上游 ⑤ 也是从那儿取）。
+          PATCH_A="/tmp/Patches/Patch/susfs_patch_to_4.19.patch"
+          PATCH_B="$GITHUB_WORKSPACE/Patches/Patch/susfs_patch_to_4.19.patch"
+          if [ -f "$PATCH_A" ]; then
+            p "SUSFS 4.19 补丁就位（/tmp/Patches）"
+          elif [ -f "$PATCH_B" ]; then
+            p "SUSFS 4.19 补丁就位（工作区）"
+          else
+            f "找不到 SUSFS 4.19 补丁（已查 $PATCH_A 与 $PATCH_B）"
+          fi
 
           echo "=== 6. 容量预算 ==="
           echo "  INFO  boot 分区 ${{ env.BOOT_PARTITION_BYTES }} B，Image 预算 ${{ env.BOOT_IMAGE_BUDGET }} B"
@@ -375,8 +384,7 @@ jobs:
             echo "[+] 预检全过，允许编译"
           else
             echo "[-] 预检未过，已停在编译之前"
-            echo "    常见修法：profile=safe-defconfig（提不到 defconfig 时）"
-            echo "              检查 stock_boot.img 是否真的原厂 A11 全量包里的 boot"
+            echo "::error title=④-E 预检失败::上面日志里所有 FAIL 行就是失败项"
             exit 1
           fi
 
