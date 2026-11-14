@@ -24,6 +24,9 @@
 name: Build OnePlus 8T Kernel
 
 on:
+  push:
+    branches: [sample]
+    paths: ['trigger.txt']
   workflow_dispatch:
     inputs:
       profile:
