@@ -1990,10 +1990,10 @@ index 8edf44a..1f7cfe5 100644
  	 * Always return at least 1 from get_anon_bdev.
 diff --git a/fs/susfs.c b/fs/susfs.c
 new file mode 100644
-index 0000000..bf906c6
+index 0000000..b0b6a66
 --- /dev/null
 +++ b/fs/susfs.c
-@@ -0,0 +1,2630 @@
+@@ -0,0 +1,2634 @@
 +#include <linux/version.h>
 +#include <linux/cred.h>
 +#include <linux/fs.h>
@@ -2643,7 +2643,11 @@ index 0000000..bf906c6
 +	int err = 0;
 +	static bool is_uid_filter_set_before = false;
 +
++#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 12, 0)
++	info = susfs_kvmalloc(sizeof(*info), GFP_KERNEL | __GFP_ZERO);
++#else
 +	info = kvmalloc(sizeof(*info), GFP_KERNEL | __GFP_ZERO);
++#endif
 +	if (!info) {
 +		err = -ENOMEM;
 +		goto out_copy_to_user;
