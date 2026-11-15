@@ -46,14 +46,19 @@ index 284bdfa..db542b7 100644
  			if (!user)
  				break;
 diff --git a/fs/Makefile b/fs/Makefile
-index 969caba..cdd3d90 100644
+index 969caba..49ef446 100644
 --- a/fs/Makefile
 +++ b/fs/Makefile
-@@ -13,6 +13,8 @@ obj-y :=	open.o read_write.o file_table.o super.o \
+@@ -13,6 +13,13 @@ obj-y :=	open.o read_write.o file_table.o super.o \
  		pnode.o splice.o sync.o utimes.o \
  		stack.o fs_struct.o statfs.o fs_pin.o nsfs.o
  
 +obj-$(CONFIG_KSU_SUSFS) += susfs.o
++# susfs: kernel_read() changed signature in v4.14; some 4.9 backport the new one.
++# Detect by signature, not by version.
++ifeq ($(shell grep -q "ssize_t kernel_read" $(srctree)/fs/read_write.c $(srctree)/fs/exec.c 2>/dev/null; echo $$?),0)
++CFLAGS_susfs.o += -DSUSFS_KERNEL_READ_NEW
++endif
 +
  ifeq ($(CONFIG_BLOCK),y)
  obj-y +=	buffer.o block_dev.o direct-io.o mpage.o
@@ -1764,10 +1769,10 @@ index 55cd884..c273ba6 100644
  		return -ENOMEM;
 diff --git a/fs/susfs.c b/fs/susfs.c
 new file mode 100644
-index 0000000..e11abe2
+index 0000000..bf906c6
 --- /dev/null
 +++ b/fs/susfs.c
-@@ -0,0 +1,2618 @@
+@@ -0,0 +1,2630 @@
 +#include <linux/version.h>
 +#include <linux/cred.h>
 +#include <linux/fs.h>
@@ -1803,6 +1808,18 @@ index 0000000..e11abe2
 +#include <linux/susfs.h>
 +#include "fuse/fuse_i.h"
 +#include "mount.h"
++
++#ifdef SUSFS_KERNEL_READ_NEW
++static inline int susfs_kernel_read(struct file *fp, void *buf, size_t size, loff_t *pos)
++{
++	return kernel_read(fp, buf, size, pos);
++}
++#else
++static inline int susfs_kernel_read(struct file *fp, void *buf, size_t size, loff_t *pos)
++{
++	return kernel_read(fp, *pos, buf, size);
++}
++#endif
 +
 +extern bool susfs_is_current_ksu_domain(void);
 +extern void setup_selinux(const char *domain, struct cred *cred);
@@ -2284,7 +2301,7 @@ index 0000000..e11abe2
 +	}
 +	buf[size] = '\0';
 +
-+	ret = kernel_read(fp, buf, size, &pos);
++	ret = susfs_kernel_read(fp, buf, size, &pos);
 +	filp_close(fp, NULL);
 +	if (ret != (int)size) {
 +		vfree(buf);
@@ -3665,7 +3682,7 @@ index 0000000..e11abe2
 +	}
 +	buf[size] = '\0';
 +
-+	ret = kernel_read(fp, buf, size, &pos);
++	ret = susfs_kernel_read(fp, buf, size, &pos);
 +	filp_close(fp, NULL);
 +	if (ret != (int)size) {
 +		vfree(buf);
