@@ -82,4 +82,6 @@ It also aims to provide an easier compilation process using **GitHub Actions**, 
 - [Baseband Guard](https://github.com/vc-teahouse/Baseband-guard) - @秋刀鱼
 - [Droidspaces](https://github.com/ravindu644/Droidspaces-OSS) - @ravindu644
 - [NoMount](https://github.com/maxsteeel/nomount) - @maxsteeel
+- [fgetpriority](https://github.com/aerath-stuff/fgetpriority) - @aerath-stuff
+- [VPNHide Next](https://github.com/soranerai/vpnhide_next) - @soranerai
 - And to more open-source kernel authors.

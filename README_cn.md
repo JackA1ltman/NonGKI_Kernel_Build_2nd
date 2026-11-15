@@ -82,4 +82,6 @@
 - [Baseband Guard](https://github.com/vc-teahouse/Baseband-guard) - @秋刀鱼
 - [Droidspaces](https://github.com/ravindu644/Droidspaces-OSS) - @ravindu644
 - [NoMount](https://github.com/maxsteeel/nomount) - @maxsteeel
+- [fgetpriority](https://github.com/aerath-stuff/fgetpriority) - @aerath-stuff
+- [VPNHide Next](https://github.com/soranerai/vpnhide_next) - @soranerai
 - 以及更多的开源内核作者
