@@ -1991,10 +1991,10 @@ index 08d39b2..2206fed 100644
  	 * Always return at least 1 from get_anon_bdev.
 diff --git a/fs/susfs.c b/fs/susfs.c
 new file mode 100644
-index 0000000..b0b6a66
+index 0000000..5293cb9
 --- /dev/null
 +++ b/fs/susfs.c
-@@ -0,0 +1,2634 @@
+@@ -0,0 +1,2642 @@
 +#include <linux/version.h>
 +#include <linux/cred.h>
 +#include <linux/fs.h>
@@ -2678,7 +2678,11 @@ index 0000000..b0b6a66
 +	* The app names are stored as they are, so that the uids of the apps can
 +	* be resolved again later on, when the apps are installed or uninstalled.
 +	*/
++#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 12, 0)
++	new_app_strings = susfs_kvmalloc(app_str_len + 1, GFP_KERNEL | __GFP_ZERO);
++#else
 +	new_app_strings = kvmalloc(app_str_len + 1, GFP_KERNEL | __GFP_ZERO);
++#endif
 +	if (!new_app_strings) {
 +		err = -ENOMEM;
 +		goto out_copy_to_user;
@@ -2775,7 +2779,11 @@ index 0000000..b0b6a66
 +	mutex_lock(&susfs_mutex_lock_sus_path_uid_filter);
 +	if (susfs_sus_path_app_strings) {
 +		app_str_len = strlen(susfs_sus_path_app_strings);
++#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 12, 0)
++		app_strings = susfs_kvmalloc(app_str_len + 1, GFP_KERNEL | __GFP_ZERO);
++#else
 +		app_strings = kvmalloc(app_str_len + 1, GFP_KERNEL | __GFP_ZERO);
++#endif
 +		if (app_strings)
 +			memcpy(app_strings, susfs_sus_path_app_strings, app_str_len + 1);
 +	}
