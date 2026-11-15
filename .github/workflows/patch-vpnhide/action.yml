@@ -1,0 +1,36 @@
+name: 'Patch VPNHide for Kernel.'
+
+runs:
+  using: 'composite'
+  steps:
+      - name: Patch VPNHide
+        if: env.VPNHIDE_ENABLE == 'true'
+        shell: bash
+        run: |
+          cd $GITHUB_WORKSPACE/device_kernel/
+
+          if grep -q "fgetpriority" "drivers/Kconfig"; then
+
+            git clone https://github.com/soranerai/vpnhide_next_backend.git vpnhide
+            chmod +x vpnhide/kpatch/scripts/apply.sh
+
+            if [[ "${{ env.KERNEL_VERSION }}" == "5.4" ]]; then
+                ./vpnhide/kpatch/scripts/apply.sh . android12-5.4
+
+            elif [[ "${{ env.KERNEL_VERSION }}" == "4.19" || "${{ env.KERNEL_VERSION }}" == "4.14" || "${{ env.KERNEL_VERSION }}" == "4.9" ]]; then
+                ./vpnhide/kpatch/scripts/apply.sh . upstream-"${{ env.KERNEL_VERSION }}"
+
+            else
+                echo "[-] Kernel version not supported!"
+                false
+
+            fi
+
+
+            echo "CONFIG_VPNHIDE=y" >> ./arch/${{ env.KERNEL_ARCH }}/configs/${{ env.DEFCONFIG_NAME }}
+
+            echo "[+] Patched VPNHide for your kernel successfully."
+          else
+
+            echo "[-] Kernel has been embedded in VPNHide, Skipped."
+          fi

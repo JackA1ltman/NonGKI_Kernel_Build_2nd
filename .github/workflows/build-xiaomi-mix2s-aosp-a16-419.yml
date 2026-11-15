@@ -65,6 +65,8 @@ env:
   REKERNEL_ENABLE: "false" # if u need Re:Kernel.
   DROIDSPACES_ENABLE: "true" # if u need Droidspaces or LXC/Docker.
   NOMOUNT_ENABLE: "false" # if u need NoMount.
+  FGETPRIORITY_ENABLE: "false" #if u need hide getpriority.
+  VPNHIDE_ENABLE: "false" #if u need hide vpn status.
 
   HOOK_METHOD: "syscall" # Manual hook method ->  syscall.
 
@@ -146,6 +148,12 @@ jobs:
 
       - name: 🛡️ Patch Kernel of NoMount
         uses: ./.github/workflows/patch-nomount
+
+      - name: ⛔ Patch Kernel of fgetpriority
+        uses: ./.github/workflows/patch-fgetpriority
+
+      - name: 🛜 Patch Kernel of VPNHide
+        uses: ./.github/workflows/patch-vpnhide
 
       - name: 🚀 Build Process
         uses: ./.github/workflows/build-process

@@ -1,0 +1,25 @@
+name: 'Patch fgetpriority for Kernel.'
+
+runs:
+  using: 'composite'
+  steps:
+      - name: Patch fgetpriority
+        if: env.FGETPRIORITY_ENABLE == 'true'
+        shell: bash
+        run: |
+          cd $GITHUB_WORKSPACE/device_kernel/
+
+          if grep -q "fgetpriority" "drivers/Kconfig"; then
+
+            git clone https://github.com/aerath-stuff/fgetpriority.git fgetpriority
+            ln -sfn ../fgetpriority/kernel drivers/fgetpriority
+            grep -q "fgetpriority" drivers/Makefile || echo 'obj-$(CONFIG_FGETPRIORITY) += fgetpriority/kernel/' >> drivers/Makefile
+            grep -q "drivers/fgetpriority/Kconfig" drivers/Kconfig || sed -i '/endmenu/i source "drivers/fgetpriority/kernel/Kconfig"' drivers/Kconfig
+
+            echo "CONFIG_FGETPRIORITY=y" >> ./arch/${{ env.KERNEL_ARCH }}/configs/${{ env.DEFCONFIG_NAME }}
+
+            echo "[+] Patched fgetpriority for your kernel successfully."
+          else
+
+            echo "[-] Kernel has been embedded in fgetpriority, Skipped."
+          fi

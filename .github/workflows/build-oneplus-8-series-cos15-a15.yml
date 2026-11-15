@@ -65,6 +65,8 @@ env:
   REKERNEL_ENABLE: "false" # if u need Re:Kernel.
   DROIDSPACES_ENABLE: "false" # if u need Droidspaces or LXC/Docker.
   NOMOUNT_ENABLE: "false" # if u need NoMount.
+  FGETPRIORITY_ENABLE: "false" #if u need hide getpriority.
+  VPNHIDE_ENABLE: "false" #if u need hide vpn status.
 
   HOOK_METHOD: "syscall" # Manual hook method ->  syscall.
 
@@ -152,17 +154,14 @@ jobs:
       - name: 🛡️ Patch Kernel of NoMount
         uses: ./.github/workflows/patch-nomount
 
+      - name: ⛔ Patch Kernel of fgetpriority
+        uses: ./.github/workflows/patch-fgetpriority
+
+      - name: 🛜 Patch Kernel of VPNHide
+        uses: ./.github/workflows/patch-vpnhide
+
       - name: 🚀 Build Process
         uses: ./.github/workflows/build-process
-
-      - name: ❗ OnePlus 8 Remove files
-        run: |
-          # Only ${{ env.DEVICE_NAME }} use it.
-          cd $GITHUB_WORKSPACE/device_kernel
-
-          rm -f out/arch/arm64/boot/dtbo.img
-          rm -f out/arch/arm64/boot/dtb
-          echo "Removed dtbo.img and dtb for OnePlus 8."
 
       - name: 🔩 Pack Process
         uses: ./.github/workflows/pack-process
