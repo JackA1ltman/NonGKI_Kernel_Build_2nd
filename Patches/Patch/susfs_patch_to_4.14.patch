@@ -2038,7 +2038,7 @@ index e6019ed..f298278 100644
  		return -ENOMEM;
 diff --git a/fs/susfs.c b/fs/susfs.c
 new file mode 100644
-index 0000000..5293cb9
+index 0000000..e5e0ace
 --- /dev/null
 +++ b/fs/susfs.c
 @@ -0,0 +1,2642 @@
@@ -2469,7 +2469,7 @@ index 0000000..5293cb9
 +		return false;
 +	}
 +
-+	if (unlikely(test_bit(AS_FLAGS_SUS_PATH, &inode->i_mapping->flags) &&
++	if (unlikely(test_bit(AS_FLAGS_SUS_PATH, &inode->i_state) &&
 +		likely(!susfs_is_uid_allowed_for_sus_path(uid))))
 +	{
 +		//SUSFS_LOGI("hiding path with ino '%lu'\n", inode->i_ino);
