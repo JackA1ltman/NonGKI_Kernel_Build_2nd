@@ -18,6 +18,51 @@ on:
         required: false
         type: string
         default: "Mon JUL 5 11:45:14 UTC 2021"
+      patch_susfs:
+        description: "Apply SUSFS (base + 4.9 fixed hooks)"
+        required: false
+        type: boolean
+        default: true
+      patch_rekernel:
+        description: "Apply Re:Kernel"
+        required: false
+        type: boolean
+        default: false
+      patch_droidspaces:
+        description: "Apply Droidspaces"
+        required: false
+        type: boolean
+        default: false
+      patch_baseband_guard:
+        description: "Apply Baseband Guard"
+        required: false
+        type: boolean
+        default: true
+      patch_baseband_guard_boot:
+        description: "Baseband Guard: also protect boot partition"
+        required: false
+        type: boolean
+        default: false
+      patch_nomount:
+        description: "Apply NoMount"
+        required: false
+        type: boolean
+        default: true
+      patch_fgetpriority:
+        description: "Apply fgetpriority"
+        required: false
+        type: boolean
+        default: true
+      patch_vpnhide:
+        description: "Apply VPNHide"
+        required: false
+        type: boolean
+        default: false
+      patch_lz4kd:
+        description: "Apply LZ4K/LZ4KD zram compression (4.9)"
+        required: false
+        type: boolean
+        default: true
   workflow_dispatch:
     inputs:
       bakasu_branch:
@@ -35,6 +80,51 @@ on:
         required: false
         default: "Mon JUL 5 11:45:14 UTC 2021"
         type: string
+      patch_susfs:
+        description: "SUSFS（基础补丁 + 4.9 fixed hooks）"
+        required: false
+        type: boolean
+        default: true
+      patch_rekernel:
+        description: "Re:Kernel"
+        required: false
+        type: boolean
+        default: false
+      patch_droidspaces:
+        description: "Droidspaces"
+        required: false
+        type: boolean
+        default: false
+      patch_baseband_guard:
+        description: "Baseband Guard"
+        required: false
+        type: boolean
+        default: true
+      patch_baseband_guard_boot:
+        description: "Baseband Guard：额外保护 boot 分区"
+        required: false
+        type: boolean
+        default: false
+      patch_nomount:
+        description: "NoMount"
+        required: false
+        type: boolean
+        default: true
+      patch_fgetpriority:
+        description: "fgetpriority"
+        required: false
+        type: boolean
+        default: true
+      patch_vpnhide:
+        description: "VPNHide"
+        required: false
+        type: boolean
+        default: false
+      patch_lz4kd:
+        description: "LZ4K/LZ4KD zram 压缩（4.9）"
+        required: false
+        type: boolean
+        default: true
 
 env:
   # Device env
@@ -66,8 +156,7 @@ env:
   KERNELSU_AUTO_GET : "false" # Always use the BakaSU setup.sh above.
   KERNELSU_AUTO_FORK : "bakasu" # only bakasu
 
-  SUSFS_ENABLE : true
-  SUSFS_FIXED : false # The evox-a15 susfs_fixed patch targets another tree layout; base 4.9 patch is used instead.
+  SUSFS_FIXED : false # The evox-a15 susfs_fixed patch targets another tree layout; our own 4.9 fixed patch is applied instead.
 
   AK3_SOURCE : "https://github.com/osm0sis/AnyKernel3.git"
   AK3_BRANCH : "master"
@@ -94,12 +183,6 @@ env:
   SUSFS_FOLDER_FIXED: "" # Fill in your patch prefix directory here. Leave it blank if there isn't one. -> your_folder
   SUSFS_PATCH_FIXED: "" # Fill in your patches here. If there are multiple patches, please separate them with a comma. Leave it blank if there isn't one. -> patch1,patch2
 
-  REKERNEL_ENABLE: "false" # if u need Re:Kernel.
-  DROIDSPACES_ENABLE: "false" # if u need Droidspaces or LXC/Docker.
-  NOMOUNT_ENABLE: "true" # if u need NoMount.
-  FGETPRIORITY_ENABLE: "true" #if u need hide getpriority.
-  VPNHIDE_ENABLE: "false" #if u need hide vpn status.
-  LZ4KD_ENABLE: "true" #if u need LZ4K/LZ4KD zram compression (4.9 Only).
 
   HOOK_METHOD: "syscall" # Manual hook method ->  syscall.
 
@@ -110,8 +193,6 @@ env:
   KPM_KPATCH_NEXT: "false" # If u want hook KPatch-Next in build step.
   KPM_PATCH_SOURCE: "https://raw.githubusercontent.com/SukiSU-Ultra/SukiSU_patch/refs/heads/main/kpm/patch_linux" # If u want to use KPM Inline,so you need set patch exec file source -> raw.githubusercontent.com/Test/Test/patch .
 
-  BASEBAND_GUARD_ENABLE: "true" #if u want prevent unauthorized writes to critical partitions/device nodes.
-  BASEBAND_GUARD_BOOT: "false" #if u want to protect boot partition.
 
   GENERATE_DTB: "false" # if u kernel need DTB , but cannot auto generate it. (Only AnyKernel3).
   GENERATE_CHIP: "qcom" # only supported for qcom and mediatek.
@@ -131,6 +212,16 @@ jobs:
     # container: archlinux/archlinux:latest # if u need use arch linux -> archlinux/archlinux:latest or ubuntu 20.04 -> ubuntu:focal
     env:
       KERNELSU_BRANCH: "${{ inputs.bakasu_branch || 'main' }}"
+      # Patch switches (rendered as checkboxes in the Run workflow UI)
+      SUSFS_ENABLE: ${{ inputs.patch_susfs }}
+      REKERNEL_ENABLE: ${{ inputs.patch_rekernel }}
+      DROIDSPACES_ENABLE: ${{ inputs.patch_droidspaces }}
+      BASEBAND_GUARD_ENABLE: ${{ inputs.patch_baseband_guard }}
+      BASEBAND_GUARD_BOOT: ${{ inputs.patch_baseband_guard_boot }}
+      NOMOUNT_ENABLE: ${{ inputs.patch_nomount }}
+      FGETPRIORITY_ENABLE: ${{ inputs.patch_fgetpriority }}
+      VPNHIDE_ENABLE: ${{ inputs.patch_vpnhide }}
+      LZ4KD_ENABLE: ${{ inputs.patch_lz4kd }}
       KBUILD_BUILD_VERSION: "1"
       KBUILD_BUILD_TIMESTAMP: "${{ inputs.kernel_build_time || 'Mon JUL 5 11:45:14 UTC 2021' }}"
       LOCALVERSION: ""
@@ -150,6 +241,22 @@ jobs:
 
       - name: 🪝 Patch Kernel of SUSFS
         uses: ./.github/workflows/patch-susfs
+
+      - name: 🩹 Patch SUSFS 4.9 Fixed Hooks
+        if: env.SUSFS_ENABLE == 'true'
+        shell: bash
+        run: |
+          cd $GITHUB_WORKSPACE/device_kernel/
+
+          if grep -q "susfs_is_current_app_uid" fs/stat.c && grep -q "SUSFS_IS_INODE_OPEN_REDIRECT(inode)" fs/proc/task_mmu.c; then
+            echo "[+] SUSFS 4.9 fixed hooks already present, Skipped."
+            exit 0
+          fi
+
+          cp /tmp/Patches/susfs/susfs_fixed_to_4.9.patch ./
+          patch -p1 < susfs_fixed_to_4.9.patch
+          rm -f susfs_fixed_to_4.9.patch fs/stat.c.rej fs/proc/task_mmu.c.rej
+          echo "[+] SUSFS 4.9 fixed hooks applied successfully."
 
       - name: 🔗 Patch for no-kprobe
         uses: ./.github/workflows/patch-no-kprobe
