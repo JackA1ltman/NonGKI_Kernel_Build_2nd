@@ -8,12 +8,32 @@ on:
         required: false
         type: string
         default: "main"
+      kernel_name:
+        description: "Kernel uname release (uname -r)"
+        required: false
+        type: string
+        default: "4.9.337-imexplorer-perf"
+      kernel_build_time:
+        description: "Kernel build time shown by uname -v (date part)"
+        required: false
+        type: string
+        default: "Mon JUL 5 11:45:14 UTC 2021"
   workflow_dispatch:
     inputs:
       bakasu_branch:
         description: "BakaSU branch, tag or commit (default: main)"
         required: false
         default: "main"
+        type: string
+      kernel_name:
+        description: "内核 uname 版本，即 uname -r (默认: 4.9.337-imexplorer-perf)"
+        required: false
+        default: "4.9.337-imexplorer-perf"
+        type: string
+      kernel_build_time:
+        description: "内核编译时间，即 uname -v 的日期部分 (默认: Mon JUL 5 11:45:14 UTC 2021)"
+        required: false
+        default: "Mon JUL 5 11:45:14 UTC 2021"
         type: string
 
 env:
@@ -74,10 +94,10 @@ env:
   SUSFS_FOLDER_FIXED: "mix2s_evox_a15" # Fill in your patch prefix directory here. Leave it blank if there isn't one. -> your_folder
   SUSFS_PATCH_FIXED: "susfs_fixed" # Fill in your patches here. If there are multiple patches, please separate them with a comma. Leave it blank if there isn't one. -> patch1,patch2
 
-  REKERNEL_ENABLE: "true" # if u need Re:Kernel.
-  DROIDSPACES_ENABLE: "true" # if u need Droidspaces or LXC/Docker.
-  NOMOUNT_ENABLE: "false" # if u need NoMount.
-  FGETPRIORITY_ENABLE: "false" #if u need hide getpriority.
+  REKERNEL_ENABLE: "false" # if u need Re:Kernel.
+  DROIDSPACES_ENABLE: "false" # if u need Droidspaces or LXC/Docker.
+  NOMOUNT_ENABLE: "true" # if u need NoMount.
+  FGETPRIORITY_ENABLE: "true" #if u need hide getpriority.
   VPNHIDE_ENABLE: "false" #if u need hide vpn status.
   LZ4KD_ENABLE: "true" #if u need LZ4K/LZ4KD zram compression (4.9 Only).
 
@@ -111,6 +131,9 @@ jobs:
     # container: archlinux/archlinux:latest # if u need use arch linux -> archlinux/archlinux:latest or ubuntu 20.04 -> ubuntu:focal
     env:
       KERNELSU_BRANCH: "${{ inputs.bakasu_branch || 'main' }}"
+      KBUILD_BUILD_VERSION: "1"
+      KBUILD_BUILD_TIMESTAMP: "${{ inputs.kernel_build_time || 'Mon JUL 5 11:45:14 UTC 2021' }}"
+      LOCALVERSION: ""
       CCACHE_COMPILERCHECK: "%compiler% -dumpmachine; %compiler% -dumpversion"
       CCACHE_NOHASHDIR: "true"
       CCACHE_HARDLINK: "true"
@@ -158,6 +181,39 @@ jobs:
 
       - name: 🗜️ Patch Kernel of LZ4KD
         uses: ./.github/workflows/patch-lz4kd
+
+      - name: 🏷️ Set Kernel UTS Name
+        shell: bash
+        env:
+          KERNEL_NAME: "${{ inputs.kernel_name || '4.9.337-imexplorer-perf' }}"
+        run: |
+          cd $GITHUB_WORKSPACE/device_kernel
+
+          NAME="$(printf '%s' "$KERNEL_NAME" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
+          BASE="$(awk '/^VERSION =/{v=$3} /^PATCHLEVEL =/{p=$3} /^SUBLEVEL =/{s=$3} END{print v"."p"."s}' Makefile)"
+          [ -z "$NAME" ] && NAME="${BASE}-imexplorer-perf"
+
+          if [[ "$NAME" == "$BASE" ]]; then
+            LOCALVER=""
+
+          elif [[ "$NAME" == "$BASE"-* ]]; then
+            LOCALVER="${NAME#"$BASE"}"
+
+          else
+            LOCALVER="-$NAME"
+            echo "[-] '$NAME' does not start with '$BASE', kernel will be '${BASE}${LOCALVER}'."
+          fi
+
+          # Avoid the '-dirty'/git describe suffix from scripts/setlocalversion.
+          : > .scmversion
+
+          DEFCONFIG="$GITHUB_WORKSPACE/device_kernel/arch/$KERNEL_ARCH/configs/$DEFCONFIG_NAME"
+          ESCAPED="$(printf '%s' "$LOCALVER" | sed 's/[&|\\]/\\&/g')"
+          sed -i "s|^CONFIG_LOCALVERSION=.*|CONFIG_LOCALVERSION=\"$ESCAPED\"|" "$DEFCONFIG"
+
+          echo "[+] CONFIG_LOCALVERSION=\"$LOCALVER\""
+          echo "[+] uname -r will be: ${BASE}${LOCALVER}"
+          echo "[+] uname -v will be: #$KBUILD_BUILD_VERSION SMP PREEMPT $KBUILD_BUILD_TIMESTAMP"
 
       - name: 🚀 Build Process
         uses: ./.github/workflows/build-process
