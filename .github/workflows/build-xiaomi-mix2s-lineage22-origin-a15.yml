@@ -2,7 +2,19 @@ name: Build Xiaomi Mi MIX 2S (LineageOS 22.2 Origin A15)
 
 on:
   workflow_call:
+    inputs:
+      bakasu_branch:
+        description: "BakaSU branch, tag or commit"
+        required: false
+        type: string
+        default: "main"
   workflow_dispatch:
+    inputs:
+      bakasu_branch:
+        description: "BakaSU branch, tag or commit (default: main)"
+        required: false
+        default: "main"
+        type: string
 
 env:
   # Device env
@@ -29,11 +41,10 @@ env:
   DEFCONFIG_ORIGIN_IMAGE: ""
   DEFCONFIG_FROM_BOOT: false
 
-  KERNELSU_SOURCE : ""
-  KERNELSU_BRANCH : ""
+  KERNELSU_SOURCE : "https://raw.githubusercontent.com/Baka-SU/BakaSU/main/kernel/setup.sh"
 
-  KERNELSU_AUTO_GET : "true"
-  KERNELSU_AUTO_FORK : "bakasu" # xxksu, rsuntk , next, bakasu and sukisu
+  KERNELSU_AUTO_GET : "false" # Always use the BakaSU setup.sh above.
+  KERNELSU_AUTO_FORK : "bakasu" # only bakasu
 
   SUSFS_ENABLE : true
   SUSFS_FIXED : true
@@ -99,6 +110,7 @@ jobs:
     runs-on: ubuntu-24.04 # u can changed to ubuntu 22.04, and need container set ubuntu-24.04
     # container: archlinux/archlinux:latest # if u need use arch linux -> archlinux/archlinux:latest or ubuntu 20.04 -> ubuntu:focal
     env:
+      KERNELSU_BRANCH: "${{ inputs.bakasu_branch || 'main' }}"
       CCACHE_COMPILERCHECK: "%compiler% -dumpmachine; %compiler% -dumpversion"
       CCACHE_NOHASHDIR: "true"
       CCACHE_HARDLINK: "true"
