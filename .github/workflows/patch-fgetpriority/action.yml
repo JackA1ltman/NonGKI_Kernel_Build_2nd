@@ -12,7 +12,9 @@ runs:
           if ! grep -q "fgetpriority" "drivers/Kconfig"; then
 
             git clone https://github.com/aerath-stuff/fgetpriority.git fgetpriority
-            ln -sfn ../fgetpriority/kernel drivers/fgetpriority
+            # The repo keeps its sources in kernel/, and Kconfig/Makefile expect
+            # drivers/fgetpriority/kernel/, so link to the repo root (not kernel/).
+            ln -sfn ../fgetpriority drivers/fgetpriority
             grep -q "fgetpriority" drivers/Makefile || echo 'obj-$(CONFIG_FGETPRIORITY) += fgetpriority/kernel/' >> drivers/Makefile
             grep -q "drivers/fgetpriority/Kconfig" drivers/Kconfig || sed -i '/endmenu/i source "drivers/fgetpriority/kernel/Kconfig"' drivers/Kconfig
 
