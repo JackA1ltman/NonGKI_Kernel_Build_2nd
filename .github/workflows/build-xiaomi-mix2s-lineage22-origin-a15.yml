@@ -68,6 +68,7 @@ env:
   NOMOUNT_ENABLE: "false" # if u need NoMount.
   FGETPRIORITY_ENABLE: "false" #if u need hide getpriority.
   VPNHIDE_ENABLE: "false" #if u need hide vpn status.
+  LZ4KD_ENABLE: "true" #if u need LZ4K/LZ4KD zram compression (4.9 Only).
 
   HOOK_METHOD: "syscall" # Manual hook method ->  syscall.
 
@@ -142,6 +143,9 @@ jobs:
 
       - name: 🛜 Patch Kernel of VPNHide
         uses: ./.github/workflows/patch-vpnhide
+
+      - name: 🗜️ Patch Kernel of LZ4KD
+        uses: ./.github/workflows/patch-lz4kd
 
       - name: 🚀 Build Process
         uses: ./.github/workflows/build-process

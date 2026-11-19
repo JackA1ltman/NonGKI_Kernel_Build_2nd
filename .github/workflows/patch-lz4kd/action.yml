@@ -1,0 +1,64 @@
+name: 'Patch LZ4KD compression for Kernel.'
+
+runs:
+  using: 'composite'
+  steps:
+      - name: Apply LZ4KD Patch
+        if: env.LZ4KD_ENABLE == 'true'
+        shell: bash
+        run: |
+          cd $GITHUB_WORKSPACE/device_kernel/
+
+          # LZ4KD is only ported for 4.9.x kernels.
+          if [[ "${{ env.KERNEL_VERSION }}" != "4.9" ]]; then
+            echo "[-] LZ4KD patch only supports 4.9.x, current kernel is ${{ env.KERNEL_VERSION }}, skipped."
+            exit 0
+          fi
+
+          if grep -q "lz4kd" drivers/block/zram/zcomp.c; then
+            echo "[+] LZ4KD is already patched, Skipped."
+            exit 0
+          fi
+
+          echo "::group::[+] Starting LZ4K/LZ4KD patch..."
+          cp /tmp/Patches/lz4kd/lz4kd_to_4.9.patch ./
+          patch -p1 < lz4kd_to_4.9.patch
+
+          if find crypto lib include drivers/block/zram -name "*.rej" | grep -q .; then
+            echo "[-] Failed to apply LZ4KD patch, rejected files:"
+            find crypto lib include drivers/block/zram -name "*.rej" -exec sh -c 'echo "===== $1"; cat "$1"' _ {} \;
+            false
+
+          else
+            rm -f lz4kd_to_4.9.patch
+            echo "[+] LZ4KD patch applied successfully."
+          fi
+          echo "::endgroup::"
+
+      - name: Set LZ4KD for DEFCONFIG
+        if: env.LZ4KD_ENABLE == 'true' && env.KERNEL_VERSION == '4.9'
+        shell: bash
+        run: |
+          cd $GITHUB_WORKSPACE/device_kernel/
+
+          DEFCONFIG="./arch/${{ env.KERNEL_ARCH }}/configs/${{ env.DEFCONFIG_NAME }}"
+
+          if grep -q "CONFIG_CRYPTO_LZ4KD=y" "$DEFCONFIG"; then
+            echo "[+] LZ4KD configs already exist, Skipped."
+
+          else
+            {
+              echo "CONFIG_CRYPTO_LZ4K=y"
+              echo "CONFIG_CRYPTO_LZ4KD=y"
+              echo "CONFIG_ZRAM_DEF_COMP_LZ4KD=y"
+            } >> "$DEFCONFIG"
+            echo "[+] LZ4KD configs has been set."
+          fi
+
+      - name: Upload LZ4KD Patch Rejected Files
+        if: env.LZ4KD_ENABLE == 'true' && failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lz4kd_patch_rejected_files
+          path: |
+            device_kernel/**/*.rej

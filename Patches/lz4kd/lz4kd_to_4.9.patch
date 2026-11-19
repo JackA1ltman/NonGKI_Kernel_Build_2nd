@@ -1,0 +1,4056 @@
+diff --git a/crypto/Kconfig b/crypto/Kconfig
+index 60ece1b8bfd3..3b20e0f623ab 100644
+--- a/crypto/Kconfig
++++ b/crypto/Kconfig
+@@ -1636,6 +1636,22 @@ config CRYPTO_LZ4
+ 	help
+ 	  This is the LZ4 algorithm.
+ 
++config CRYPTO_LZ4K
++	tristate "LZ4K compression algorithm"
++	select CRYPTO_ALGAPI
++	select LZ4K_COMPRESS
++	select LZ4K_DECOMPRESS
++	help
++	  This is the LZ4K algorithm.
++
++config CRYPTO_LZ4KD
++	tristate "LZ4KD compression algorithm"
++	select CRYPTO_ALGAPI
++	select LZ4KD_COMPRESS
++	select LZ4KD_DECOMPRESS
++	help
++	  This is the LZ4KD algorithm.
++
+ config CRYPTO_LZ4HC
+ 	tristate "LZ4HC compression algorithm"
+ 	select CRYPTO_ALGAPI
+diff --git a/crypto/Makefile b/crypto/Makefile
+index bb20d35a26ee..2f7b27634f63 100644
+--- a/crypto/Makefile
++++ b/crypto/Makefile
+@@ -120,6 +120,8 @@ obj-$(CONFIG_CRYPTO_AUTHENC) += authenc.o authencesn.o
+ obj-$(CONFIG_CRYPTO_LZO) += lzo.o
+ obj-$(CONFIG_CRYPTO_LZ4) += lz4.o
+ obj-$(CONFIG_CRYPTO_LZ4HC) += lz4hc.o
++obj-$(CONFIG_CRYPTO_LZ4K) += lz4k.o
++obj-$(CONFIG_CRYPTO_LZ4KD) += lz4kd.o
+ obj-$(CONFIG_CRYPTO_842) += 842.o
+ obj-$(CONFIG_CRYPTO_RNG2) += rng.o
+ obj-$(CONFIG_CRYPTO_ANSI_CPRNG) += ansi_cprng.o
+diff --git a/crypto/lz4k.c b/crypto/lz4k.c
+new file mode 100644
+index 000000000000..3c14a98c2d25
+--- /dev/null
++++ b/crypto/lz4k.c
+@@ -0,0 +1,95 @@
++/*
++ * Copyright (c) Huawei Technologies Co., Ltd. 2012-2020. All rights reserved.
++ * Description: LZ4K compression algorithm for ZRAM
++ * Author: Arkhipov Denis arkhipov.denis@huawei.com
++ * Create: 2020-03-25
++ */
++
++#include <linux/init.h>
++#include <linux/module.h>
++#include <linux/crypto.h>
++#include <linux/vmalloc.h>
++#include <linux/lz4k.h>
++#include <crypto/algapi.h>
++
++
++struct lz4k_ctx {
++	void *lz4k_comp_mem;
++};
++
++static int lz4k_init(struct crypto_tfm *tfm)
++{
++	struct lz4k_ctx *ctx = crypto_tfm_ctx(tfm);
++
++	ctx->lz4k_comp_mem = vmalloc(lz4k_encode_state_bytes_min());
++	if (!ctx->lz4k_comp_mem)
++		return -ENOMEM;
++
++	return 0;
++}
++
++static void lz4k_exit(struct crypto_tfm *tfm)
++{
++	struct lz4k_ctx *ctx = crypto_tfm_ctx(tfm);
++	vfree(ctx->lz4k_comp_mem);
++}
++
++static int lz4k_compress_crypto(struct crypto_tfm *tfm, const u8 *src, unsigned int slen, u8 *dst, unsigned int *dlen)
++{
++	struct lz4k_ctx *ctx = crypto_tfm_ctx(tfm);
++	int ret;
++
++	ret = lz4k_encode(ctx->lz4k_comp_mem, src, dst, slen, *dlen, 0);
++
++	if (ret < 0) {
++		return -EINVAL;
++	}
++
++	if (ret)
++		*dlen = ret;
++
++	return 0;
++}
++
++static int lz4k_decompress_crypto(struct crypto_tfm *tfm, const u8 *src, unsigned int slen, u8 *dst, unsigned int *dlen)
++{
++	int ret;
++
++	ret = lz4k_decode(src, dst, slen, *dlen);
++
++	if (ret <= 0)
++		return -EINVAL;
++	*dlen = ret;
++	return 0;
++}
++
++static struct crypto_alg alg_lz4k = {
++	.cra_name		= "lz4k",
++	.cra_driver_name	= "lz4k-generic",
++	.cra_flags		= CRYPTO_ALG_TYPE_COMPRESS,
++	.cra_list		= LIST_HEAD_INIT(alg_lz4k.cra_list),
++	.cra_ctxsize		= sizeof(struct lz4k_ctx),
++	.cra_module		= THIS_MODULE,
++	.cra_init		= lz4k_init,
++	.cra_exit		= lz4k_exit,
++	.cra_u			= { .compress = {
++	.coa_compress		= lz4k_compress_crypto,
++	.coa_decompress		= lz4k_decompress_crypto } }
++};
++
++static int __init lz4k_mod_init(void)
++{
++	return crypto_register_alg(&alg_lz4k);
++}
++
++static void __exit lz4k_mod_fini(void)
++{
++	crypto_unregister_alg(&alg_lz4k);
++}
++
++subsys_initcall(lz4k_mod_init);
++module_exit(lz4k_mod_fini);
++
++MODULE_LICENSE("GPL");
++MODULE_DESCRIPTION("LZ4K Compression Algorithm");
++MODULE_ALIAS_CRYPTO("lz4k");
+diff --git a/crypto/lz4kd.c b/crypto/lz4kd.c
+new file mode 100644
+index 000000000000..95a50accda6f
+--- /dev/null
++++ b/crypto/lz4kd.c
+@@ -0,0 +1,136 @@
++/*
++ * Cryptographic API.
++ *
++ * Copyright (c) Huawei Technologies Co., Ltd. 2022. All rights reserved.
++ * Description: LZ4KD compression algorithm for ZRAM
++ */
++
++#include <linux/init.h>
++#include <linux/module.h>
++#include <linux/crypto.h>
++#include <linux/vmalloc.h>
++#include <linux/lz4kd.h>
++#include <crypto/algapi.h>
++
++
++struct lz4kd_ctx {
++	void *lz4kd_comp_mem;
++};
++
++static int lz4kd_init(struct crypto_tfm *tfm)
++{
++	struct lz4kd_ctx *ctx = crypto_tfm_ctx(tfm);
++
++	ctx->lz4kd_comp_mem = vmalloc(lz4kd_encode_state_bytes_min());
++	if (!ctx->lz4kd_comp_mem)
++		return -ENOMEM;
++
++	return 0;
++}
++
++static void lz4kd_exit(struct crypto_tfm *tfm)
++{
++	struct lz4kd_ctx *ctx = crypto_tfm_ctx(tfm);
++	vfree(ctx->lz4kd_comp_mem);
++}
++
++static int lz4kd_compress_crypto(struct crypto_tfm *tfm, const u8 *src, unsigned int slen, u8 *dst,
++				unsigned int *dlen)
++{
++	struct lz4kd_ctx *ctx = crypto_tfm_ctx(tfm);
++	int ret = 0;
++
++	ret = lz4kd_encode(ctx->lz4kd_comp_mem, src, dst, slen, *dlen, 0);
++	if (ret < 0)
++		return -EINVAL;
++
++	if (ret)
++		*dlen = ret;
++
++	return 0;
++}
++
++static int lz4kd_decompress_crypto(struct crypto_tfm *tfm, const u8 *src, unsigned int slen, u8 *dst,
++				unsigned int *dlen)
++{
++	int ret = 0;
++
++	ret = lz4kd_decode(src, dst, slen, *dlen);
++	if (ret <= 0)
++		return -EINVAL;
++	*dlen = ret;
++	return 0;
++}
++
++#ifdef CONFIG_CRYPTO_DELTA
++static int lz4kd_compress_delta_crypto(struct crypto_tfm *tfm, const u8 *src0, const u8 *src,
++				unsigned int slen, u8 *dst, unsigned int *dlen, unsigned int out_max)
++{
++	struct lz4kd_ctx *ctx = crypto_tfm_ctx(tfm);
++	int ret = 0;
++
++	ret = lz4kd_encode_delta(ctx->lz4kd_comp_mem, src0, src, dst, slen, *dlen, out_max);
++	if (ret < 0)
++		return -EINVAL;
++
++	if (ret)
++		*dlen = ret;
++
++	return 0;
++}
++
++static int lz4kd_decompress_delta_crypto(struct crypto_tfm *tfm, const u8 *src, unsigned int slen,
++				const u8 *dst0,	u8 *dst, unsigned int *dlen)
++{
++	int ret = 0;
++
++	ret = lz4kd_decode_delta(src, dst0, dst, slen, *dlen);
++	if (ret <= 0)
++		return -EINVAL;
++	*dlen = ret;
++	return 0;
++}
++#endif
++
++static struct crypto_alg alg_lz4kd = {
++	.cra_name		= "lz4kd",
++	.cra_driver_name	= "lz4kd-generic",
++#ifdef CONFIG_CRYPTO_DELTA
++	.cra_flags		= CRYPTO_ALG_TYPE_COMPRESS | CRYPTO_ALG_EXT_PROP_DELTA,
++#else
++	.cra_flags		= CRYPTO_ALG_TYPE_COMPRESS,
++#endif
++	.cra_list		= LIST_HEAD_INIT(alg_lz4kd.cra_list),
++	.cra_ctxsize		= sizeof(struct lz4kd_ctx),
++	.cra_module		= THIS_MODULE,
++	.cra_init		= lz4kd_init,
++	.cra_exit		= lz4kd_exit,
++	.cra_u			= {
++	.compress = {
++			.coa_compress    = lz4kd_compress_crypto,
++			.coa_decompress  = lz4kd_decompress_crypto
++#ifdef CONFIG_CRYPTO_DELTA
++,
++			.coa_compress_delta = lz4kd_compress_delta_crypto,
++			.coa_decompress_delta = lz4kd_decompress_delta_crypto
++#endif
++		}
++	}
++};
++
++static int __init lz4kd_mod_init(void)
++{
++	return crypto_register_alg(&alg_lz4kd);
++}
++
++static void __exit lz4kd_mod_fini(void)
++{
++	crypto_unregister_alg(&alg_lz4kd);
++}
++
++module_init(lz4kd_mod_init);
++module_exit(lz4kd_mod_fini);
++
++MODULE_LICENSE("GPL");
++MODULE_DESCRIPTION("LZ4KD Compression Algorithm");
++MODULE_ALIAS_CRYPTO("lz4kd");
+diff --git a/drivers/block/zram/Kconfig b/drivers/block/zram/Kconfig
+index e8f2fa2993ab..d58177572dfb 100644
+--- a/drivers/block/zram/Kconfig
++++ b/drivers/block/zram/Kconfig
+@@ -14,6 +14,56 @@ config ZRAM
+ 
+ 	  See Documentation/blockdev/zram.txt for more information.
+ 
++choice
++	prompt "Default zram compressor"
++	default ZRAM_DEF_COMP_LZO
++	depends on ZRAM
++
++config ZRAM_DEF_COMP_LZO
++	bool "lzo"
++	depends on CRYPTO_LZO
++
++config ZRAM_DEF_COMP_LZ4
++	bool "lz4"
++	depends on CRYPTO_LZ4
++
++config ZRAM_DEF_COMP_LZ4HC
++	bool "lz4hc"
++	depends on CRYPTO_LZ4HC
++
++config ZRAM_DEF_COMP_LZ4K
++	bool "lz4k"
++	depends on CRYPTO_LZ4K
++
++config ZRAM_DEF_COMP_LZ4KD
++	bool "lz4kd"
++	depends on CRYPTO_LZ4KD
++
++config ZRAM_DEF_COMP_842
++	bool "842"
++	depends on CRYPTO_842
++
++config ZRAM_DEF_COMP_ZSTD
++	bool "zstd"
++	depends on CRYPTO_ZSTD
++
++config ZRAM_DEF_COMP_DEFLATE
++	bool "deflate"
++	depends on CRYPTO_DEFLATE
++
++endchoice
++
++config ZRAM_DEF_COMP
++	string
++	default "lzo" if ZRAM_DEF_COMP_LZO
++	default "lz4" if ZRAM_DEF_COMP_LZ4
++	default "lz4hc" if ZRAM_DEF_COMP_LZ4HC
++	default "lz4k" if ZRAM_DEF_COMP_LZ4K
++	default "lz4kd" if ZRAM_DEF_COMP_LZ4KD
++	default "842" if ZRAM_DEF_COMP_842
++	default "zstd" if ZRAM_DEF_COMP_ZSTD
++	default "deflate" if ZRAM_DEF_COMP_DEFLATE
++
+ config ZRAM_WRITEBACK
+        bool "Write back incompressible or idle page to backing device"
+        depends on ZRAM
+diff --git a/drivers/block/zram/zcomp.c b/drivers/block/zram/zcomp.c
+index c084a7f9763d..a05273fa6ff2 100644
+--- a/drivers/block/zram/zcomp.c
++++ b/drivers/block/zram/zcomp.c
+@@ -29,6 +29,12 @@ static const char * const backends[] = {
+ #if IS_ENABLED(CONFIG_CRYPTO_LZ4HC)
+ 	"lz4hc",
+ #endif
++#if IS_ENABLED(CONFIG_CRYPTO_LZ4K)
++	"lz4k",
++#endif
++#if IS_ENABLED(CONFIG_CRYPTO_LZ4KD)
++	"lz4kd",
++#endif
+ #if IS_ENABLED(CONFIG_CRYPTO_842)
+ 	"842",
+ #endif
+diff --git a/drivers/block/zram/zram_drv.c b/drivers/block/zram/zram_drv.c
+index d11775a04ea7..ef90600add67 100644
+--- a/drivers/block/zram/zram_drv.c
++++ b/drivers/block/zram/zram_drv.c
+@@ -40,7 +40,7 @@ static DEFINE_IDR(zram_index_idr);
+ static DEFINE_MUTEX(zram_index_mutex);
+ 
+ static int zram_major;
+-static const char *default_compressor = "lzo";
++static const char *default_compressor = CONFIG_ZRAM_DEF_COMP;
+ 
+ /* Module params (documentation at end) */
+ static unsigned int num_devices = 1;
+diff --git a/include/linux/lz4k.h b/include/linux/lz4k.h
+new file mode 100644
+index 000000000000..6e73161b1840
+--- /dev/null
++++ b/include/linux/lz4k.h
+@@ -0,0 +1,383 @@
++/*
++ * Copyright (c) Huawei Technologies Co., Ltd. 2012-2020. All rights reserved.
++ * Description: LZ4K compression algorithm
++ * Author: Aleksei Romanovskii aleksei.romanovskii@huawei.com
++ * Created: 2020-03-25
++ */
++
++#ifndef _LZ4K_H
++#define _LZ4K_H
++
++/* file lz4k.h
++  This file contains the platform-independent API of LZ-class
++  lossless codecs (compressors/decompressors) with complete
++  in-place documentation.  The documentation is formatted
++  in accordance with DOXYGEN mark-up format.  So, one can
++  generate proper documentation, e.g. in HTML format, using DOXYGEN.
++
++  Currently, LZ-class codecs, documented here, implement following
++  algorithms for lossless data compression/decompression:
++  \li "LZ HUAWEI" proprietary codec competing with LZ4 - lz4k_encode(),
++  lz4k_encode_delta(), lz4k_decode(), lz4k_decode_delta()
++
++  The LZ HUAWEI compressors accept any data as input and compress it
++  without loss to a smaller size if possible.
++  Compressed data produced by LZ HUAWEI compressor API lz4k_encode*(),
++  can be decompressed only by lz4k_decode() API documented below.\n
++  */
++
++/*
++  lz4k_status defines simple set of status values returned by Huawei APIs
++ */
++typedef enum {
++	LZ4K_STATUS_INCOMPRESSIBLE =  0, /* !< Return when data is incompressible */
++	LZ4K_STATUS_FAILED         = -1, /* !< Return on general failure */
++	LZ4K_STATUS_READ_ERROR =     -2, /* !< Return when data reading failed */
++	LZ4K_STATUS_WRITE_ERROR =    -3  /* !< Return when data writing failed */
++} lz4k_status;
++
++/*
++  LZ4K_Version() returns static unmutable string with algorithm version
++ */
++const char *lz4k_version(void);
++
++/*
++  lz4k_encode_state_bytes_min() returns number of bytes for state parameter,
++  supplied to lz4k_encode(), lz4k_encode_delta(),
++  lz4k_update_delta_state().
++  So, state should occupy at least lz4k_encode_state_bytes_min() for mentioned
++  functions to work correctly.
++ */
++unsigned lz4k_encode_state_bytes_min(void);
++
++/*
++  lz4k_encode() encodes/compresses one input buffer at *in, places
++  result of encoding into one output buffer at *out if encoded data
++  size fits specified values of out_max and out_limit.
++  It returs size of encoded data in case of success or value<=0 otherwise.
++  The result of successful encoding is in HUAWEI proprietary format, that
++  is the encoded data can be decoded only by lz4k_decode().
++
++  \return
++    \li positive value\n
++      if encoding was successful. The value returned is the size of encoded
++      (compressed) data always <=out_max.
++    \li non-positive value\n
++      if in==0||in_max==0||out==0||out_max==0 or
++      if out_max is less than needed for encoded (compressed) data.
++    \li 0 value\n
++      if encoded data size >= out_limit
++
++  \param[in] state
++    !=0, pointer to state buffer used internally by the function.  Size of
++    state in bytes should be at least lz4k_encode_state_bytes_min().  The content
++    of state buffer will be changed during encoding.
++
++  \param[in] in
++    !=0, pointer to the input buffer to encode (compress).  The content of
++    the input buffer does not change during encoding.
++
++  \param[in] out
++    !=0, pointer to the output buffer where to place result of encoding
++    (compression).
++    If encoding is unsuccessful, e.g. out_max or out_limit are less than
++    needed for encoded data then content of out buffer may be arbitrary.
++
++  \param[in] in_max
++    !=0, size in bytes of the input buffer at *in
++
++  \param[in] out_max
++    !=0, size in bytes of the output buffer at *out
++
++  \param[in] out_limit
++    encoded data size soft limit in bytes. Due to performance reasons it is
++    not guaranteed that
++    lz4k_encode will always detect that resulting encoded data size is
++    bigger than out_limit.
++    Hovewer, when reaching out_limit is detected, lz4k_encode() returns
++    earlier and spares CPU cycles.  Caller code should recheck result
++    returned by lz4k_encode() (value greater than 0) if it is really
++    less or equal than out_limit.
++    out_limit is ignored if it is equal to 0.
++ */
++int lz4k_encode(
++	void *const state,
++	const void *const in,
++	void *out,
++	unsigned in_max,
++	unsigned out_max,
++	unsigned out_limit);
++
++/*
++  lz4k_encode_max_cr() encodes/compresses one input buffer at *in, places
++  result of encoding into one output buffer at *out if encoded data
++  size fits specified value of out_max.
++  It returs size of encoded data in case of success or value<=0 otherwise.
++  The result of successful encoding is in HUAWEI proprietary format, that
++  is the encoded data can be decoded only by lz4k_decode().
++
++  \return
++    \li positive value\n
++      if encoding was successful. The value returned is the size of encoded
++      (compressed) data always <=out_max.
++    \li non-positive value\n
++      if in==0||in_max==0||out==0||out_max==0 or
++      if out_max is less than needed for encoded (compressed) data.
++
++  \param[in] state
++    !=0, pointer to state buffer used internally by the function.  Size of
++    state in bytes should be at least lz4k_encode_state_bytes_min().  The content
++    of state buffer will be changed during encoding.
++
++  \param[in] in
++    !=0, pointer to the input buffer to encode (compress).  The content of
++    the input buffer does not change during encoding.
++
++  \param[in] out
++    !=0, pointer to the output buffer where to place result of encoding
++    (compression).
++    If encoding is unsuccessful, e.g. out_max is less than
++    needed for encoded data then content of out buffer may be arbitrary.
++
++  \param[in] in_max
++    !=0, size in bytes of the input buffer at *in
++
++  \param[in] out_max
++    !=0, size in bytes of the output buffer at *out
++
++  \param[in] out_limit
++    encoded data size soft limit in bytes. Due to performance reasons it is
++    not guaranteed that
++    lz4k_encode will always detect that resulting encoded data size is
++    bigger than out_limit.
++    Hovewer, when reaching out_limit is detected, lz4k_encode() returns
++    earlier and spares CPU cycles.  Caller code should recheck result
++    returned by lz4k_encode() (value greater than 0) if it is really
++    less or equal than out_limit.
++    out_limit is ignored if it is equal to 0.
++ */
++int lz4k_encode_max_cr(
++	void *const state,
++	const void *const in,
++	void *out,
++	unsigned in_max,
++	unsigned out_max,
++	unsigned out_limit);
++
++/*
++  lz4k_update_delta_state() fills/updates state (hash table) in the same way as
++  lz4k_encode does while encoding (compressing).
++  The state and its content can then be used by lz4k_encode_delta()
++  to encode (compress) data more efficiently.
++  By other words, effect of lz4k_update_delta_state() is the same as
++  lz4k_encode() with all encoded output discarded.
++
++  Example sequence of calls for lz4k_update_delta_state and
++  lz4k_encode_delta:
++    //dictionary (1st) block
++    int result0=lz4k_update_delta_state(state, in0, in0, in_max0);
++//delta (2nd) block
++    int result1=lz4k_encode_delta(state, in0, in, out, in_max,
++                                       out_max);
++
++  \param[in] state
++    !=0, pointer to state buffer used internally by lz4k_encode*.
++    Size of state in bytes should be at least lz4k_encode_state_bytes_min().
++    The content of state buffer is zeroed at the beginning of
++    lz4k_update_delta_state ONLY when in0==in.
++    The content of state buffer will be changed inside
++    lz4k_update_delta_state.
++
++  \param[in] in0
++    !=0, pointer to the reference/dictionary input buffer that was used
++    as input to preceding call of lz4k_encode() or lz4k_update_delta_state()
++    to fill/update the state buffer.
++    The content of the reference/dictionary input buffer does not change
++    during encoding.
++    The in0 is needed for use-cases when there are several dictionary and
++    input blocks interleaved, e.g.
++    <dictionaryA><inputA><dictionaryB><inputB>..., or
++    <dictionaryA><dictionaryB><inputAB>..., etc.
++
++  \param[in] in
++    !=0, pointer to the input buffer to fill/update state as if encoding
++    (compressing) this input.  This input buffer is also called dictionary
++    input buffer.
++    The content of the input buffer does not change during encoding.
++    The two buffers - at in0 and at in - should be contiguous in memory.
++    That is, the last byte of buffer at in0 is located exactly before byte
++    at in.
++
++  \param[in] in_max
++    !=0, size in bytes of the input buffer at in.
++ */
++int lz4k_update_delta_state(
++	void *const state,
++	const void *const in0,
++	const void *const in,
++	unsigned in_max);
++
++/*
++  lz4k_encode_delta() encodes (compresses) data from one input buffer
++  using one reference buffer as dictionary and places the result of
++  compression into one output buffer.
++  The result of successful compression is in HUAWEI proprietary format, so
++  that compressed data can be decompressed only by lz4k_decode_delta().
++  Reference/dictionary buffer and input buffer should be contiguous in
++  memory.
++
++  Example sequence of calls for lz4k_update_delta_state and
++  lz4k_encode_delta:
++//dictionary (1st) block
++    int result0=lz4k_update_delta_state(state, in0, in0, in_max0);
++//delta (2nd) block
++    int result1=lz4k_encode_delta(state, in0, in, out, in_max,
++                                       out_max);
++
++  Example sequence of calls for lz4k_encode and lz4k_encode_delta:
++//dictionary (1st) block
++    int result0=lz4k_encode(state, in0, out0, in_max0, out_max0);
++//delta (2nd) block
++    int result1=lz4k_encode_delta(state, in0, in, out, in_max,
++                                       out_max);
++
++  \return
++    \li positive value\n
++      if encoding was successful. The value returned is the size of encoded
++      (compressed) data.
++    \li non-positive value\n
++      if state==0||in0==0||in==0||in_max==0||out==0||out_max==0 or
++      if out_max is less than needed for encoded (compressed) data.
++
++  \param[in] state
++    !=0, pointer to state buffer used internally by the function.  Size of
++    state in bytes should be at least lz4k_encode_state_bytes_min().  For more
++    efficient encoding the state buffer may be filled/updated by calling
++    lz4k_update_delta_state() or lz4k_encode() before lz4k_encode_delta().
++    The content of state buffer is zeroed at the beginning of
++    lz4k_encode_delta() ONLY when in0==in.
++    The content of state will be changed during encoding.
++
++  \param[in] in0
++    !=0, pointer to the reference/dictionary input buffer that was used as
++    input to preceding call of lz4k_encode() or lz4k_update_delta_state() to
++    fill/update the state buffer.
++    The content of the reference/dictionary input buffer does not change
++    during encoding.
++
++  \param[in] in
++    !=0, pointer to the input buffer to encode (compress).  The input buffer
++    is compressed using content of the reference/dictionary input buffer at
++    in0. The content of the input buffer does not change during encoding.
++    The two buffers - at *in0 and at *in - should be contiguous in memory.
++    That is, the last byte of buffer at *in0 is located exactly before byte
++    at *in.
++
++  \param[in] out
++    !=0, pointer to the output buffer where to place result of encoding
++    (compression). If compression is unsuccessful then content of out
++    buffer may be arbitrary.
++
++  \param[in] in_max
++    !=0, size in bytes of the input buffer at *in
++
++  \param[in] out_max
++    !=0, size in bytes of the output buffer at *out.
++ */
++int lz4k_encode_delta(
++	void *const state,
++	const void *const in0,
++	const void *const in,
++	void *out,
++	unsigned in_max,
++	unsigned out_max);
++
++/*
++  lz4k_decode() decodes (decompresses) data from one input buffer and places
++  the result of decompression into one output buffer.  The encoded data in input
++  buffer should be in HUAWEI proprietary format, produced by lz4k_encode()
++  or by lz4k_encode_delta().
++
++  \return
++    \li positive value\n
++      if decoding was successful. The value returned is the size of decoded
++      (decompressed) data.
++    \li non-positive value\n
++      if in==0||in_max==0||out==0||out_max==0 or
++      if out_max is less than needed for decoded (decompressed) data or
++      if input encoded data format is corrupted.
++
++  \param[in] in
++    !=0, pointer to the input buffer to decode (decompress).  The content of
++    the input buffer does not change during decoding.
++
++  \param[in] out
++    !=0, pointer to the output buffer where to place result of decoding
++    (decompression). If decompression is unsuccessful then content of out
++    buffer may be arbitrary.
++
++  \param[in] in_max
++    !=0, size in bytes of the input buffer at in
++
++  \param[in] out_max
++    !=0, size in bytes of the output buffer at out
++ */
++int lz4k_decode(
++	const void *const in,
++	void *const out,
++	unsigned in_max,
++	unsigned out_max);
++
++/*
++  lz4k_decode_delta() decodes (decompresses) data from one input buffer
++  and places the result of decompression into one output buffer.  The
++  compressed data in input buffer should be in format, produced by
++  lz4k_encode_delta().
++
++  Example sequence of calls for lz4k_decode and lz4k_decode_delta:
++//dictionary (1st) block
++    int result0=lz4k_decode(in0, out0, in_max0, out_max0);
++//delta (2nd) block
++    int result1=lz4k_decode_delta(in, out0, out, in_max, out_max);
++
++  \return
++    \li positive value\n
++      if decoding was successful. The value returned is the size of decoded
++      (decompressed) data.
++    \li non-positive value\n
++      if in==0||in_max==0||out==0||out_max==0 or
++      if out_max is less than needed for decoded (decompressed) data or
++      if input data format is corrupted.
++
++  \param[in] in
++    !=0, pointer to the input buffer to decode (decompress).  The content of
++    the input buffer does not change during decoding.
++
++  \param[in] out0
++    !=0, pointer to the dictionary input buffer that was used as input to
++    lz4k_update_delta_state() to fill/update the state buffer.  The content
++    of the dictionary input buffer does not change during decoding.
++
++  \param[in] out
++    !=0, pointer to the output buffer where to place result of decoding
++    (decompression). If decompression is unsuccessful then content of out
++    buffer may be arbitrary.
++    The two buffers - at *out0 and at *out - should be contiguous in memory.
++    That is, the last byte of buffer at *out0 is located exactly before byte
++    at *out.
++
++  \param[in] in_max
++    !=0, size in bytes of the input buffer at *in
++
++  \param[in] out_max
++    !=0, size in bytes of the output buffer at *out
++ */
++int lz4k_decode_delta(
++	const void *in,
++	const void *const out0,
++	void *const out,
++	unsigned in_max,
++	unsigned out_max);
++
++
++#endif /* _LZ4K_H */
+diff --git a/include/linux/lz4kd.h b/include/linux/lz4kd.h
+new file mode 100644
+index 000000000000..cef922d1e1d4
+--- /dev/null
++++ b/include/linux/lz4kd.h
+@@ -0,0 +1,326 @@
++/*
++ * Copyright (c) Huawei Technologies Co., Ltd. 2022. All rights reserved.
++ * Description: LZ4K compression algorithm with delta compression
++ */
++
++#ifndef _LZ4KD_H
++#define _LZ4KD_H
++
++/* file lz4kd.h
++  This file contains the platform-independent API of LZ-class
++  lossless codecs (compressors/decompressors) with complete
++  in-place documentation.  The documentation is formatted
++  in accordance with DOXYGEN mark-up format.  So, one can
++  generate proper documentation, e.g. in HTML format, using DOXYGEN.
++
++  Currently, LZ-class codecs, documented here, implement following
++  algorithms for lossless data compression/decompression:
++  \li "LZ" proprietary codec competing with LZ4 - lz4kd_encode(),
++  lz4kd_encode_delta(), lz4kd_decode(), lz4kd_decode_delta()
++
++  The LZ compressors accept any data as input and compress it
++  without loss to a smaller size if possible.
++  Compressed data produced by LZ compressor API lz4kd_encode*(),
++  can be decompressed only by lz4kd_decode() API documented below.\n
++  */
++
++/*
++  lz4kd_status defines simple set of status values returned by APIs
++ */
++typedef enum {
++	LZ4K_STATUS_INCOMPRESSIBLE =  0, /* !< Return when data is incompressible */
++	LZ4K_STATUS_FAILED         = -1, /* !< Return on general failure */
++	LZ4K_STATUS_READ_ERROR =     -2, /* !< Return when data reading failed */
++	LZ4K_STATUS_WRITE_ERROR =    -3  /* !< Return when data writing failed */
++} lz4kd_status;
++
++/*
++  lz4kd_Version() returns static unmutable string with algorithm version
++ */
++const char *lz4kd_version(void);
++
++/*
++  lz4kd_encode_state_bytes_min() returns number of bytes for state parameter,
++  supplied to lz4kd_encode(), lz4kd_encode_delta().
++  So, state should occupy at least lz4kd_encode_state_bytes_min() for mentioned
++  functions to work correctly.
++ */
++unsigned lz4kd_encode_state_bytes_min(void);
++
++/*
++  lz4kd_encode() encodes/compresses one input buffer at *in, places
++  result of encoding into one output buffer at *out if encoded data
++  size fits specified values of out_max and out_limit.
++  It returs size of encoded data in case of success or value<=0 otherwise.
++  The result of successful encoding is in proprietary format, that
++  is the encoded data can be decoded only by lz4kd_decode().
++
++  \return
++    \li positive value\n
++      if encoding was successful. The value returned is the size of encoded
++      (compressed) data always <=out_max.
++    \li non-positive value\n
++      if in==0||in_max==0||out==0||out_max==0 or
++      if out_max is less than needed for encoded (compressed) data.
++    \li 0 value\n
++      if encoded data size >= out_limit
++
++  \param[in] state
++    !=0, pointer to state buffer used internally by the function.  Size of
++    state in bytes should be at least lz4kd_encode_state_bytes_min().  The content
++    of state buffer will be changed during encoding.
++
++  \param[in] in
++    !=0, pointer to the input buffer to encode (compress).  The content of
++    the input buffer does not change during encoding.
++
++  \param[in] out
++    !=0, pointer to the output buffer where to place result of encoding
++    (compression).
++    If encoding is unsuccessful, e.g. out_max or out_limit are less than
++    needed for encoded data then content of out buffer may be arbitrary.
++
++  \param[in] in_max
++    !=0, size in bytes of the input buffer at *in
++
++  \param[in] out_max
++    !=0, size in bytes of the output buffer at *out
++
++  \param[in] out_limit
++    encoded data size soft limit in bytes. Due to performance reasons it is
++    not guaranteed that
++    lz4kd_encode will always detect that resulting encoded data size is
++    bigger than out_limit.
++    Hovewer, when reaching out_limit is detected, lz4kd_encode() returns
++    earlier and spares CPU cycles.  Caller code should recheck result
++    returned by lz4kd_encode() (value greater than 0) if it is really
++    less or equal than out_limit.
++    out_limit is ignored if it is equal to 0.
++ */
++int lz4kd_encode(
++	void *const state,
++	const void *const in,
++	void *out,
++	unsigned in_max,
++	unsigned out_max,
++	unsigned out_limit);
++
++int lz4kd_encode2(
++	void *const state,
++	const void *const in,
++	void *out,
++	unsigned in_max,
++	unsigned out_max,
++	unsigned out_limit);
++
++int lz4kd_encode_pattern(
++	void *const state,
++	const void *const in,
++	void *out,
++	unsigned in_max,
++	unsigned out_max,
++	unsigned out_limit);
++
++/*
++  lz4kd_encode_max_cr() encodes/compresses one input buffer at *in, places
++  result of encoding into one output buffer at *out if encoded data
++  size fits specified value of out_max.
++  It returs size of encoded data in case of success or value<=0 otherwise.
++  The result of successful encoding is in proprietary format, that
++  is the encoded data can be decoded only by lz4kd_decode().
++
++  \return
++    \li positive value\n
++      if encoding was successful. The value returned is the size of encoded
++      (compressed) data always <=out_max.
++    \li non-positive value\n
++      if in==0||in_max==0||out==0||out_max==0 or
++      if out_max is less than needed for encoded (compressed) data.
++
++  \param[in] state
++    !=0, pointer to state buffer used internally by the function.  Size of
++    state in bytes should be at least lz4kd_encode_state_bytes_min().  The content
++    of state buffer will be changed during encoding.
++
++  \param[in] in
++    !=0, pointer to the input buffer to encode (compress).  The content of
++    the input buffer does not change during encoding.
++
++  \param[in] out
++    !=0, pointer to the output buffer where to place result of encoding
++    (compression).
++    If encoding is unsuccessful, e.g. out_max is less than
++    needed for encoded data then content of out buffer may be arbitrary.
++
++  \param[in] in_max
++    !=0, size in bytes of the input buffer at *in
++
++  \param[in] out_max
++    !=0, size in bytes of the output buffer at *out
++
++  \param[in] out_limit
++    encoded data size soft limit in bytes. Due to performance reasons it is
++    not guaranteed that
++    lz4kd_encode will always detect that resulting encoded data size is
++    bigger than out_limit.
++    Hovewer, when reaching out_limit is detected, lz4kd_encode() returns
++    earlier and spares CPU cycles.  Caller code should recheck result
++    returned by lz4kd_encode() (value greater than 0) if it is really
++    less or equal than out_limit.
++    out_limit is ignored if it is equal to 0.
++ */
++int lz4kd_encode_max_cr(
++	void *const state,
++	const void *const in,
++	void *out,
++	unsigned in_max,
++	unsigned out_max,
++	unsigned out_limit);
++
++/*
++  lz4kd_encode_delta() encodes (compresses) data from one input buffer
++  using one reference buffer as dictionary and places the result of
++  compression into one output buffer.
++  The result of successful compression is in proprietary format, so
++  that compressed data can be decompressed only by lz4kd_decode_delta().
++  Reference/dictionary buffer and input buffer should be contiguous in
++  memory.
++
++  \return
++    \li positive value\n
++      if encoding was successful. The value returned is the size of encoded
++      (compressed) data.
++    \li non-positive value\n
++      if state==0||in0==0||in==0||in_max==0||out==0||out_max==0 or
++      if out_max is less than needed for encoded (compressed) data.
++
++  \param[in] state
++    !=0, pointer to state buffer used internally by the function.  Size of
++    state in bytes should be at least lz4kd_encode_state_bytes_min().
++    The content of state buffer is zeroed at the beginning of
++    lz4kd_encode_delta().
++    The content of state will be changed during encoding.
++
++  \param[in] in0
++    !=0, pointer to the reference/dictionary input buffer that was used as
++    input to preceding call of lz4kd_encode().
++    The content of the reference/dictionary input buffer does not change
++    during encoding.
++
++  \param[in] in
++    !=0, pointer to the input buffer to encode (compress).  The input buffer
++    is compressed using content of the reference/dictionary input buffer at
++    in0. The content of the input buffer does not change during encoding.
++    The two buffers - at *in0 and at *in - should be contiguous in memory.
++    That is, the last byte of buffer at *in0 is located exactly before byte
++    at *in.
++
++  \param[in] out
++    !=0, pointer to the output buffer where to place result of encoding
++    (compression). If compression is unsuccessful then content of out
++    buffer may be arbitrary.
++
++  \param[in] in_max
++    !=0, size in bytes of the input buffer at *in
++
++  \param[in] out_max
++    !=0, size in bytes of the output buffer at *out.
++ */
++int lz4kd_encode_delta(
++	void *const state,
++	const void *const in0,
++	const void *const in,
++	void *out,
++	unsigned in_max,
++	unsigned out_max,
++	unsigned out_limit);
++
++/*
++  lz4kd_decode() decodes (decompresses) data from one input buffer and places
++  the result of decompression into one output buffer.  The encoded data in input
++  buffer should be in proprietary format, produced by lz4kd_encode()
++  or by lz4kd_encode_delta().
++
++  \return
++    \li positive value\n
++      if decoding was successful. The value returned is the size of decoded
++      (decompressed) data.
++    \li non-positive value\n
++      if in==0||in_max==0||out==0||out_max==0 or
++      if out_max is less than needed for decoded (decompressed) data or
++      if input encoded data format is corrupted.
++
++  \param[in] in
++    !=0, pointer to the input buffer to decode (decompress).  The content of
++    the input buffer does not change during decoding.
++
++  \param[in] out
++    !=0, pointer to the output buffer where to place result of decoding
++    (decompression). If decompression is unsuccessful then content of out
++    buffer may be arbitrary.
++
++  \param[in] in_max
++    !=0, size in bytes of the input buffer at in
++
++  \param[in] out_max
++    !=0, size in bytes of the output buffer at out
++ */
++int lz4kd_decode(
++	const void *const in,
++	void *const out,
++	unsigned in_max,
++	unsigned out_max);
++
++/*
++  lz4kd_decode_delta() decodes (decompresses) data from one input buffer
++  and places the result of decompression into one output buffer.  The
++  compressed data in input buffer should be in format, produced by
++  lz4kd_encode_delta().
++
++  Example sequence of calls for lz4kd_decode and lz4kd_decode_delta:
++//dictionary (1st) block
++    int result0=lz4kd_decode(in0, out0, in_max0, out_max0);
++//delta (2nd) block
++    int result1=lz4kd_decode_delta(in, out0, out, in_max, out_max);
++
++  \return
++    \li positive value\n
++      if decoding was successful. The value returned is the size of decoded
++      (decompressed) data.
++    \li non-positive value\n
++      if in==0||in_max==0||out==0||out_max==0 or
++      if out_max is less than needed for decoded (decompressed) data or
++      if input data format is corrupted.
++
++  \param[in] in
++    !=0, pointer to the input buffer to decode (decompress).  The content of
++    the input buffer does not change during decoding.
++
++  \param[in] out0
++    !=0, pointer to the dictionary input buffer that was used as in0 input to
++    lz4kd_encode_delta().  The content
++    of the dictionary input buffer does not change during decoding.
++
++  \param[in] out
++    !=0, pointer to the output buffer where to place result of decoding
++    (decompression). If decompression is unsuccessful then content of out
++    buffer may be arbitrary.
++    The two buffers - at *out0 and at *out - should be contiguous in memory.
++    That is, the last byte of buffer at *out0 is located exactly before byte
++    at *out.
++
++  \param[in] in_max
++    !=0, size in bytes of the input buffer at *in
++
++  \param[in] out_max
++    !=0, size in bytes of the output buffer at *out
++ */
++int lz4kd_decode_delta(
++	const void *in,
++	const void *const out0,
++	void *const out,
++	unsigned in_max,
++	unsigned out_max);
++
++
++#endif /* _LZ4KD_H */
+diff --git a/lib/Kconfig b/lib/Kconfig
+index 546cfb34611e..737b9f4d5ecd 100644
+--- a/lib/Kconfig
++++ b/lib/Kconfig
+@@ -241,6 +241,18 @@ config LZ4HC_COMPRESS
+ config LZ4_DECOMPRESS
+ 	tristate
+ 
++config LZ4K_COMPRESS
++	tristate
++
++config LZ4K_DECOMPRESS
++	tristate
++
++config LZ4KD_COMPRESS
++	tristate
++
++config LZ4KD_DECOMPRESS
++	tristate
++
+ config ZSTD_COMPRESS
+ 	select XXHASH
+ 	tristate
+diff --git a/lib/Makefile b/lib/Makefile
+index c1b580c117dd..7d0675fe58b9 100644
+--- a/lib/Makefile
++++ b/lib/Makefile
+@@ -111,6 +111,10 @@ obj-$(CONFIG_LZO_DECOMPRESS) += lzo/
+ obj-$(CONFIG_LZ4_COMPRESS) += lz4/
+ obj-$(CONFIG_LZ4HC_COMPRESS) += lz4/
+ obj-$(CONFIG_LZ4_DECOMPRESS) += lz4/
++obj-$(CONFIG_LZ4K_COMPRESS) += lz4k/
++obj-$(CONFIG_LZ4K_DECOMPRESS) += lz4k/
++obj-$(CONFIG_LZ4KD_COMPRESS) += lz4kd/
++obj-$(CONFIG_LZ4KD_DECOMPRESS) += lz4kd/
+ obj-$(CONFIG_ZSTD_COMPRESS) += zstd/
+ obj-$(CONFIG_ZSTD_DECOMPRESS) += zstd/
+ obj-$(CONFIG_XZ_DEC) += xz/
+diff --git a/lib/lz4k/Makefile b/lib/lz4k/Makefile
+new file mode 100644
+index 000000000000..6ea3578639d4
+--- /dev/null
++++ b/lib/lz4k/Makefile
+@@ -0,0 +1,2 @@
++obj-$(CONFIG_LZ4K_COMPRESS) += lz4k_encode.o
++obj-$(CONFIG_LZ4K_DECOMPRESS) += lz4k_decode.o
+\ No newline at end of file
+diff --git a/lib/lz4k/lz4k_decode.c b/lib/lz4k/lz4k_decode.c
+new file mode 100644
+index 000000000000..eff9c541c9a1
+--- /dev/null
++++ b/lib/lz4k/lz4k_decode.c
+@@ -0,0 +1,310 @@
++/*
++ * Copyright (c) Huawei Technologies Co., Ltd. 2012-2020. All rights reserved.
++ * Description: LZ4K compression algorithm
++ * Author: Aleksei Romanovskii aleksei.romanovskii@huawei.com
++ * Created: 2020-03-25
++ */
++
++#if !defined(__KERNEL__)
++#include "lz4k.h"
++#else
++#include <linux/lz4k.h>
++#include <linux/module.h>
++#endif
++
++#include "lz4k_private.h" /* types, etc */
++
++static const uint8_t *get_size(
++	uint_fast32_t *size,
++	const uint8_t *in_at,
++	const uint8_t *const in_end)
++{
++	uint_fast32_t u;
++	do {
++		if (unlikely(in_at >= in_end))
++			return NULL;
++		*size += (u = *(const uint8_t*)in_at);
++		++in_at;
++	} while (BYTE_MAX == u);
++	return in_at;
++} /* get_size */
++
++static int end_of_block(
++	const uint_fast32_t nr_bytes_max,
++	const uint_fast32_t r_bytes_max,
++	const uint8_t *const in_at,
++	const uint8_t *const in_end,
++	const uint8_t *const out,
++	const uint8_t *const out_at)
++{
++	if (!nr_bytes_max)
++		return LZ4K_STATUS_FAILED; /* should be the last one in block */
++	if (r_bytes_max != REPEAT_MIN)
++		return LZ4K_STATUS_FAILED; /* should be the last one in block */
++	if (in_at != in_end)
++		return LZ4K_STATUS_FAILED; /* should be the last one in block */
++	return (int)(out_at - out);
++}
++
++enum {
++	NR_COPY_MIN = 16,
++	R_COPY_MIN = 16,
++	R_COPY_SAFE = R_COPY_MIN - 1,
++	R_COPY_SAFE_2X = (R_COPY_MIN << 1) - 1
++};
++
++static bool out_non_repeat(
++	const uint8_t **in_at,
++	uint8_t **out_at,
++	uint_fast32_t nr_bytes_max,
++	const uint8_t *const in_end,
++	const uint8_t *const out_end)
++{
++	const uint8_t *const in_copy_end = *in_at + nr_bytes_max;
++	uint8_t *const out_copy_end = *out_at + nr_bytes_max;
++	if (likely(nr_bytes_max <= NR_COPY_MIN)) {
++		if (likely(*in_at <= in_end - NR_COPY_MIN &&
++			   *out_at <= out_end - NR_COPY_MIN))
++			m_copy(*out_at, *in_at, NR_COPY_MIN);
++		else if (in_copy_end <= in_end && out_copy_end <= out_end)
++			m_copy(*out_at, *in_at, nr_bytes_max);
++		else
++			return false;
++	} else { /* nr_bytes_max>NR_COPY_MIN */
++		if (likely(in_copy_end <= in_end - NR_COPY_MIN &&
++			   out_copy_end <= out_end - NR_COPY_MIN)) {
++			m_copy(*out_at, *in_at, NR_COPY_MIN);
++			copy_x_while_lt(*out_at + NR_COPY_MIN,
++					*in_at + NR_COPY_MIN,
++					out_copy_end, NR_COPY_MIN);
++		} else if (in_copy_end <= in_end && out_copy_end <= out_end) {
++			m_copy(*out_at, *in_at, nr_bytes_max);
++		} else { /* in_copy_end > in_end || out_copy_end > out_end */
++			return false;
++		}
++	} /* if (nr_bytes_max <= NR_COPY_MIN) */
++	*in_at = in_copy_end;
++	*out_at = out_copy_end;
++	return true;
++} /* out_non_repeat */
++
++static void out_repeat_overlap(
++	uint_fast32_t offset,
++	uint8_t *out_at,
++	const uint8_t *out_from,
++	const uint8_t *const out_copy_end)
++{ /* (1 < offset < R_COPY_MIN/2) && out_copy_end + R_COPY_SAFE_2X  <= out_end */
++	enum {
++		COPY_MIN = R_COPY_MIN >> 1,
++		OFFSET_LIMIT = COPY_MIN >> 1
++	};
++	m_copy(out_at, out_from, COPY_MIN);
++	out_at += offset;
++	if (offset <= OFFSET_LIMIT)
++		offset <<= 1;
++	do {
++		m_copy(out_at, out_from, COPY_MIN);
++		out_at += offset;
++		if (offset <= OFFSET_LIMIT)
++			offset <<= 1;
++	} while (out_at - out_from < R_COPY_MIN);
++	while_lt_copy_2x_as_x2(out_at, out_from, out_copy_end, R_COPY_MIN);
++} /* out_repeat_overlap */
++
++static bool out_repeat_slow(
++	uint_fast32_t r_bytes_max,
++	uint_fast32_t offset,
++	uint8_t *out_at,
++	const uint8_t *out_from,
++	const uint8_t *const out_copy_end,
++	const uint8_t *const out_end)
++{
++	if (offset > 1 && out_copy_end <= out_end - R_COPY_SAFE_2X) {
++		out_repeat_overlap(offset, out_at, out_from, out_copy_end);
++	} else {
++		if (unlikely(out_copy_end > out_end))
++			return false;
++		if (offset == 1) {
++			m_set(out_at, *out_from, r_bytes_max);
++		} else {
++			do
++				*out_at++ = *out_from++;
++			while (out_at < out_copy_end);
++		}
++	}
++	return true;
++}
++
++static int decode(
++	const uint8_t *const in,
++	const uint8_t *const out0,
++	uint8_t *const out,
++	const uint8_t *const in_end,
++	const uint8_t *const out_end,
++	const uint_fast32_t nr_log2,
++	const uint_fast32_t off_log2)
++{
++	const uint_fast32_t r_log2 = TAG_BITS_MAX - (off_log2 + nr_log2);
++	const uint8_t *in_at = in;
++	const uint8_t *const in_end_minus_x = in_end - TAG_BYTES_MAX;
++	uint8_t *out_at = out;
++	while (likely(in_at <= in_end_minus_x)) {
++		const uint_fast32_t utag = read4_at(in_at - 1) >> BYTE_BITS;
++		const uint_fast32_t offset = utag & mask(off_log2);
++		uint_fast32_t nr_bytes_max = utag >> (off_log2 + r_log2),
++			      r_bytes_max = ((utag >> off_log2) & mask(r_log2)) +
++					    REPEAT_MIN;
++		const uint8_t *out_from = 0;
++		uint8_t *out_copy_end = 0;
++		in_at += TAG_BYTES_MAX;
++		if (unlikely(nr_bytes_max == mask(nr_log2))) {
++			in_at = get_size(&nr_bytes_max, in_at, in_end);
++			if (in_at == NULL)
++				return LZ4K_STATUS_READ_ERROR;
++		}
++		if (!out_non_repeat(&in_at, &out_at, nr_bytes_max, in_end, out_end))
++			return LZ4K_STATUS_FAILED;
++		if (unlikely(r_bytes_max == mask(r_log2) + REPEAT_MIN)) {
++			in_at = get_size(&r_bytes_max, in_at, in_end);
++			if (in_at == NULL)
++				return LZ4K_STATUS_READ_ERROR;
++		}
++		out_from = out_at - offset;
++		if (unlikely(out_from < out0))
++			return LZ4K_STATUS_FAILED;
++		out_copy_end = out_at + r_bytes_max;
++		if (likely(offset >= R_COPY_MIN &&
++			   out_copy_end <= out_end - R_COPY_SAFE_2X)) {
++			copy_2x_as_x2_while_lt(out_at, out_from, out_copy_end,
++					       R_COPY_MIN);
++		} else if (likely(offset >= (R_COPY_MIN >> 1) &&
++				  out_copy_end <= out_end - R_COPY_SAFE_2X)) {
++			m_copy(out_at, out_from, R_COPY_MIN);
++			out_at += offset;
++			while_lt_copy_x(out_at, out_from, out_copy_end, R_COPY_MIN);
++			/* faster than 2x */
++		} else if (likely(offset > 0)) {
++			if (!out_repeat_slow(r_bytes_max, offset, out_at, out_from,
++			     out_copy_end, out_end))
++				return LZ4K_STATUS_FAILED;
++		} else { /* offset == 0: EOB, last literal */
++			return end_of_block(nr_bytes_max, r_bytes_max, in_at,
++					    in_end, out, out_at);
++		}
++		out_at = out_copy_end;
++	} /* while (likely(in_at <= in_end_minus_x)) */
++	return in_at == in_end ? (int)(out_at - out) : LZ4K_STATUS_FAILED;
++} /* decode */
++
++static int decode4kb(
++	const uint8_t *const in,
++	const uint8_t *const out0,
++	uint8_t *const out,
++	const uint8_t *const in_end,
++	const uint8_t *const out_end)
++{
++	enum {
++		NR_LOG2 = 6
++	};
++	return decode(in, out0, out, in_end, out_end, NR_LOG2, BLOCK_4KB_LOG2);
++} /* decode4kb */
++
++static int decode8kb(
++	const uint8_t *const in,
++	const uint8_t *const out0,
++	uint8_t *const out,
++	const uint8_t *const in_end,
++	const uint8_t *const out_end)
++{
++	enum {
++		NR_LOG2 = 5
++	};
++	return decode(in, out0, out, in_end, out_end, NR_LOG2, BLOCK_8KB_LOG2);
++} /* decode8kb */
++
++static int decode16kb(
++	const uint8_t *const in,
++	const uint8_t *const out0,
++	uint8_t *const out,
++	const uint8_t *const in_end,
++	const uint8_t *const out_end)
++{
++	enum {
++		NR_LOG2 = 5
++	};
++	return decode(in, out0, out, in_end, out_end, NR_LOG2, BLOCK_16KB_LOG2);
++} /* decode16kb */
++
++static int decode32kb(
++	const uint8_t *const in,
++	const uint8_t *const out0,
++	uint8_t *const out,
++	const uint8_t *const in_end,
++	const uint8_t *const out_end)
++{
++	enum {
++		NR_LOG2 = 4
++	};
++	return decode(in, out0, out, in_end, out_end, NR_LOG2, BLOCK_32KB_LOG2);
++} /* decode32kb */
++
++static int decode64kb(
++	const uint8_t *const in,
++	const uint8_t *const out0,
++	uint8_t *const out,
++	const uint8_t *const in_end,
++	const uint8_t *const out_end)
++{
++	enum {
++		NR_LOG2 = 4
++	};
++	return decode(in, out0, out, in_end, out_end, NR_LOG2, BLOCK_64KB_LOG2);
++} /* decode64kb */
++
++inline static const void *u8_inc(const uint8_t *a)
++{
++	return a+1;
++}
++
++int lz4k_decode(
++	const void *in,
++	void *const out,
++	unsigned in_max,
++	unsigned out_max)
++{
++	/* ++use volatile pointers to prevent compiler optimizations */
++	const uint8_t *volatile in_end = (const uint8_t*)in + in_max;
++	const uint8_t *volatile out_end = (uint8_t*)out + out_max;
++	uint8_t in_log2 = 0;
++	if (unlikely(in == NULL || out == NULL || in_max <= 4 || out_max <= 0))
++		return LZ4K_STATUS_FAILED;
++	in_log2 = (uint8_t)(BLOCK_4KB_LOG2 + *(const uint8_t*)in);
++	/* invalid buffer size or pointer overflow */
++	if (unlikely((const uint8_t*)in >= in_end || (uint8_t*)out >= out_end))
++		return LZ4K_STATUS_FAILED;
++	/* -- */
++	in = u8_inc((const uint8_t*)in);
++	--in_max;
++	if (in_log2 < BLOCK_8KB_LOG2)
++		return decode4kb((const uint8_t*)in, (uint8_t*)out,
++				 (uint8_t*)out, in_end, out_end);
++	if (in_log2 == BLOCK_8KB_LOG2)
++		return decode8kb((const uint8_t*)in, (uint8_t*)out,
++				 (uint8_t*)out, in_end, out_end);
++	if (in_log2 == BLOCK_16KB_LOG2)
++		return decode16kb((const uint8_t*)in, (uint8_t*)out,
++				  (uint8_t*)out, in_end, out_end);
++	if (in_log2 == BLOCK_32KB_LOG2)
++		return decode32kb((const uint8_t*)in, (uint8_t*)out,
++				  (uint8_t*)out, in_end, out_end);
++	if (in_log2 == BLOCK_64KB_LOG2)
++		return decode64kb((const uint8_t*)in, (uint8_t*)out,
++				  (uint8_t*)out, in_end, out_end);
++	return LZ4K_STATUS_FAILED;
++} /* lz4k_decode */
++/*lint -e580*/
++EXPORT_SYMBOL(lz4k_decode);
++/*lint +e580*/
++
++MODULE_LICENSE("Dual BSD/GPL");
++MODULE_DESCRIPTION("LZ4K decoder");
+diff --git a/lib/lz4k/lz4k_encode.c b/lib/lz4k/lz4k_encode.c
+new file mode 100644
+index 000000000000..eeb30d5fae86
+--- /dev/null
++++ b/lib/lz4k/lz4k_encode.c
+@@ -0,0 +1,545 @@
++/*
++ * Copyright (c) Huawei Technologies Co., Ltd. 2012-2020. All rights reserved.
++ * Description: LZ4K compression algorithm
++ * Author: Aleksei Romanovskii aleksei.romanovskii@huawei.com
++ * Created: 2020-03-25
++ */
++
++#if !defined(__KERNEL__)
++#include "lz4k.h"
++#else
++#include <linux/lz4k.h>
++#include <linux/module.h>
++#endif
++
++#include "lz4k_private.h"
++#include "lz4k_encode_private.h"
++
++static uint8_t *out_size_bytes(uint8_t *out_at, uint_fast32_t u)
++{
++	for (; unlikely(u >= BYTE_MAX); u -= BYTE_MAX)
++		*out_at++ = (uint8_t)BYTE_MAX;
++	*out_at++ = (uint8_t)u;
++	return out_at;
++} /* out_size_bytes */
++
++inline static uint8_t *out_utag_then_bytes_left(
++	uint8_t *out_at,
++	uint_fast32_t utag,
++	uint_fast32_t bytes_left)
++{
++	m_copy(out_at, &utag, TAG_BYTES_MAX);
++	return out_size_bytes(out_at + TAG_BYTES_MAX, bytes_left);
++}
++
++static int out_tail(
++	uint8_t *out_at,
++	uint8_t *const out_end,
++	const uint8_t *const out,
++	const uint8_t *const nr0,
++	const uint8_t *const in_end,
++	const uint_fast32_t nr_log2,
++	const uint_fast32_t off_log2,
++	bool check_out)
++{
++	const uint_fast32_t nr_mask = mask(nr_log2);
++	const uint_fast32_t r_log2 = TAG_BITS_MAX - (off_log2 + nr_log2);
++	const uint_fast32_t nr_bytes_max = u_32(in_end - nr0);
++	if (encoded_bytes_min(nr_log2, nr_bytes_max) > u_32(out_end - out_at))
++		return check_out ? LZ4K_STATUS_WRITE_ERROR :
++				   LZ4K_STATUS_INCOMPRESSIBLE;
++	if (nr_bytes_max < nr_mask) {
++		/* caller guarantees at least one nr-byte */
++		uint_fast32_t utag = (nr_bytes_max << (off_log2 + r_log2));
++		m_copy(out_at, &utag, TAG_BYTES_MAX);
++		out_at += TAG_BYTES_MAX;
++	} else { /* nr_bytes_max>=nr_mask */
++		uint_fast32_t bytes_left = nr_bytes_max - nr_mask;
++		uint_fast32_t utag = (nr_mask << (off_log2 + r_log2));
++		out_at = out_utag_then_bytes_left(out_at, utag, bytes_left);
++	} /* if (nr_bytes_max<nr_mask) */
++	m_copy(out_at, nr0, nr_bytes_max);
++	return (int)(out_at + nr_bytes_max - out);
++} /* out_tail */
++
++int lz4k_out_tail(
++	uint8_t *out_at,
++	uint8_t *const out_end,
++	const uint8_t *const out,
++	const uint8_t *const nr0,
++	const uint8_t *const in_end,
++	const uint_fast32_t nr_log2,
++	const uint_fast32_t off_log2,
++	bool check_out)
++{
++	return out_tail(out_at, out_end, out, nr0, in_end,
++			nr_log2, off_log2, check_out);
++}
++
++static uint8_t *out_non_repeat(
++	uint8_t *out_at,
++	uint8_t *const out_end,
++	uint_fast32_t utag,
++	const uint8_t *const nr0,
++	const uint8_t *const r,
++	const uint_fast32_t nr_log2,
++	const uint_fast32_t off_log2,
++	bool check_out)
++{
++	const uint_fast32_t nr_bytes_max = u_32(r - nr0);
++	const uint_fast32_t nr_mask = mask(nr_log2),
++		r_log2 = TAG_BITS_MAX - (off_log2 + nr_log2);
++	if (likely(nr_bytes_max < nr_mask)) {
++		if (unlikely(check_out &&
++		    TAG_BYTES_MAX + nr_bytes_max > u_32(out_end - out_at)))
++			return NULL;
++		utag |= (nr_bytes_max << (off_log2 + r_log2));
++		m_copy(out_at, &utag, TAG_BYTES_MAX);
++		out_at += TAG_BYTES_MAX;
++	} else { /* nr_bytes_max >= nr_mask */
++		uint_fast32_t bytes_left = nr_bytes_max - nr_mask;
++		if (unlikely(check_out &&
++		    TAG_BYTES_MAX + size_bytes_count(bytes_left) + nr_bytes_max >
++		    u_32(out_end - out_at)))
++			return NULL;
++		utag |= (nr_mask << (off_log2 + r_log2));
++		out_at = out_utag_then_bytes_left(out_at, utag, bytes_left);
++	} /* if (nr_bytes_max<nr_mask) */
++	if (unlikely(check_out))
++		m_copy(out_at, nr0, nr_bytes_max);
++	else
++		copy_x_while_total(out_at, nr0, nr_bytes_max, NR_COPY_MIN);
++	out_at += nr_bytes_max;
++	return out_at;
++} /* out_non_repeat */
++
++uint8_t *lz4k_out_non_repeat(
++	uint8_t *out_at,
++	uint8_t *const out_end,
++	uint_fast32_t utag,
++	const uint8_t *const nr0,
++	const uint8_t *const r,
++	const uint_fast32_t nr_log2,
++	const uint_fast32_t off_log2,
++	bool check_out)
++{
++	 return out_non_repeat(out_at, out_end, utag, nr0, r,
++				nr_log2, off_log2, check_out);
++}
++
++static uint8_t *out_r_bytes_left(
++	uint8_t *out_at,
++	uint8_t *const out_end,
++	uint_fast32_t r_bytes_max,
++	const uint_fast32_t nr_log2,
++	const uint_fast32_t off_log2,
++	const bool check_out) /* =false when
++out_max>=encoded_bytes_max(in_max), =true otherwise */
++{
++	const uint_fast32_t r_mask = mask(TAG_BITS_MAX - (off_log2 + nr_log2));
++	if (unlikely(r_bytes_max - REPEAT_MIN >= r_mask)) {
++		uint_fast32_t bytes_left = r_bytes_max - REPEAT_MIN - r_mask;
++		if (unlikely(check_out &&
++		    size_bytes_count(bytes_left) > u_32(out_end - out_at)))
++			return NULL;
++		out_at = out_size_bytes(out_at, bytes_left);
++	}
++	return out_at; /* SUCCESS: continue compression */
++} /* out_r_bytes_left */
++
++uint8_t *lz4k_out_r_bytes_left(
++	uint8_t *out_at,
++	uint8_t *const out_end,
++	uint_fast32_t r_bytes_max,
++	const uint_fast32_t nr_log2,
++	const uint_fast32_t off_log2,
++	const bool check_out)
++{
++	return out_r_bytes_left(out_at, out_end, r_bytes_max,
++				nr_log2, off_log2, check_out);
++}
++
++static uint8_t *out_repeat(
++	uint8_t *out_at,
++	uint8_t *const out_end,
++	uint_fast32_t utag,
++	uint_fast32_t r_bytes_max,
++	const uint_fast32_t nr_log2,
++	const uint_fast32_t off_log2,
++	const bool check_out) /* =false when
++out_max>=encoded_bytes_max(in_max), =true otherwise */
++{
++	const uint_fast32_t r_mask = mask(TAG_BITS_MAX - (off_log2 + nr_log2));
++	if (likely(r_bytes_max - REPEAT_MIN < r_mask)) {
++		if (unlikely(check_out && TAG_BYTES_MAX > u_32(out_end - out_at)))
++			return NULL;
++		utag |= ((r_bytes_max - REPEAT_MIN) << off_log2);
++		m_copy(out_at, &utag, TAG_BYTES_MAX);
++		out_at += TAG_BYTES_MAX;
++	} else {
++		uint_fast32_t bytes_left = r_bytes_max - REPEAT_MIN - r_mask;
++		if (unlikely(check_out &&
++		    TAG_BYTES_MAX + size_bytes_count(bytes_left) >
++		    u_32(out_end - out_at)))
++			return NULL;
++		utag |= (r_mask << off_log2);
++		out_at = out_utag_then_bytes_left(out_at, utag, bytes_left);
++	}
++	return out_at; /* SUCCESS: continue compression */
++} /* out_repeat */
++
++uint8_t *lz4k_out_repeat(
++	uint8_t *out_at,
++	uint8_t *const out_end,
++	uint_fast32_t utag,
++	uint_fast32_t r_bytes_max,
++	const uint_fast32_t nr_log2,
++	const uint_fast32_t off_log2,
++	const bool check_out)
++{
++	return out_repeat(out_at, out_end, utag, r_bytes_max,
++			  nr_log2, off_log2, check_out);
++}
++
++static const uint8_t *repeat_end(
++	const uint8_t *q,
++	const uint8_t *r,
++	const uint8_t *const in_end_safe,
++	const uint8_t *const in_end)
++{
++	q += REPEAT_MIN;
++	r += REPEAT_MIN;
++	/* caller guarantees r+12<=in_end */
++	do {
++		const uint64_t x = read8_at(q) ^ read8_at(r);
++		if (x) {
++			const uint16_t ctz = (uint16_t)__builtin_ctzl(x);
++			return r + (ctz >> BYTE_BITS_LOG2);
++		}
++		/* some bytes differ:+ count of trailing 0-bits/bytes */
++		q += sizeof(uint64_t), r += sizeof(uint64_t);
++	} while (likely(r <= in_end_safe)); /* once, at input block end */
++	do {
++		if (*q != *r) return r;
++		++q;
++		++r;
++	} while (r < in_end);
++	return r;
++} /* repeat_end */
++
++const uint8_t *lz4k_repeat_end(
++	const uint8_t *q,
++	const uint8_t *r,
++	const uint8_t *const in_end_safe,
++	const uint8_t *const in_end)
++{
++	return repeat_end(q, r, in_end_safe, in_end);
++}
++
++enum {
++	HT_BYTES_LOG2 = HT_LOG2 + 1
++};
++
++inline unsigned encode_state_bytes_min(void)
++{
++	unsigned bytes_total = (1U << HT_BYTES_LOG2);
++	return bytes_total;
++} /* encode_state_bytes_min */
++
++#if !defined(LZ4K_DELTA) && !defined(LZ4K_MAX_CR)
++
++unsigned lz4k_encode_state_bytes_min(void)
++{
++	return encode_state_bytes_min();
++} /* lz4k_encode_state_bytes_min */
++/*lint -e580*/
++EXPORT_SYMBOL(lz4k_encode_state_bytes_min);
++/*lint +e580*/
++
++#endif /* !defined(LZ4K_DELTA) && !defined(LZ4K_MAX_CR) */
++
++/* CR increase order: +STEP, have OFFSETS, use _5b */
++/* *_6b to compete with LZ4 */
++inline static uint_fast32_t hash0_v(const uint64_t r, uint32_t shift)
++{
++	return hash64v_6b(r, shift);
++}
++
++inline static uint_fast32_t hash0(const uint8_t *r, uint32_t shift)
++{
++	return hash64_6b(r, shift);
++}
++
++/*
++ * Proof that 'r' increments are safe-NO pointer overflows are possible:
++ *
++ * While using STEP_LOG2=5, step_start=1<<STEP_LOG2 == 32 we increment s
++ * 32 times by 1, 32 times by 2, 32 times by 3, and so on:
++ * 32*1+32*2+32*3+...+32*31 == 32*SUM(1..31) == 32*((1+31)*15+16).
++ * So, we can safely increment s by at most 31 for input block size <=
++ * 1<<13 < 15872.
++ *
++ * More precisely, STEP_LIMIT == x for any input block  calculated as follows:
++ * 1<<off_log2 >= (1<<STEP_LOG2)*((x+1)(x-1)/2+x/2) ==>
++ * 1<<(off_log2-STEP_LOG2+1) >= x^2+x-1 ==>
++ * x^2+x-1-1<<(off_log2-STEP_LOG2+1) == 0, which is solved by standard
++ * method.
++ * To avoid overhead here conservative approximate value of x is calculated
++ * as average of two nearest square roots, see STEP_LIMIT above.
++ */
++
++enum {
++	STEP_LOG2 = 5 /* increase for better CR */
++};
++
++static int encode_any(
++	uint16_t *const ht0,
++	const uint8_t *const in0,
++	uint8_t *const out,
++	const uint8_t *const in_end,
++	uint8_t *const out_end, /* ==out_limit for !check_out */
++	const uint_fast32_t nr_log2,
++	const uint_fast32_t off_log2,
++	const bool check_out)
++{   /* caller guarantees off_log2 <=16 */
++	uint8_t *out_at = out;
++	const uint8_t *const in_end_safe = in_end - NR_COPY_MIN;
++	const uint8_t *r = in0;
++	const uint8_t *nr0 = r++;
++	uint_fast32_t step = 1 << STEP_LOG2;
++	for (;;) {
++		uint_fast32_t utag = 0;
++		const uint8_t *r_end = 0;
++		uint_fast32_t r_bytes_max = 0;
++		const uint8_t *const q = hashed(in0, ht0, hash0(r, HT_LOG2), r);
++		if (!equal4(q, r)) {
++			r += (++step >> STEP_LOG2);
++			if (unlikely(r > in_end_safe))
++				return out_tail(out_at, out_end, out, nr0, in_end,
++						nr_log2, off_log2, check_out);
++			continue;
++		}
++		utag = u_32(r - q);
++		r_end = repeat_end(q, r, in_end_safe, in_end);
++		r = repeat_start(q, r, nr0, in0);
++		r_bytes_max = u_32(r_end - r);
++		if (nr0 == r) {
++			out_at = out_repeat(out_at, out_end, utag, r_bytes_max,
++					    nr_log2, off_log2, check_out);
++		} else {
++			update_utag(r_bytes_max, &utag, nr_log2, off_log2);
++			out_at = out_non_repeat(out_at, out_end, utag, nr0, r,
++						nr_log2, off_log2, check_out);
++			if (unlikely(check_out && out_at == NULL))
++				return LZ4K_STATUS_WRITE_ERROR;
++			out_at = out_r_bytes_left(out_at, out_end, r_bytes_max,
++						  nr_log2, off_log2, check_out);
++		}
++		if (unlikely(check_out && out_at == NULL))
++			return LZ4K_STATUS_WRITE_ERROR;
++		nr0 = (r += r_bytes_max);
++		if (unlikely(r > in_end_safe))
++			return r == in_end ? (int)(out_at - out) :
++				out_tail(out_at, out_end, out, r, in_end,
++					 nr_log2, off_log2, check_out);
++		ht0[hash0(r - 1 - 1, HT_LOG2)] = (uint16_t)(r - 1 - 1 - in0);
++		step = 1 << STEP_LOG2;
++	} /* for */
++} /* encode_any */
++
++static int encode_fast(
++	uint16_t *const ht,
++	const uint8_t *const in,
++	uint8_t *const out,
++	const uint8_t *const in_end,
++	uint8_t *const out_end, /* ==out_limit for !check_out */
++	const uint_fast32_t nr_log2,
++	const uint_fast32_t off_log2)
++{ /* caller guarantees off_log2 <=16 */
++	return encode_any(ht, in, out, in_end, out_end, nr_log2, off_log2,
++		false); /* !check_out */
++} /* encode_fast */
++
++static int encode_slow(
++	uint16_t *const ht,
++	const uint8_t *const in,
++	uint8_t *const out,
++	const uint8_t *const in_end,
++	uint8_t *const out_end, /* ==out_limit for !check_out */
++	const uint_fast32_t nr_log2,
++	const uint_fast32_t off_log2)
++{ /* caller guarantees off_log2 <=16 */
++	return encode_any(ht, in, out, in_end, out_end, nr_log2, off_log2,
++		true); /* check_out */
++} /* encode_slow */
++
++static int encode4kb(
++	uint16_t *const state,
++	const uint8_t *const in,
++	uint8_t *out,
++	const uint_fast32_t in_max,
++	const uint_fast32_t out_max,
++	const uint_fast32_t out_limit)
++{
++	enum {
++		NR_LOG2 = 6
++	};
++	const int result = (encoded_bytes_max(NR_LOG2, in_max) > out_max) ?
++		encode_slow(state, in, out, in + in_max, out + out_max,
++			NR_LOG2, BLOCK_4KB_LOG2) :
++		encode_fast(state, in, out, in + in_max, out + out_limit,
++			NR_LOG2, BLOCK_4KB_LOG2);
++	return result <= 0 ? result : result + 1; /* +1 for in_log2 */
++}
++
++static int encode8kb(
++	uint16_t *const state,
++	const uint8_t *const in,
++	uint8_t *out,
++	const uint_fast32_t in_max,
++	const uint_fast32_t out_max,
++	const uint_fast32_t out_limit)
++{
++	enum {
++		NR_LOG2 = 5
++	};
++	const int result = (encoded_bytes_max(NR_LOG2, in_max) > out_max) ?
++		encode_slow(state, in, out, in + in_max, out + out_max,
++			NR_LOG2, BLOCK_8KB_LOG2) :
++		encode_fast(state, in, out, in + in_max, out + out_limit,
++			NR_LOG2, BLOCK_8KB_LOG2);
++	return result <= 0 ? result : result + 1; /* +1 for in_log2 */
++}
++
++static int encode16kb(
++	uint16_t *const state,
++	const uint8_t *const in,
++	uint8_t *out,
++	const uint_fast32_t in_max,
++	const uint_fast32_t out_max,
++	const uint_fast32_t out_limit)
++{
++	enum {
++		NR_LOG2 = 5
++	};
++	const int result = (encoded_bytes_max(NR_LOG2, in_max) > out_max) ?
++		encode_slow(state, in, out, in + in_max, out + out_max,
++			NR_LOG2, BLOCK_16KB_LOG2) :
++		encode_fast(state, in, out, in + in_max, out + out_limit,
++			NR_LOG2, BLOCK_16KB_LOG2);
++	return result <= 0 ? result : result + 1; /* +1 for in_log2 */
++}
++
++static int encode32kb(
++	uint16_t *const state,
++	const uint8_t *const in,
++	uint8_t *out,
++	const uint_fast32_t in_max,
++	const uint_fast32_t out_max,
++	const uint_fast32_t out_limit)
++{
++	enum {
++		NR_LOG2 = 4
++	};
++	const int result = (encoded_bytes_max(NR_LOG2, in_max) > out_max) ?
++		encode_slow(state, in, out, in + in_max, out + out_max,
++			NR_LOG2, BLOCK_32KB_LOG2) :
++		encode_fast(state, in, out, in + in_max, out + out_limit,
++			NR_LOG2, BLOCK_32KB_LOG2);
++	return result <= 0 ? result : result + 1; /* +1 for in_log2 */
++}
++
++static int encode64kb(
++	uint16_t *const state,
++	const uint8_t *const in,
++	uint8_t *out,
++	const uint_fast32_t in_max,
++	const uint_fast32_t out_max,
++	const uint_fast32_t out_limit)
++{
++	enum {
++		NR_LOG2 = 4
++	};
++	const int result = (encoded_bytes_max(NR_LOG2, in_max) > out_max) ?
++		encode_slow(state, in, out, in + in_max, out + out_max,
++			NR_LOG2, BLOCK_64KB_LOG2) :
++		encode_fast(state, in, out, in + in_max, out + out_limit,
++			NR_LOG2, BLOCK_64KB_LOG2);
++	return result <= 0 ? result : result + 1; /* +1 for in_log2 */
++}
++
++static int encode(
++	uint16_t *const state,
++	const uint8_t *const in,
++	uint8_t *out,
++	uint_fast32_t in_max,
++	uint_fast32_t out_max,
++	uint_fast32_t out_limit)
++{
++	const uint8_t in_log2 = (uint8_t)(most_significant_bit_of(
++		round_up_to_power_of2(in_max - REPEAT_MIN)));
++	m_set(state, 0, encode_state_bytes_min());
++	*out = in_log2 > BLOCK_4KB_LOG2 ? (uint8_t)(in_log2 - BLOCK_4KB_LOG2) : 0;
++	++out;
++	--out_max;
++	--out_limit;
++	if (in_log2 < BLOCK_8KB_LOG2)
++		return encode4kb(state, in, out, in_max, out_max, out_limit);
++	if (in_log2 == BLOCK_8KB_LOG2)
++		return encode8kb(state, in, out, in_max, out_max, out_limit);
++	if (in_log2 == BLOCK_16KB_LOG2)
++		return encode16kb(state, in, out, in_max, out_max, out_limit);
++	if (in_log2 == BLOCK_32KB_LOG2)
++		return encode32kb(state, in, out, in_max, out_max, out_limit);
++	if (in_log2 == BLOCK_64KB_LOG2)
++		return encode64kb(state, in, out, in_max, out_max, out_limit);
++	return LZ4K_STATUS_FAILED;
++}
++
++int lz4k_encode(
++	void *const state,
++	const void *const in,
++	void *out,
++	unsigned in_max,
++	unsigned out_max,
++	unsigned out_limit)
++{
++	const unsigned gain_max = 64 > (in_max >> 6) ? 64 : (in_max >> 6);
++	const unsigned out_limit_min = in_max < out_max ? in_max : out_max;
++	const uint8_t *volatile in_end = (const uint8_t*)in + in_max;
++	const uint8_t *volatile out_end = (uint8_t*)out + out_max;
++	const void *volatile state_end =
++		(uint8_t*)state + encode_state_bytes_min();
++	if (unlikely(state == NULL))
++		return LZ4K_STATUS_FAILED;
++	if (unlikely(in == NULL || out == NULL))
++		return LZ4K_STATUS_FAILED;
++	if (unlikely(in_max <= gain_max))
++		return LZ4K_STATUS_INCOMPRESSIBLE;
++	if (unlikely(out_max <= gain_max)) /* need 1 byte for in_log2 */
++		return LZ4K_STATUS_FAILED;
++	/* ++use volatile pointers to prevent compiler optimizations */
++	if (unlikely((const uint8_t*)in >= in_end || (uint8_t*)out >= out_end))
++		return LZ4K_STATUS_FAILED;
++	if (unlikely(state >= state_end))
++		return LZ4K_STATUS_FAILED; /* pointer overflow */
++	if (!out_limit || out_limit >= out_limit_min)
++		out_limit = out_limit_min - gain_max;
++	return encode((uint16_t*)state, (const uint8_t*)in, (uint8_t*)out,
++		      in_max, out_max, out_limit);
++} /* lz4k_encode */
++/*lint -e580*/
++EXPORT_SYMBOL(lz4k_encode);
++/*lint +e580*/
++
++const char *lz4k_version(void)
++{
++	static const char *version = "2020.07.07";
++	return version;
++}
++/*lint -e580*/
++EXPORT_SYMBOL(lz4k_version);
++/*lint +e580*/
++
++MODULE_LICENSE("Dual BSD/GPL");
++MODULE_DESCRIPTION("LZ4K encoder");
+diff --git a/lib/lz4k/lz4k_encode_private.h b/lib/lz4k/lz4k_encode_private.h
+new file mode 100644
+index 000000000000..781b5f8f7be5
+--- /dev/null
++++ b/lib/lz4k/lz4k_encode_private.h
+@@ -0,0 +1,137 @@
++/*
++ * Copyright (c) Huawei Technologies Co., Ltd. 2012-2020. All rights reserved.
++ * Description: LZ4K compression algorithm
++ * Author: Aleksei Romanovskii aleksei.romanovskii@huawei.com
++ * Created: 2020-03-25
++ */
++
++#ifndef _LZ4K_ENCODE_PRIVATE_H
++#define _LZ4K_ENCODE_PRIVATE_H
++
++#include "lz4k_private.h"
++
++/* <nrSize bytes for whole block>+<1 terminating 0 byte> */
++inline static uint_fast32_t size_bytes_count(uint_fast32_t u)
++{
++	return (u + BYTE_MAX - 1) / BYTE_MAX;
++}
++
++/* minimum encoded size for non-compressible data */
++inline static uint_fast32_t encoded_bytes_min(
++	uint_fast32_t nr_log2,
++	uint_fast32_t in_max)
++{
++	return in_max < mask(nr_log2) ?
++		TAG_BYTES_MAX + in_max :
++		TAG_BYTES_MAX + size_bytes_count(in_max - mask(nr_log2)) + in_max;
++}
++
++enum {
++	NR_COPY_LOG2 = 4,
++	NR_COPY_MIN = 1 << NR_COPY_LOG2
++};
++
++inline static uint_fast32_t u_32(int64_t i)
++{
++	return (uint_fast32_t)i;
++}
++
++/* maximum encoded size for non-comprressible data if "fast" encoder is used */
++inline static uint_fast32_t encoded_bytes_max(
++	uint_fast32_t nr_log2,
++	uint_fast32_t in_max)
++{
++	uint_fast32_t r = TAG_BYTES_MAX + (uint32_t)round_up_to_log2(in_max, NR_COPY_LOG2);
++	return in_max < mask(nr_log2) ? r : r + size_bytes_count(in_max - mask(nr_log2));
++}
++
++enum {
++	HT_LOG2 = 12
++};
++
++/*
++ * Compressed data format (where {} means 0 or more occurrences, [] means
++ * optional):
++ * <24bits tag: (off_log2 rOffset| r_log2 rSize|nr_log2 nrSize)>
++ * {<nrSize byte>}[<nr bytes>]{<rSize byte>}
++ * <rSize byte> and <nrSize byte> bytes are terminated by byte != 255
++ *
++ */
++
++inline static void  update_utag(
++	uint_fast32_t r_bytes_max,
++	uint_fast32_t *utag,
++	const uint_fast32_t nr_log2,
++	const uint_fast32_t off_log2)
++{
++	const uint_fast32_t r_mask = mask(TAG_BITS_MAX - (off_log2 + nr_log2));
++	*utag |= likely(r_bytes_max - REPEAT_MIN < r_mask) ?
++		 ((r_bytes_max - REPEAT_MIN) << off_log2) : (r_mask << off_log2);
++}
++
++inline static const uint8_t *hashed(
++	const uint8_t *const in0,
++	uint16_t *const ht,
++	uint_fast32_t h,
++	const uint8_t *r)
++{
++	const uint8_t *q = in0 + ht[h];
++	ht[h] = (uint16_t)(r - in0);
++	return q;
++}
++
++inline static const uint8_t *repeat_start(
++	const uint8_t *q,
++	const uint8_t *r,
++	const uint8_t *const nr0,
++	const uint8_t *const in0)
++{
++	for (; r > nr0 && likely(q > in0) && unlikely(q[-1] == r[-1]); --q, --r);
++	return r;
++} /* repeat_start */
++
++int lz4k_out_tail(
++	uint8_t *out_at,
++	uint8_t *const out_end,
++	const uint8_t *const out,
++	const uint8_t *const nr0,
++	const uint8_t *const in_end,
++	const uint_fast32_t nr_log2,
++	const uint_fast32_t off_log2,
++	bool check_out);
++
++uint8_t *lz4k_out_non_repeat(
++	uint8_t *out_at,
++	uint8_t *const out_end,
++	uint_fast32_t utag,
++	const uint8_t *const nr0,
++	const uint8_t *const r,
++	const uint_fast32_t nr_log2,
++	const uint_fast32_t off_log2,
++	bool check_out);
++
++uint8_t *lz4k_out_r_bytes_left(
++	uint8_t *out_at,
++	uint8_t *const out_end,
++	uint_fast32_t r_bytes_max,
++	const uint_fast32_t nr_log2,
++	const uint_fast32_t off_log2,
++	const bool check_out);
++
++uint8_t *lz4k_out_repeat(
++	uint8_t *out_at,
++	uint8_t *const out_end,
++	uint_fast32_t utag,
++	uint_fast32_t r_bytes_max,
++	const uint_fast32_t nr_log2,
++	const uint_fast32_t off_log2,
++	const bool check_out);
++
++const uint8_t *lz4k_repeat_end(
++	const uint8_t *q,
++	const uint8_t *r,
++	const uint8_t *const in_end_safe,
++	const uint8_t *const in_end);
++
++#endif /* _LZ4K_ENCODE_PRIVATE_H */
++
+diff --git a/lib/lz4k/lz4k_private.h b/lib/lz4k/lz4k_private.h
+new file mode 100644
+index 000000000000..4f887cf1587d
+--- /dev/null
++++ b/lib/lz4k/lz4k_private.h
+@@ -0,0 +1,269 @@
++/*
++ * Copyright (c) Huawei Technologies Co., Ltd. 2012-2020. All rights reserved.
++ * Description: LZ4K compression algorithm
++ * Author: Aleksei Romanovskii  aleksei.romanovskii@huawei.com
++ * Created: 2020-03-25
++ */
++
++#ifndef _LZ4K_PRIVATE_H
++#define _LZ4K_PRIVATE_H
++
++#if !defined(__KERNEL__)
++
++#include "lz4k.h"
++#include <stdint.h> /* uint*_t */
++#define __STDC_WANT_LIB_EXT1__ 1
++#include <string.h> /* memcpy() */
++
++#define likely(e) __builtin_expect(e, 1)
++#define unlikely(e) __builtin_expect(e, 0)
++
++#else /* __KERNEL__ */
++
++#include <linux/lz4k.h>
++#define __STDC_WANT_LIB_EXT1__ 1
++#include <linux/string.h> /* memcpy() */
++#include <linux/types.h> /* uint8_t, int8_t, uint16_t, int16_t,
++uint32_t, int32_t, uint64_t, int64_t */
++#include <linux/stddef.h>
++
++typedef uint64_t uint_fast32_t;
++typedef int64_t int_fast32_t;
++
++#endif /* __KERNEL__ */
++
++#if defined(__GNUC__) && (__GNUC__>=4)
++#define LZ4K_WITH_GCC_INTRINSICS
++#endif
++
++#if !defined(__GNUC__)
++#define __builtin_expect(e, v) (e)
++#endif /* defined(__GNUC__) */
++
++enum {
++	BYTE_BITS = 8,
++	BYTE_BITS_LOG2 = 3,
++	BYTE_MAX = 255U,
++	REPEAT_MIN = 4,
++	TAG_BYTES_MAX = 3,
++	TAG_BITS_MAX  = TAG_BYTES_MAX * 8,
++	BLOCK_4KB_LOG2  = 12,
++	BLOCK_8KB_LOG2  = 13,
++	BLOCK_16KB_LOG2 = 14,
++	BLOCK_32KB_LOG2 = 15,
++	BLOCK_64KB_LOG2 = 16
++};
++
++inline static uint32_t mask(uint_fast32_t log2)
++{
++	return (1U << log2) - 1U;
++}
++
++inline static uint64_t mask64(uint_fast32_t log2)
++{
++	return (1ULL << log2) - 1ULL;
++}
++
++#if defined LZ4K_WITH_GCC_INTRINSICS
++inline static int most_significant_bit_of(uint64_t u)
++{
++	return (int)(__builtin_expect((u) == 0, false) ?
++		     -1 : (int)(31 ^ (uint32_t)__builtin_clz((unsigned)(u))));
++}
++#else /* #!defined LZ4K_WITH_GCC_INTRINSICS */
++#error undefined most_significant_bit_of(unsigned u)
++#endif /* #if defined LZ4K_WITH_GCC_INTRINSICS */
++
++inline static uint64_t round_up_to_log2(uint64_t u, uint8_t log2)
++{
++	return (uint64_t)((u + mask64(log2)) & ~mask64(log2));
++} /* round_up_to_log2 */
++
++inline static uint64_t round_up_to_power_of2(uint64_t u)
++{
++	const int_fast32_t msb = most_significant_bit_of(u);
++	return round_up_to_log2(u, (uint8_t)msb);
++} /* round_up_to_power_of2 */
++
++inline static void m_copy(void *dst, const void *src, size_t total)
++{
++#if defined(__STDC_LIB_EXT1__)
++	(void)memcpy_s(dst, total, src, (total * 2) >> 1); /* *2 >> 1 to avoid bot errors */
++#else
++	(void)__builtin_memcpy(dst, src, total);
++#endif
++}
++
++inline static void m_set(void *dst, uint8_t value, size_t total)
++{
++#if defined(__STDC_LIB_EXT1__)
++	(void)memset_s(dst, total, value, (total * 2) >> 1); /* *2 >> 1 to avoid bot errors */
++#else
++	(void)__builtin_memset(dst, value, total);
++#endif
++}
++
++inline static uint32_t read4_at(const void *p)
++{
++	uint32_t result;
++	m_copy(&result, p, sizeof(result));
++	return result;
++}
++
++inline static uint64_t read8_at(const void *p)
++{
++	uint64_t result;
++	m_copy(&result, p, sizeof(result));
++	return result;
++}
++
++inline static bool equal4(const uint8_t *const q, const uint8_t *const r)
++{
++	return read4_at(q) == read4_at(r);
++}
++
++inline static bool equal3(const uint8_t *const q, const uint8_t *const r)
++{
++	return (read4_at(q) << BYTE_BITS) == (read4_at(r) << BYTE_BITS);
++}
++
++inline static uint_fast32_t hash24v(const uint64_t r, uint32_t shift)
++{
++	const uint32_t m = 3266489917U;
++	return (((uint32_t)r << BYTE_BITS) * m) >> (32 - shift);
++}
++
++inline static uint_fast32_t hash24(const uint8_t *r, uint32_t shift)
++{
++	return hash24v(read4_at(r), shift);
++}
++
++inline static uint_fast32_t hash32v_2(const uint64_t r, uint32_t shift)
++{
++	const uint32_t m = 3266489917U;
++	return ((uint32_t)r * m) >> (32 - shift);
++}
++
++inline static uint_fast32_t hash32_2(const uint8_t *r, uint32_t shift)
++{
++	return hash32v_2(read4_at(r), shift);
++}
++
++inline static uint_fast32_t hash32v(const uint64_t r, uint32_t shift)
++{
++	const uint32_t m = 2654435761U;
++	return ((uint32_t)r * m) >> (32 - shift);
++}
++
++inline static uint_fast32_t hash32(const uint8_t *r, uint32_t shift)
++{
++	return hash32v(read4_at(r), shift);
++}
++
++inline static uint_fast32_t hash64v_5b(const uint64_t r, uint32_t shift)
++{
++	const uint64_t m = 889523592379ULL;
++	return (uint32_t)(((r << 24) * m) >> (64 - shift));
++}
++
++inline static uint_fast32_t hash64_5b(const uint8_t *r, uint32_t shift)
++{
++	return hash64v_5b(read8_at(r), shift);
++}
++
++inline static uint_fast32_t hash64v_6b(const uint64_t r, uint32_t shift)
++{
++	const uint64_t m = 227718039650203ULL;
++	return (uint32_t)(((r << 16) * m) >> (64 - shift));
++}
++
++inline static uint_fast32_t hash64_6b(const uint8_t *r, uint32_t shift)
++{
++	return hash64v_6b(read8_at(r), shift);
++}
++
++inline static uint_fast32_t hash64v_7b(const uint64_t r, uint32_t shift)
++{
++	const uint64_t m = 58295818150454627ULL;
++	return (uint32_t)(((r << 8) * m) >> (64 - shift));
++}
++
++inline static uint_fast32_t hash64_7b(const uint8_t *r, uint32_t shift)
++{
++	return hash64v_7b(read8_at(r), shift);
++}
++
++inline static uint_fast32_t hash64v_8b(const uint64_t r, uint32_t shift)
++{
++	const uint64_t m = 2870177450012600261ULL;
++	return (uint32_t)((r * m) >> (64 - shift));
++}
++
++inline static uint_fast32_t hash64_8b(const uint8_t *r, uint32_t shift)
++{
++	return hash64v_8b(read8_at(r), shift);
++}
++
++inline static void while_lt_copy_x(
++	uint8_t *dst,
++	const uint8_t *src,
++	const uint8_t *dst_end,
++	const size_t copy_min)
++{
++	for (; dst < dst_end; dst += copy_min, src += copy_min)
++		m_copy(dst, src, copy_min);
++}
++
++inline static void copy_x_while_lt(
++	uint8_t *dst,
++	const uint8_t *src,
++	const uint8_t *dst_end,
++	const size_t copy_min)
++{
++	m_copy(dst, src, copy_min);
++	while (dst + copy_min < dst_end)
++		m_copy(dst += copy_min, src += copy_min, copy_min);
++}
++
++inline static void copy_x_while_total(
++	uint8_t *dst,
++	const uint8_t *src,
++	size_t total,
++	const size_t copy_min)
++{
++	m_copy(dst, src, copy_min);
++	for (; total > copy_min; total-= copy_min)
++		m_copy(dst += copy_min, src += copy_min, copy_min);
++} /* copy_x_while_total */
++
++inline static void copy_2x(
++	uint8_t *dst,
++	const uint8_t *src,
++	const size_t copy_min)
++{
++	m_copy(dst, src, copy_min);
++	m_copy(dst + copy_min, src + copy_min, copy_min);
++}
++
++inline static void copy_2x_as_x2_while_lt(
++	uint8_t *dst,
++	const uint8_t *src,
++	const uint8_t *dst_end,
++	const size_t copy_min)
++{
++	copy_2x(dst, src, copy_min);
++	while (dst + (copy_min << 1) < dst_end)
++		copy_2x(dst += (copy_min << 1), src += (copy_min << 1), copy_min);
++}
++
++inline static void while_lt_copy_2x_as_x2(
++	uint8_t *dst,
++	const uint8_t *src,
++	const uint8_t *dst_end,
++	const size_t copy_min)
++{
++	for (; dst < dst_end; dst += (copy_min << 1), src += (copy_min << 1))
++		copy_2x(dst, src, copy_min);
++}
++
++#endif /* _LZ4K_PRIVATE_H */
+diff --git a/lib/lz4kd/Makefile b/lib/lz4kd/Makefile
+new file mode 100644
+index 000000000000..485e0d9220f4
+--- /dev/null
++++ b/lib/lz4kd/Makefile
+@@ -0,0 +1,3 @@
++ccflags-y += -DLZ4K_DELTA -O3
++obj-$(CONFIG_LZ4KD_COMPRESS) += lz4kd_encode.o lz4kd_encode_delta.o
++obj-$(CONFIG_LZ4KD_DECOMPRESS) += lz4kd_decode.o lz4kd_decode_delta.o
+diff --git a/lib/lz4kd/lz4kd_decode.c b/lib/lz4kd/lz4kd_decode.c
+new file mode 100644
+index 000000000000..e3829eaa6049
+--- /dev/null
++++ b/lib/lz4kd/lz4kd_decode.c
+@@ -0,0 +1,243 @@
++/*
++ * Copyright (c) Huawei Technologies Co., Ltd. 2022. All rights reserved.
++ * Description: LZ4K compression algorithm with delta compression
++ */
++
++#if !defined(__KERNEL__)
++#include "lz4kd.h"
++#else
++#include <linux/lz4kd.h>
++#include <linux/module.h>
++#endif
++
++#include "lz4kd_private.h" /* types, etc */
++
++static const uint8_t *get_size(
++	uint_fast32_t *size,
++	const uint8_t *in_at,
++	const uint8_t *const in_end)
++{
++	uint_fast32_t u;
++	do {
++		if (unlikely(in_at >= in_end))
++			return NULL;
++		*size += (u = *(const uint8_t*)in_at);
++		++in_at;
++	} while (BYTE_MAX == u);
++	return in_at;
++}
++
++static int end_of_block(
++	const uint_fast32_t nr_bytes_max,
++	const uint_fast32_t r_bytes_max,
++	const uint8_t *const in_at,
++	const uint8_t *const in_end,
++	const uint8_t *const out,
++	const uint8_t *const out_at)
++{
++	if (!nr_bytes_max)
++		return LZ4K_STATUS_FAILED; /* should be the last one in block */
++	if (r_bytes_max != REPEAT_MIN)
++		return LZ4K_STATUS_FAILED; /* should be the last one in block */
++	if (in_at != in_end)
++		return LZ4K_STATUS_FAILED; /* should be the last one in block */
++	return (int)(out_at - out);
++}
++
++enum {
++	NR_COPY_MIN = 16,
++	R_COPY_MIN = 16,
++	R_COPY_SAFE = R_COPY_MIN - 1,
++	R_COPY_SAFE_2X = (R_COPY_MIN << 1) - 1
++};
++
++static bool out_non_repeat(
++	const uint8_t **in_at,
++	uint8_t **out_at,
++	uint_fast32_t nr_bytes_max,
++	const uint8_t *const in_end,
++	const uint8_t *const out_end)
++{
++	const uint8_t *const in_copy_end = *in_at + nr_bytes_max;
++	uint8_t *const out_copy_end = *out_at + nr_bytes_max;
++	if (likely(nr_bytes_max <= NR_COPY_MIN)) {
++		if (likely(*in_at <= in_end - NR_COPY_MIN &&
++			   *out_at <= out_end - NR_COPY_MIN))
++			m_copy(*out_at, *in_at, NR_COPY_MIN);
++		else if (in_copy_end <= in_end && out_copy_end <= out_end)
++			m_copy(*out_at, *in_at, nr_bytes_max);
++		else
++			return false;
++	} else { /* nr_bytes_max>NR_COPY_MIN */
++		if (likely(in_copy_end <= in_end - NR_COPY_MIN &&
++			   out_copy_end <= out_end - NR_COPY_MIN)) {
++			m_copy(*out_at, *in_at, NR_COPY_MIN);
++			copy_x_while_lt(*out_at + NR_COPY_MIN,
++					*in_at + NR_COPY_MIN,
++					out_copy_end, NR_COPY_MIN);
++		} else if (in_copy_end <= in_end && out_copy_end <= out_end) {
++			m_copy(*out_at, *in_at, nr_bytes_max);
++		} else { /* in_copy_end > in_end || out_copy_end > out_end */
++			return false;
++		}
++	} /* if (nr_bytes_max <= NR_COPY_MIN) */
++	*in_at = in_copy_end;
++	*out_at = out_copy_end;
++	return true;
++}
++
++static void out_repeat_overlap(
++	uint_fast32_t offset,
++	uint8_t *out_at,
++	const uint8_t *out_from,
++	const uint8_t *const out_copy_end)
++{
++	enum {
++		COPY_MIN = R_COPY_MIN >> 1,
++		OFFSET_LIMIT = COPY_MIN >> 1
++	};
++	m_copy(out_at, out_from, COPY_MIN);
++/* (1 < offset < R_COPY_MIN/2) && out_copy_end + R_COPY_SAFE_2X  <= out_end */
++	out_at += offset;
++	if (offset <= OFFSET_LIMIT)
++		offset <<= 1;
++	do {
++		m_copy(out_at, out_from, COPY_MIN);
++		out_at += offset;
++		if (offset <= OFFSET_LIMIT)
++			offset <<= 1;
++	} while (out_at - out_from < R_COPY_MIN);
++	while_lt_copy_2x_as_x2(out_at, out_from, out_copy_end, R_COPY_MIN);
++}
++
++static bool out_repeat_slow(
++	uint_fast32_t r_bytes_max,
++	uint_fast32_t offset,
++	uint8_t *out_at,
++	const uint8_t *out_from,
++	const uint8_t *const out_copy_end,
++	const uint8_t *const out_end)
++{
++	if (offset > 1 && out_copy_end <= out_end - R_COPY_SAFE_2X) {
++		out_repeat_overlap(offset, out_at, out_from, out_copy_end);
++	} else {
++		if (unlikely(out_copy_end > out_end))
++			return false;
++		if (offset == 1) {
++			m_set(out_at, *out_from, r_bytes_max);
++		} else {
++			do
++				*out_at++ = *out_from++;
++			while (out_at < out_copy_end);
++		}
++	}
++	return true;
++}
++
++static int decode(
++	const uint8_t *in_at,
++	uint8_t *const out,
++	const uint8_t *const in_end,
++	const uint8_t *const out_end,
++	const uint_fast32_t nr_log2,
++	const uint_fast32_t off_log2)
++{
++	const uint_fast32_t r_log2 = TAG_BITS_MAX - (off_log2 + nr_log2);
++	const uint8_t *const in_end_minus_x = in_end - TAG_BYTES_MAX;
++	uint8_t *out_at = out;
++	while (likely(in_at <= in_end_minus_x)) {
++		const uint_fast32_t utag = read4_at(in_at - 1) >> BYTE_BITS;
++		const uint_fast32_t offset = utag & mask(off_log2);
++		uint_fast32_t nr_bytes_max = utag >> (off_log2 + r_log2),
++			      r_bytes_max = ((utag >> off_log2) & mask(r_log2)) +
++					    REPEAT_MIN;
++		const uint8_t *out_from = 0;
++		uint8_t *out_copy_end = 0;
++		const uint8_t *out_safe_end = 0;
++		in_at += TAG_BYTES_MAX;
++		if (unlikely(nr_bytes_max == mask(nr_log2))) {
++			in_at = get_size(&nr_bytes_max, in_at, in_end);
++			if (unlikely(in_at == NULL))
++				return LZ4K_STATUS_READ_ERROR;
++		}
++		if (!out_non_repeat(&in_at, &out_at, nr_bytes_max, in_end, out_end))
++			return LZ4K_STATUS_FAILED;
++		if (unlikely(r_bytes_max == mask(r_log2) + REPEAT_MIN)) {
++			in_at = get_size(&r_bytes_max, in_at, in_end);
++			if (unlikely(in_at == NULL))
++				return LZ4K_STATUS_READ_ERROR;
++		}
++		out_from = out_at - offset;
++		if (unlikely(out_from < out))
++			return LZ4K_STATUS_FAILED;
++		out_copy_end = out_at + r_bytes_max;
++		out_safe_end = out_end - R_COPY_SAFE_2X;
++		if (likely(offset >= R_COPY_MIN && out_copy_end <= out_safe_end)) {
++			copy_2x_as_x2_while_lt(out_at, out_from, out_copy_end,
++					       R_COPY_MIN);
++		} else if (likely(offset >= (R_COPY_MIN >> 1) &&
++				  out_copy_end <= out_safe_end)) {
++			m_copy(out_at, out_from, R_COPY_MIN);
++			out_at += offset;
++			while_lt_copy_x(out_at, out_from, out_copy_end, R_COPY_MIN);
++		} else if (likely(offset > 0)) {
++			if (!out_repeat_slow(r_bytes_max, offset, out_at, out_from,
++			     out_copy_end, out_end))
++				return LZ4K_STATUS_FAILED;
++		} else { /* offset == 0: EOB, last literal */
++			return end_of_block(nr_bytes_max, r_bytes_max, in_at,
++					    in_end, out, out_at);
++		}
++		out_at = out_copy_end;
++	} /* while (likely(in_at <= in_end_minus_x)) */
++	return in_at == in_end ? (int)(out_at - out) : LZ4K_STATUS_FAILED;
++}
++
++static int decode_pattern_4kb(
++	const uint8_t *const in,
++	uint8_t *const out,
++	const uint8_t *const out_end)
++{
++	const uint64_t pattern = *(const uint64_t*)in;
++	uint64_t *o64 = (uint64_t*)out;
++	const uint64_t *const o64_end = (const uint64_t*)out_end - 1;
++	for (; o64 <= o64_end; ++o64)
++	  *o64 = pattern;
++	return (uint8_t*)o64 == out_end ? (int)(out_end - out) : LZ4K_STATUS_FAILED;
++}
++
++static int decode_4kb(
++	const uint8_t *const in,
++	uint8_t *const out,
++	const uint8_t *const in_end,
++	const uint8_t *const out_end)
++{
++	return decode(in, out, in_end, out_end, NR_4KB_LOG2, BLOCK_4KB_LOG2);
++}
++
++int lz4kd_decode(
++	const void *in,
++	void *const out,
++	unsigned in_max,
++	unsigned out_max)
++{
++	/* ++use volatile pointers to prevent compiler optimizations */
++	const uint8_t *volatile in_end = (const uint8_t*)in + in_max;
++	const uint8_t *volatile out_end = (uint8_t*)out + min_u64(out_max, 1 << BLOCK_4KB_LOG2);
++	if (unlikely(in == NULL || out == NULL))
++		return LZ4K_STATUS_FAILED;
++	if (unlikely(in_max <= 1 + TAG_BYTES_MAX || out_max <= 0))
++		return LZ4K_STATUS_FAILED;
++	/* invalid buffer size or pointer overflow */
++	if (unlikely((const uint8_t*)in >= in_end || (uint8_t*)out >= out_end))
++		return LZ4K_STATUS_FAILED;
++	/* -- */
++	if (unlikely(in_max == PATTERN_BYTES_MAX))
++		return decode_pattern_4kb((const uint8_t*)in, (uint8_t*)out,
++				out_end);
++	return decode_4kb((const uint8_t*)in + 1, (uint8_t*)out, in_end, out_end);
++}
++EXPORT_SYMBOL(lz4kd_decode);
++
++MODULE_LICENSE("Dual BSD/GPL");
++MODULE_DESCRIPTION("LZ4K decoder");
+diff --git a/lib/lz4kd/lz4kd_decode_delta.c b/lib/lz4kd/lz4kd_decode_delta.c
+new file mode 100644
+index 000000000000..216a5a506657
+--- /dev/null
++++ b/lib/lz4kd/lz4kd_decode_delta.c
+@@ -0,0 +1,225 @@
++/*
++ * Copyright (c) Huawei Technologies Co., Ltd. 2022. All rights reserved.
++ * Description: LZ4K compression algorithm with delta compression
++*/
++
++#if !defined(__KERNEL__)
++#include "lz4kd.h"
++#else
++#include <linux/lz4kd.h>
++#include <linux/module.h>
++#endif
++
++#include "lz4kd_private.h" /* types, etc */
++
++static const uint8_t *get_size(
++	uint_fast32_t *size,
++	const uint8_t *in_at,
++	const uint8_t *const in_end)
++{
++	uint_fast32_t u;
++	do {
++		if (unlikely(in_at >= in_end))
++			return NULL;
++		*size += (u = *(const uint8_t*)in_at);
++		++in_at;
++	} while (BYTE_MAX == u);
++	return in_at;
++}
++
++static int end_of_block(
++	const uint_fast32_t nr_bytes_max,
++	const uint_fast32_t r_bytes_max,
++	const uint8_t *const in_at,
++	const uint8_t *const in_end,
++	const uint8_t *const out,
++	const uint8_t *const out_at)
++{
++	if (!nr_bytes_max)
++		return LZ4K_STATUS_FAILED; /* should be the last one in block */
++	if (r_bytes_max != REPEAT_MIN)
++		return LZ4K_STATUS_FAILED; /* should be the last one in block */
++	if (in_at != in_end)
++		return LZ4K_STATUS_FAILED; /* should be the last one in block */
++	return (int)(out_at - out);
++}
++
++enum {
++	NR_COPY_MIN = 16,
++	R_COPY_MIN = 16,
++	R_COPY_SAFE = R_COPY_MIN - 1,
++	R_COPY_SAFE_2X = (R_COPY_MIN << 1) - 1
++};
++
++static bool out_non_repeat(
++	const uint8_t **in_at,
++	uint8_t **out_at,
++	uint_fast32_t nr_bytes_max,
++	const uint8_t *const in_end,
++	const uint8_t *const out_end)
++{
++	const uint8_t *const in_copy_end = *in_at + nr_bytes_max;
++	uint8_t *const out_copy_end = *out_at + nr_bytes_max;
++	if (likely(nr_bytes_max <= NR_COPY_MIN)) {
++		if (likely(*in_at <= in_end - NR_COPY_MIN &&
++			   *out_at <= out_end - NR_COPY_MIN))
++			m_copy(*out_at, *in_at, NR_COPY_MIN);
++		else if (in_copy_end <= in_end && out_copy_end <= out_end)
++			m_copy(*out_at, *in_at, nr_bytes_max);
++		else
++			return false;
++	} else { /* nr_bytes_max>NR_COPY_MIN */
++		if (likely(in_copy_end <= in_end - NR_COPY_MIN &&
++			   out_copy_end <= out_end - NR_COPY_MIN)) {
++			m_copy(*out_at, *in_at, NR_COPY_MIN);
++			copy_x_while_lt(*out_at + NR_COPY_MIN,
++					*in_at + NR_COPY_MIN,
++					out_copy_end, NR_COPY_MIN);
++		} else if (in_copy_end <= in_end && out_copy_end <= out_end) {
++			m_copy(*out_at, *in_at, nr_bytes_max);
++		} else { /* in_copy_end > in_end || out_copy_end > out_end */
++			return false;
++		}
++	} /* if (nr_bytes_max <= NR_COPY_MIN) */
++	*in_at = in_copy_end;
++	*out_at = out_copy_end;
++	return true;
++}
++
++static void out_repeat_overlap(
++	uint_fast32_t offset,
++	uint8_t *out_at,
++	const uint8_t *out_from,
++	const uint8_t *const out_copy_end)
++{
++	enum {
++		COPY_MIN = R_COPY_MIN >> 1,
++		OFFSET_LIMIT = COPY_MIN >> 1
++	};
++/* (1 < offset < R_COPY_MIN/2) && out_copy_end + R_COPY_SAFE_2X  <= out_end */
++	m_copy(out_at, out_from, COPY_MIN);
++	out_at += offset;
++	if (offset <= OFFSET_LIMIT)
++		offset <<= 1;
++	do {
++		m_copy(out_at, out_from, COPY_MIN);
++		out_at += offset;
++		if (offset <= OFFSET_LIMIT)
++			offset <<= 1;
++	} while (out_at - out_from < R_COPY_MIN);
++	while_lt_copy_2x_as_x2(out_at, out_from, out_copy_end, R_COPY_MIN);
++}
++
++static bool out_repeat_slow(
++	uint_fast32_t r_bytes_max,
++	uint_fast32_t offset,
++	uint8_t *out_at,
++	const uint8_t *out_from,
++	const uint8_t *const out_copy_end,
++	const uint8_t *const out_end)
++{
++	if (offset > 1 && out_copy_end <= out_end - R_COPY_SAFE_2X) {
++		out_repeat_overlap(offset, out_at, out_from, out_copy_end);
++	} else {
++		if (unlikely(out_copy_end > out_end))
++			return false;
++		if (offset == 1) {
++			m_set(out_at, *out_from, r_bytes_max);
++		} else {
++			do
++				*out_at++ = *out_from++;
++			while (out_at < out_copy_end);
++		}
++	}
++	return true;
++}
++
++static int decode_any(
++	const uint8_t *in_at,
++	const uint8_t *const out0,
++	uint8_t *const out,
++	const uint8_t *const in_end,
++	const uint8_t *const out_end,
++	const uint_fast32_t nr_log2,
++	const uint_fast32_t off_log2)
++{
++	const uint_fast32_t r_log2 = TAG_BITS_MAX - (off_log2 + nr_log2);
++	const uint8_t *const in_end_minus_x = in_end - TAG_BYTES_MAX;
++	uint8_t *out_at = out;
++	while (likely(in_at <= in_end_minus_x)) {
++		const uint_fast32_t utag = read4_at(in_at - 1) >> BYTE_BITS;
++		const uint_fast32_t offset = utag & mask(off_log2);
++		uint_fast32_t nr_bytes_max = utag >> (off_log2 + r_log2),
++			      r_bytes_max = ((utag >> off_log2) & mask(r_log2)) +
++					    REPEAT_MIN;
++		const uint8_t *out_from = 0;
++		uint8_t *out_copy_end = 0;
++		in_at += TAG_BYTES_MAX;
++		if (unlikely(nr_bytes_max == mask(nr_log2))) {
++			in_at = get_size(&nr_bytes_max, in_at, in_end);
++			if (in_at == NULL)
++				return LZ4K_STATUS_READ_ERROR;
++		}
++		if (!out_non_repeat(&in_at, &out_at, nr_bytes_max, in_end, out_end))
++			return LZ4K_STATUS_FAILED;
++		if (unlikely(r_bytes_max == mask(r_log2) + REPEAT_MIN)) {
++			in_at = get_size(&r_bytes_max, in_at, in_end);
++			if (in_at == NULL)
++				return LZ4K_STATUS_READ_ERROR;
++		}
++		out_from = out_at - offset;
++		if (unlikely(out_from < out0))
++			return LZ4K_STATUS_FAILED;
++		out_copy_end = out_at + r_bytes_max;
++		if (likely(offset >= R_COPY_MIN &&
++			   out_copy_end <= out_end - R_COPY_SAFE_2X)) {
++			copy_2x_as_x2_while_lt(out_at, out_from, out_copy_end,
++					       R_COPY_MIN);
++		} else if (likely(offset >= (R_COPY_MIN >> 1) &&
++				  out_copy_end <= out_end - R_COPY_SAFE_2X)) {
++			m_copy(out_at, out_from, R_COPY_MIN);
++			out_at += offset;
++			while_lt_copy_x(out_at, out_from, out_copy_end, R_COPY_MIN);
++			/* faster than 2x */
++		} else if (likely(offset > 0)) {
++			if (!out_repeat_slow(r_bytes_max, offset, out_at, out_from,
++			     out_copy_end, out_end))
++				return LZ4K_STATUS_FAILED;
++		} else { /* offset == 0: EOB, last literal */
++			return end_of_block(nr_bytes_max, r_bytes_max, in_at,
++					    in_end, out, out_at);
++		}
++		out_at = out_copy_end;
++	} /* while (likely(in_at <= in_end_minus_x)) */
++	return in_at == in_end ? (int)(out_at - out) : LZ4K_STATUS_FAILED;
++}
++
++static int decode_8kb(
++	const uint8_t *const in,
++	const uint8_t *const out0,
++	uint8_t *const out,
++	const uint8_t *const in_end,
++	const uint8_t *const out_end)
++{
++	return decode_any(in, out0, out, in_end, out_end, NR_8KB_LOG2, BLOCK_8KB_LOG2);
++}
++
++int lz4kd_decode_delta(
++	const void *in,
++	const void *const out0,
++	void *const out,
++	unsigned in_max,
++	unsigned out_max)
++{
++	if (unlikely(in == NULL || out0 == NULL || out == NULL || out0 > out))
++		return LZ4K_STATUS_FAILED;
++	if (unlikely(in_max <= 1 + TAG_BYTES_MAX || out_max <= 0))
++		return LZ4K_STATUS_FAILED;
++	/* invalid buffer size or pointer overflow */
++	return decode_8kb((const uint8_t*)in + 1, (const uint8_t*)out0,
++			 (uint8_t*)out, (const uint8_t*)in + in_max, (uint8_t*)out + out_max);
++}
++EXPORT_SYMBOL(lz4kd_decode_delta);
++
++MODULE_LICENSE("Dual BSD/GPL");
++MODULE_DESCRIPTION("LZ4K decoder");
+diff --git a/lib/lz4kd/lz4kd_encode.c b/lib/lz4kd/lz4kd_encode.c
+new file mode 100644
+index 000000000000..37ca9243ef04
+--- /dev/null
++++ b/lib/lz4kd/lz4kd_encode.c
+@@ -0,0 +1,418 @@
++/*
++ * Copyright (c) Huawei Technologies Co., Ltd. 2022. All rights reserved.
++ * Description: LZ4K compression algorithm with delta compression
++ */
++
++#if !defined(__KERNEL__)
++#include "lz4kd.h"
++#else
++#include <linux/lz4kd.h>
++#include <linux/module.h>
++#endif
++
++#include "lz4kd_private.h"
++#include "lz4kd_encode_private.h"
++
++enum {
++	HT_LOG2 = 12, /* ==11 #3 max drop in CR */
++	STEP_LOG2 = 5 /* ==3 #2 avg drop in CR */
++};
++
++static unsigned encode_state_bytes_min(void)
++{
++	enum {
++		BYTES_LOG2 = HT_LOG2 + 1
++	};
++	const unsigned bytes_total = (1U << BYTES_LOG2);
++	return bytes_total;
++}
++
++#if !defined(LZ4K_DELTA) && !defined(LZ4K_MAX_CR)
++
++unsigned lz4kd_encode_state_bytes_min(void)
++{
++	return encode_state_bytes_min();
++}
++EXPORT_SYMBOL(lz4kd_encode_state_bytes_min);
++
++#endif /* !defined(LZ4K_DELTA) && !defined(LZ4K_MAX_CR) */
++
++/* minimum encoded size for non-compressible data */
++inline static uint_fast32_t encoded_bytes_min(
++	uint_fast32_t nr_log2,
++	uint_fast32_t in_max)
++{
++	return in_max < mask(nr_log2) ?
++		TAG_BYTES_MAX + in_max :
++		TAG_BYTES_MAX + size_bytes_count(in_max - mask(nr_log2)) + in_max;
++}
++
++inline static void  update_utag(
++	uint_fast32_t r_bytes_max,
++	uint_fast32_t *utag,
++	const uint_fast32_t nr_log2,
++	const uint_fast32_t off_log2)
++{
++	const uint_fast32_t r_mask = mask(TAG_BITS_MAX - (off_log2 + nr_log2));
++	*utag |= likely(r_bytes_max - REPEAT_MIN < r_mask) ?
++		 ((r_bytes_max - REPEAT_MIN) << off_log2) : (r_mask << off_log2);
++}
++
++inline static uint8_t *out_size_bytes(uint8_t *out_at, uint_fast32_t u)
++{
++	for (; u >= BYTE_MAX; *out_at++ = (uint8_t)BYTE_MAX, u -= BYTE_MAX);
++	*out_at++ = (uint8_t)u;
++	return out_at;
++}
++
++inline static uint8_t *out_utag_then_bytes_left(
++	uint8_t *out_at,
++	uint_fast32_t utag,
++	uint_fast32_t bytes_left)
++{
++	m_copy(out_at, &utag, TAG_BYTES_MAX);
++	return out_size_bytes(out_at + TAG_BYTES_MAX, bytes_left);
++}
++
++static int out_tail(
++	uint8_t *out_at,
++	uint8_t *const out_end,
++	const uint8_t *const out,
++	const uint8_t *const nr0,
++	const uint8_t *const in_end,
++	const uint_fast32_t nr_log2,
++	const uint_fast32_t off_log2)
++{
++	const uint_fast32_t nr_mask = mask(nr_log2);
++	const uint_fast32_t r_log2 = TAG_BITS_MAX - (off_log2 + nr_log2);
++	const uint_fast32_t nr_bytes_now = u_32(in_end - nr0);
++	if (encoded_bytes_min(nr_log2, nr_bytes_now) > u_32(out_end - out_at))
++		return LZ4K_STATUS_INCOMPRESSIBLE;
++	if (nr_bytes_now < nr_mask) {
++		/* caller guarantees at least one nr-byte */
++		uint_fast32_t utag = (nr_bytes_now << (off_log2 + r_log2));
++		m_copy(out_at, &utag, TAG_BYTES_MAX);
++		out_at += TAG_BYTES_MAX;
++	} else { /* nr_bytes_now>=nr_mask */
++		uint_fast32_t bytes_left = nr_bytes_now - nr_mask;
++		uint_fast32_t utag = (nr_mask << (off_log2 + r_log2));
++		out_at = out_utag_then_bytes_left(out_at, utag, bytes_left);
++	} /* if (nr_bytes_now<nr_mask) */
++	m_copy(out_at, nr0, nr_bytes_now);
++	return (int)(out_at + nr_bytes_now - out);
++}
++
++inline static int out_tail2(
++	uint8_t *out_at,
++	uint8_t *const out_end,
++	const uint8_t *const out,
++	const uint8_t *const r,
++	const uint8_t *const in_end,
++	const uint_fast32_t nr_log2,
++	const uint_fast32_t off_log2)
++{
++	return r == in_end ? (int)(out_at - out) :
++		out_tail(out_at, out_end, out, r, in_end,
++			 nr_log2, off_log2);
++}
++
++int lz4kd_out_tail(
++	uint8_t *out_at,
++	uint8_t *const out_end,
++	const uint8_t *const out,
++	const uint8_t *const nr0,
++	const uint8_t *const in_end,
++	const uint_fast32_t nr_log2,
++	const uint_fast32_t off_log2,
++	bool check_out)
++{
++	return out_tail(out_at, out_end, out, nr0, in_end,
++			nr_log2, off_log2);
++}
++
++static uint8_t *out_non_repeat(
++	uint8_t *out_at,
++	uint8_t *const out_end,
++	uint_fast32_t utag,
++	const uint8_t *const nr0,
++	const uint8_t *const r,
++	const uint_fast32_t nr_log2,
++	const uint_fast32_t off_log2)
++{
++	const uint_fast32_t nr_bytes_max = u_32(r - nr0);
++	const uint_fast32_t nr_mask = mask(nr_log2),
++		r_log2 = TAG_BITS_MAX - (off_log2 + nr_log2);
++	if (likely(nr_bytes_max < nr_mask)) {
++		utag |= (nr_bytes_max << (off_log2 + r_log2));
++		m_copy(out_at, &utag, TAG_BYTES_MAX);
++		out_at += TAG_BYTES_MAX;
++	} else { /* nr_bytes_max >= nr_mask */
++		uint_fast32_t bytes_left = nr_bytes_max - nr_mask;
++		utag |= (nr_mask << (off_log2 + r_log2));
++		out_at = out_utag_then_bytes_left(out_at, utag, bytes_left);
++	} /* if (nr_bytes_max<nr_mask) */
++	copy_x_while_total(out_at, nr0, nr_bytes_max, NR_COPY_MIN);
++	out_at += nr_bytes_max;
++	return out_at;
++}
++
++inline static uint8_t *out_r_bytes_left(
++	uint8_t *out_at,
++	uint_fast32_t r_bytes_max,
++	const uint_fast32_t nr_log2,
++	const uint_fast32_t off_log2)
++{
++	const uint_fast32_t r_mask = mask(TAG_BITS_MAX - (off_log2 + nr_log2));
++	return likely(r_bytes_max - REPEAT_MIN < r_mask) ?
++		out_at : out_size_bytes(out_at, r_bytes_max - REPEAT_MIN - r_mask);
++}
++
++static uint8_t *out_repeat(
++	uint8_t *out_at,
++	uint_fast32_t utag,
++	uint_fast32_t r_bytes_max,
++	const uint_fast32_t nr_log2,
++	const uint_fast32_t off_log2)
++{
++	const uint_fast32_t r_mask = mask(TAG_BITS_MAX - (off_log2 + nr_log2));
++	if (likely(r_bytes_max - REPEAT_MIN < r_mask)) {
++		utag |= ((r_bytes_max - REPEAT_MIN) << off_log2);
++		m_copy(out_at, &utag, TAG_BYTES_MAX);
++		out_at += TAG_BYTES_MAX;
++	} else {
++		uint_fast32_t bytes_left = r_bytes_max - REPEAT_MIN - r_mask;
++		utag |= (r_mask << off_log2);
++		out_at = out_utag_then_bytes_left(out_at, utag, bytes_left);
++	}
++	return out_at; /* SUCCESS: continue compression */
++}
++
++uint8_t *lz4kd_out_repeat(
++	uint8_t *out_at,
++	uint8_t *const out_end,
++	uint_fast32_t utag,
++	uint_fast32_t r_bytes_max,
++	const uint_fast32_t nr_log2,
++	const uint_fast32_t off_log2,
++	const bool check_out)
++{
++	return out_repeat(out_at, utag, r_bytes_max, nr_log2, off_log2);
++}
++
++inline static uint8_t *out_tuple(
++	uint8_t *out_at,
++	uint8_t *const out_end,
++	uint_fast32_t utag,
++	const uint8_t *const nr0,
++	const uint8_t *const r,
++	uint_fast32_t r_bytes_max,
++	const uint_fast32_t nr_log2,
++	const uint_fast32_t off_log2)
++{
++	update_utag(r_bytes_max, &utag, nr_log2, off_log2);
++	out_at = out_non_repeat(out_at, out_end, utag, nr0, r, nr_log2, off_log2);
++	return out_r_bytes_left(out_at, r_bytes_max, nr_log2, off_log2);
++}
++
++uint8_t *lz4kd_out_tuple(
++	uint8_t *out_at,
++	uint8_t *const out_end,
++	uint_fast32_t utag,
++	const uint8_t *const nr0,
++	const uint8_t *const r,
++	uint_fast32_t r_bytes_max,
++	const uint_fast32_t nr_log2,
++	const uint_fast32_t off_log2,
++	bool check_out)
++{
++	return out_tuple(out_at, out_end, utag, nr0, r, r_bytes_max,
++				nr_log2, off_log2);
++}
++
++static const uint8_t *repeat_end(
++	const uint8_t *q,
++	const uint8_t *r,
++	const uint8_t *const in_end_safe,
++	const uint8_t *const in_end)
++{
++	q += REPEAT_MIN;
++	r += REPEAT_MIN;
++	/* caller guarantees r+12<=in_end */
++	do {
++		const uint64_t x = read8_at(q) ^ read8_at(r);
++		if (x) {
++			const uint16_t ctz = (uint16_t)__builtin_ctzl(x);
++			return r + (ctz >> BYTE_BITS_LOG2);
++		}
++		/* some bytes differ: count of trailing 0-bits/bytes */
++		q += sizeof(uint64_t);
++		r += sizeof(uint64_t);
++	} while (likely(r <= in_end_safe)); /* once, at input block end */
++	while (r < in_end) {
++		if (*q != *r) return r;
++		++q;
++		++r;
++	}
++	return r;
++}
++
++const uint8_t *lz4kd_repeat_end(
++	const uint8_t *q,
++	const uint8_t *r,
++	const uint8_t *const in_end_safe,
++	const uint8_t *const in_end)
++{
++	return repeat_end(q, r, in_end_safe, in_end);
++}
++
++/* CR increase order: +STEP, have OFFSETS, use _5b(most impact) */
++/* *_6b to compete with LZ4 */
++inline static uint_fast32_t hash(const uint8_t *r)
++{
++	return hash64_5b(r, HT_LOG2);
++}
++
++/*
++ * Proof that 'r' increments are safe-NO pointer overflows are possible:
++ *
++ * While using STEP_LOG2=5, step_start=1<<STEP_LOG2 == 32 we increment s
++ * 32 times by 1, 32 times by 2, 32 times by 3, and so on:
++ * 32*1+32*2+32*3+...+32*31 == 32*SUM(1..31) == 32*((1+31)*15+16).
++ * So, we can safely increment s by at most 31 for input block size <=
++ * 1<<13 < 15872.
++ *
++ * More precisely, STEP_LIMIT == x for any input block  calculated as follows:
++ * 1<<off_log2 >= (1<<STEP_LOG2)*((x+1)(x-1)/2+x/2) ==>
++ * 1<<(off_log2-STEP_LOG2+1) >= x^2+x-1 ==>
++ * x^2+x-1-1<<(off_log2-STEP_LOG2+1) == 0, which is solved by standard
++ * method.
++ * To avoid overhead here conservative approximate value of x is calculated
++ * as average of two nearest square roots, see STEP_LIMIT above.
++ */
++
++static int encode_any(
++	uint16_t *const ht,
++	const uint8_t *const in0,
++	const uint8_t *const in_end,
++	uint8_t *const out,
++	uint8_t *const out_end)
++{
++	enum {
++		NR_LOG2 = NR_4KB_LOG2,
++		OFF_LOG2 = BLOCK_4KB_LOG2
++	};
++	const uint8_t *const in_end_safe = in_end - NR_COPY_MIN;
++	const uint8_t *r = in0;
++	const uint8_t *nr0 = r++;
++	uint8_t *out_at = out + 1; /* +1 for header */
++	for (; ; nr0 = r) {
++		const uint8_t *q = 0;
++		uint_fast32_t step = 1 << STEP_LOG2;
++		uint_fast32_t utag = 0;
++		const uint8_t *r_end = 0;
++		uint_fast32_t r_bytes_max = 0;
++		while (true) {
++			if (equal4(q = hashed(in0, ht, hash(r), r), r))
++				break;
++			++r;
++			if (equal4(q = hashed(in0, ht, hash(r), r), r))
++				break;
++			if (unlikely((r += (++step >> STEP_LOG2)) > in_end_safe))
++				return out_tail(out_at, out_end, out, nr0, in_end,
++						NR_LOG2, OFF_LOG2);
++		}
++		utag = u_32(r - q);
++		r_end = repeat_end(q, r, in_end_safe, in_end);
++		r_bytes_max = u_32(r_end - r);
++		if (unlikely(nr0 == r))
++			out_at = out_repeat(out_at, utag, r_bytes_max,
++					    NR_LOG2, OFF_LOG2);
++		else
++			out_at = out_tuple(out_at, out_end, utag, nr0, r, r_bytes_max,
++					    NR_LOG2, OFF_LOG2);
++		if (unlikely((r += r_bytes_max) > in_end_safe))
++			return out_tail2(out_at, out_end, out, r, in_end,
++					 NR_LOG2, OFF_LOG2);
++		ht[hash(r - 1)] = (uint16_t)(r - 1 - in0);
++	}
++}
++
++/* not static for inlining optimization */
++int lz4kd_encode_fast(
++	void *const state,
++	const uint8_t *const in,
++	uint8_t *const out,
++	const uint_fast32_t in_max,
++	const uint_fast32_t out_max)
++{
++	return encode_any((uint16_t*)state, in, in + in_max, out, out + out_max);
++}
++
++int lz4kd_encode(
++	void *const state,
++	const void *const in,
++	void *out,
++	unsigned in_max,
++	unsigned out_max,
++	unsigned out_limit)
++{
++	const uint64_t io_min = min_u64(in_max, out_max);
++	const uint64_t gain_max = max_u64(GAIN_BYTES_MAX, (io_min >> GAIN_BYTES_LOG2));
++	/* ++use volatile pointers to prevent compiler optimizations */
++	const uint8_t *volatile in_end = (const uint8_t*)in + in_max;
++	const uint8_t *volatile out_end = (uint8_t*)out + out_max;
++	const void *volatile state_end =
++		(uint8_t*)state + encode_state_bytes_min();
++	if (unlikely(state == NULL))
++		return LZ4K_STATUS_FAILED;
++	if (unlikely(in == NULL || out == NULL))
++		return LZ4K_STATUS_FAILED;
++	if (unlikely(out_max <= gain_max))
++		return LZ4K_STATUS_FAILED;
++	if (unlikely((const uint8_t*)in >= in_end || (uint8_t*)out >= out_end))
++		return LZ4K_STATUS_FAILED;
++	if (unlikely(state >= state_end))
++		return LZ4K_STATUS_FAILED; /* pointer overflow */
++	if (in_max > (1 << BLOCK_4KB_LOG2))
++		return LZ4K_STATUS_FAILED;
++	if (unlikely(!out_limit || out_limit > io_min))
++		out_limit = (unsigned)io_min;
++	m_set(state, 0, encode_state_bytes_min());
++	*((uint8_t*)out) = 0; /* lz4kd header */
++	if (unlikely(nr_encoded_bytes_max(in_max, NR_4KB_LOG2) > out_max))
++		return 0;
++	return lz4kd_encode_fast(state, (const uint8_t*)in, (uint8_t*)out,
++			in_max, out_limit);
++}
++EXPORT_SYMBOL(lz4kd_encode);
++
++/* maximum encoded size for repeat and non-repeat data if "fast" encoder is used */
++uint_fast32_t lz4kd_encoded_bytes_max(
++	uint_fast32_t nr_max,
++	uint_fast32_t r_max,
++	uint_fast32_t nr_log2,
++	uint_fast32_t off_log2)
++{
++	uint_fast32_t r = 1 + TAG_BYTES_MAX +
++		(uint32_t)round_up_to_log2(nr_max, NR_COPY_LOG2);
++	uint_fast32_t r_log2 = TAG_BITS_MAX - (off_log2 + nr_log2);
++	if (nr_max >= mask(nr_log2))
++		r += size_bytes_count(nr_max - mask(nr_log2));
++	if (r_max >= mask(r_log2)) {
++		r_max -= mask(r_log2);
++		r += (uint_fast32_t)max_u64(size_bytes_count(r_max),
++					r_max - r_max / REPEAT_MIN); /* worst case: one tag for each REPEAT_MIN */
++	}
++	return r;
++}
++EXPORT_SYMBOL(lz4kd_encoded_bytes_max);
++
++const char *lz4kd_version(void)
++{
++	static const char *version = "2022.03.20";
++	return version;
++}
++EXPORT_SYMBOL(lz4kd_version);
++
++MODULE_LICENSE("Dual BSD/GPL");
++MODULE_DESCRIPTION("LZ4K encoder");
+diff --git a/lib/lz4kd/lz4kd_encode_delta.c b/lib/lz4kd/lz4kd_encode_delta.c
+new file mode 100644
+index 000000000000..9fce71790040
+--- /dev/null
++++ b/lib/lz4kd/lz4kd_encode_delta.c
+@@ -0,0 +1,259 @@
++/*
++ * Copyright (c) Huawei Technologies Co., Ltd. 2022. All rights reserved.
++ * Description: LZ4K compression algorithm with delta compression
++ */
++
++#if !defined(__KERNEL__)
++#include "lz4kd.h"
++#else
++#include <linux/lz4kd.h>
++#include <linux/module.h>
++#endif
++
++#include "lz4kd_private.h"
++#include "lz4kd_encode_private.h"
++
++enum {
++	HT_LOG2 = 13,
++	OFF_LOG2 = 13 /* 13 for 8KB */
++};
++
++static unsigned ht_bytes_max(void)
++{
++	return (1 << HT_LOG2) * sizeof(uint16_t);
++}
++
++static unsigned encode_state_bytes_min(void)
++{
++	return ((1 << HT_LOG2) + (1 << OFF_LOG2)) * sizeof(uint16_t);
++}
++
++#ifdef LZ4K_DELTA
++
++unsigned lz4kd_encode_state_bytes_min(void)
++{
++	return encode_state_bytes_min();
++}
++EXPORT_SYMBOL(lz4kd_encode_state_bytes_min);
++
++#endif /* LZ4K_DELTA */
++
++inline static uint_fast32_t hashv(const uint64_t v, uint32_t shift)
++{
++	return hash32v(v, shift);
++}
++
++inline static uint_fast32_t hash(const uint8_t *r, uint32_t shift)
++{
++	return hashv(*((const uint64_t*)r), shift);
++}
++
++static void fill_ht_offsets_s(
++	const uint_fast32_t off0,
++	uint16_t *const ht,
++	uint16_t *const past_offset,
++	uint64_t s)
++{
++	static const uint_fast32_t off1 = 1;
++	static const uint_fast32_t off2 = 2;
++	static const uint_fast32_t off3 = 3;
++	uint_fast32_t h0 = hashv(s,                       HT_LOG2);
++	uint_fast32_t h1 = hashv(s >> (off1 * BYTE_BITS), HT_LOG2);
++	uint_fast32_t h2 = hashv(s >> (off2 * BYTE_BITS), HT_LOG2);
++	uint_fast32_t h3 = hashv(s >> (off3 * BYTE_BITS), HT_LOG2);
++	past_offset[off0 + 0] = ht[h0];
++	ht[h0] = (uint16_t)(off0 + 0);
++	past_offset[off0 + off1] = ht[h1];
++	ht[h1] = (uint16_t)(off0 + off1);
++	past_offset[off0 + off2] = ht[h2];
++	ht[h2] = (uint16_t)(off0 + off2);
++	past_offset[off0 + off3] = ht[h3];
++	ht[h3] = (uint16_t)(off0 + off3);
++}
++
++static void update_hash_table(
++	uint16_t *const ht,
++	const uint8_t *const in1,
++	const uint8_t *const in_end)
++{
++	static const uint64_t read_bytes = 8;
++	uint64_t a = 0;
++	const uint8_t *const in0 = in1 - 1;
++	const uint8_t *r = in1;
++	uint16_t *const past_offset = ht + (1 << HT_LOG2);
++	m_set(ht, 0, ht_bytes_max());
++	past_offset[0] = 0; /* stopper in encode_any2() */
++	while (likely(r + read_bytes <= in_end)) {
++		a = read8_at(r);
++		fill_ht_offsets_s((uint16_t)(r - in0), ht, past_offset, a);
++		r += REPEAT_MIN;
++	}
++	for (; likely(r < in_end); ++r) { /* here in_end=start of the ref block */
++		uint_fast32_t off0 = (uint16_t)(r - in0);
++		uint_fast32_t h = hash(r, HT_LOG2);
++		past_offset[off0] = ht[h];
++		ht[h] = (uint16_t)(off0);
++	}
++}
++
++static void hash_repeat_tail(
++	uint16_t *const ht,
++	uint16_t *const past_offset,
++	const uint8_t *const in0,
++	const uint8_t *const r)
++{
++	const uint8_t *s = r - 1 - 1 - 1;
++	uint_fast32_t h = hash(s, HT_LOG2);
++	past_offset[s - in0] = ht[h];
++	ht[h] = (uint16_t)(s - in0);
++	++s;
++	h = hash(s, HT_LOG2);
++	past_offset[s - in0] = ht[h];
++	ht[h] = (uint16_t)(s - in0);
++	++s;
++	h = hash(s, HT_LOG2);
++	past_offset[s - in0] = ht[h];
++	ht[h] = (uint16_t)(s - in0);
++}
++
++enum {
++	STEP_LOG2 = 5, /* increase for better CR */
++	Q_MAX = 4, /* 2 for "dump" benchmark: increase for better CR */
++	MATCH_MAX = 160
++};
++
++static int encode_any2(
++	uint16_t *const ht,
++	const uint8_t *const in1,
++	const uint8_t *const in,
++	const uint8_t *const in_end,
++	uint8_t *const out,
++	uint8_t *const out_end, /* ==out_limit for !check_out */
++	const uint_fast32_t nr_log2,
++	const bool check_out)
++{
++	uint8_t *out_at = out + 1; /* +1 for header */
++	const uint8_t *const in_end_safe = in_end - NR_COPY_MIN;
++	const uint8_t *const in0 = in1 - 1;
++	const uint8_t *r = in;
++	const uint8_t *nr0 = in;
++	uint_fast32_t r_bytes_max = 0;
++	uint16_t *const past_offset = ht + (1 << HT_LOG2);
++	update_hash_table(ht, in1, in1 + (in - in1));
++	while (true) {
++		uint_fast32_t off0 = 0;
++		uint_fast32_t utag = 0;
++		const uint8_t *q = 0;
++		const uint8_t *r_end = 0;
++		const uint8_t *s = r;
++		uint_fast32_t step = 1 << STEP_LOG2;
++		while (true) {
++			uint64_t sv = read8_at(s);
++			uint_fast32_t h = hashv(sv, HT_LOG2);
++			off0 = past_offset[s - in0] = ht[h];
++			ht[h] = (uint16_t)(s - in0);
++			for (; off0 && !equal4pv((q = in0 + off0), sv); off0 = past_offset[off0]);
++			if (off0 != 0)
++				break; /* repeat found */
++			if (unlikely((s += (++step >> STEP_LOG2)) > in_end_safe))
++				return lz4kd_out_tail(out_at, out_end, out, nr0,
++					 in_end, nr_log2, OFF_LOG2, check_out);
++		} /* for */
++		utag = (uint_fast32_t)(s - q);
++		r_end = lz4kd_repeat_end(q, s, in_end_safe, in_end);
++		r_bytes_max = (uint_fast32_t)(r_end - (r = repeat_start(q, s, nr0, in1)));
++		if (s + r_bytes_max >= in_end) /* see the bottom of while() below */
++			goto REPEAT_DONE; /* match_max(q, s, r_bytes_max + 1) below */
++		step = Q_MAX - 1;
++		while ((off0 = past_offset[off0]) && (q >= in || step > 0)) {
++			const uint8_t *r_start = 0;
++			--step;
++			if (!match_max((q = in0 + off0), s, r_bytes_max + 1))
++				continue;
++			r_end = lz4kd_repeat_end(q, s, in_end_safe, in_end);
++			r_start = repeat_start(q, s, nr0, in1);
++			if (r_bytes_max > (uint_fast32_t)(r_end - r_start))
++				continue;
++			r_bytes_max = (uint_fast32_t)(r_end - r_start);
++			r = r_start;
++			utag = (uint_fast32_t)(s - q);
++			if (s + r_bytes_max >= in_end ||
++			    (q < in && r_bytes_max >= MATCH_MAX))
++				goto REPEAT_DONE;
++		}
++REPEAT_DONE:
++		out_at = lz4kd_out_tuple(out_at, out_end, utag, nr0, r,
++				r_bytes_max, nr_log2, OFF_LOG2, check_out);
++		if (unlikely(check_out && out_at == NULL))
++			return LZ4K_STATUS_WRITE_ERROR;
++		if (unlikely((r += r_bytes_max) > in_end_safe))
++			return r == in_end ? (int)(out_at - out) :
++				lz4kd_out_tail(out_at, out_end, out, r, in_end,
++					nr_log2, OFF_LOG2, check_out);
++		hash_repeat_tail(ht, past_offset, in0, r);
++		nr0 = r;
++	} /* for */
++}
++
++static int encode_delta_fast(
++	uint16_t *const ht,
++	const uint8_t *const in0,
++	const uint8_t *const in,
++	uint8_t *const out,
++	const uint_fast32_t in_max,
++	const uint_fast32_t out_max,
++	const uint_fast32_t nr_log2)
++{
++	return encode_any2(ht, in0, in, in + in_max, out, out + out_max,
++			 nr_log2, false); /* !check_out */
++}
++
++int lz4kd_encode_delta_slow(
++	uint16_t *const ht,
++	const uint8_t *const in0,
++	const uint8_t *const in,
++	uint8_t *const out,
++	const uint_fast32_t in_max,
++	const uint_fast32_t out_max,
++	const uint_fast32_t nr_log2)
++{
++	return encode_any2(ht, in0, in, in + in_max, out, out + out_max,
++			 nr_log2, true); /* check_out */
++}
++
++inline static uint64_t u64_diff(const void *a, const void *b)
++{
++	return (uint64_t)((const uint8_t*)a - (const uint8_t*)b);
++}
++
++int lz4kd_encode_delta(
++	void *const state,
++	const void *const in0,
++	const void *const in,
++	void *out,
++	unsigned in_max,
++	unsigned out_max,
++	unsigned out_limit)
++{
++	const unsigned io_min = in_max < out_max ? in_max : out_max;
++	if (unlikely(state == NULL))
++		return LZ4K_STATUS_FAILED;
++	if (unlikely(in0 == NULL || in == NULL || out == NULL))
++		return LZ4K_STATUS_FAILED;
++	if (unlikely(in0 >= in))
++		return LZ4K_STATUS_FAILED;
++	if (unlikely(u64_diff(in, in0) + in_max > (1U << BLOCK_8KB_LOG2)))
++		return LZ4K_STATUS_FAILED;
++	if (!out_limit || out_limit > io_min)
++		out_limit = io_min;
++	*((uint8_t*)out) = 0; /* header */
++	return unlikely(nr_encoded_bytes_max(in_max, NR_8KB_LOG2) > out_max) ?
++		lz4kd_encode_delta_slow((uint16_t*)state, (const uint8_t*)in0, (const uint8_t*)in,
++			(uint8_t*)out, in_max, out_max, NR_8KB_LOG2) :
++		encode_delta_fast((uint16_t*)state, (const uint8_t*)in0, (const uint8_t*)in,
++			(uint8_t*)out, in_max, out_limit, NR_8KB_LOG2);
++}
++EXPORT_SYMBOL(lz4kd_encode_delta);
++
++MODULE_LICENSE("Dual BSD/GPL");
++MODULE_DESCRIPTION("LZ4K encoder delta");
+diff --git a/lib/lz4kd/lz4kd_encode_private.h b/lib/lz4kd/lz4kd_encode_private.h
+new file mode 100644
+index 000000000000..becb1beeb9d0
+--- /dev/null
++++ b/lib/lz4kd/lz4kd_encode_private.h
+@@ -0,0 +1,135 @@
++/*
++ * Copyright (c) Huawei Technologies Co., Ltd. 2022. All rights reserved.
++ * Description: LZ4K compression algorithm with delta compression
++ */
++
++#ifndef _LZ4KD_ENCODE_PRIVATE_H
++#define _LZ4KD_ENCODE_PRIVATE_H
++
++#include "lz4kd_private.h"
++
++#ifdef __cplusplus
++extern "C" {
++#endif
++
++enum {
++	GAIN_BYTES_LOG2 = 6,
++	GAIN_BYTES_MAX = 1 << GAIN_BYTES_LOG2,
++	NR_COPY_LOG2 = 4,
++	NR_COPY_MIN = 1 << NR_COPY_LOG2
++};
++
++inline static uint32_t u_32(int64_t i)
++{
++	return (uint32_t)i;
++}
++
++/*
++ * Compressed data format (where {} means 0 or more occurrences, [] means
++ * optional)
++ * <24bits tag: (off_log2 rOffset| r_log2 rSize|nr_log2 nrSize)>
++ * {<nrSize byte>}[<nr bytes>]{<rSize byte>}
++ * <rSize byte> and <nrSize byte> sequences are terminated by byte != 255
++ *
++ * <nrSize bytes for whole block>+<1 terminating 0 byte>
++ */
++inline static uint_fast32_t size_bytes_count(uint_fast32_t u)
++{
++	return ((u + BYTE_MAX) >> BYTE_BITS) + 1; /* (u + BYTE_MAX - 1) / BYTE_MAX; */
++}
++
++/* maximum encoded size for non-compressible data if "fast" encoder is used */
++inline static uint_fast32_t nr_encoded_bytes_max(
++	uint_fast32_t nr_max,
++	uint_fast32_t nr_log2)
++{
++	uint_fast32_t r = 1 + TAG_BYTES_MAX + (uint32_t)round_up_to_log2(nr_max, NR_COPY_LOG2);
++	return nr_max < mask(nr_log2) ? r : r + size_bytes_count(nr_max - mask(nr_log2));
++}
++
++/* maximum encoded size for repeat and non-repeat data if "fast" encoder is used */
++uint_fast32_t lz4kd_encoded_bytes_max(
++	uint_fast32_t nr_max,
++	uint_fast32_t r_max,
++	uint_fast32_t nr_log2,
++	uint_fast32_t off_log2);
++
++inline static const uint8_t *hashed(
++	const uint8_t *const in0,
++	uint16_t *const ht,
++	uint_fast32_t h,
++	const uint8_t *r)
++{
++	const uint8_t *q = in0 + ht[h];
++	ht[h] = (uint16_t)(r - in0);
++	return q;
++}
++
++inline static const uint8_t *repeat_start(
++	const uint8_t *q,
++	const uint8_t *r,
++	const uint8_t *const nr0,
++	const uint8_t *const in0)
++{
++	for (; r > nr0 && likely(q > in0) && unlikely(q[-1] == r[-1]); --q, --r);
++	return r;
++}
++
++static inline bool match_max(
++		const uint8_t *q,
++		const uint8_t *s,
++		const uint_fast32_t r_max)
++{
++	return equal4(q + r_max - REPEAT_MIN, s + r_max - REPEAT_MIN) &&
++		equal4(q, s);
++}
++
++int lz4kd_out_tail(
++	uint8_t *out_at,
++	uint8_t *const out_end,
++	const uint8_t *const out,
++	const uint8_t *const nr0,
++	const uint8_t *const in_end,
++	const uint_fast32_t nr_log2,
++	const uint_fast32_t off_log2,
++	bool check_out);
++
++uint8_t *lz4kd_out_tuple(
++	uint8_t *out_at,
++	uint8_t *const out_end,
++	uint_fast32_t utag,
++	const uint8_t *const nr0,
++	const uint8_t *const r,
++	uint_fast32_t r_bytes_max,
++	const uint_fast32_t nr_log2,
++	const uint_fast32_t off_log2,
++	bool check_out);
++
++uint8_t *lz4kd_out_repeat(
++	uint8_t *out_at,
++	uint8_t *const out_end,
++	uint_fast32_t utag,
++	uint_fast32_t r_bytes_max,
++	const uint_fast32_t nr_log2,
++	const uint_fast32_t off_log2,
++	const bool check_out);
++
++const uint8_t *lz4kd_repeat_end(
++	const uint8_t *q,
++	const uint8_t *r,
++	const uint8_t *const in_end_safe,
++	const uint8_t *const in_end);
++
++int lz4kd_encode_fast(
++	void *const state,
++	const uint8_t *const in,
++	uint8_t *const out,
++	const uint_fast32_t in_max,
++	const uint_fast32_t out_max);
++
++#ifdef __cplusplus
++}
++#endif
++
++#endif /* _LZ4KD_ENCODE_PRIVATE_H */
++
+diff --git a/lib/lz4kd/lz4kd_private.h b/lib/lz4kd/lz4kd_private.h
+new file mode 100644
+index 000000000000..63b62f044ba1
+--- /dev/null
++++ b/lib/lz4kd/lz4kd_private.h
+@@ -0,0 +1,304 @@
++/*
++ * Copyright (c) Huawei Technologies Co., Ltd. 2022. All rights reserved.
++ * Description: LZ4K compression algorithm with delta compression
++ */
++
++#ifndef _LZ4KD_PRIVATE_H
++#define _LZ4KD_PRIVATE_H
++
++#if !defined(__KERNEL__)
++
++/* for userspace only */
++
++#else /* __KERNEL__ */
++
++#include <linux/lz4kd.h>
++#define __STDC_WANT_LIB_EXT1__ 1
++#include <linux/string.h> /* memcpy() */
++#include <linux/types.h> /* uint8_t, int8_t, uint16_t, int16_t,
++uint32_t, int32_t, uint64_t, int64_t */
++#include <linux/stddef.h>
++
++typedef uint64_t uint_fast32_t;
++typedef int64_t int_fast32_t;
++
++#endif /* __KERNEL__ */
++
++#if defined(__GNUC__) && (__GNUC__>=4)
++#define LZ4K_WITH_GCC_INTRINSICS
++#endif
++
++enum {
++	BYTE_BITS = 8UL,
++	WORD_BITS = 32U,
++	DWORD_BITS = 64UL,
++	BYTE_BITS_LOG2 = 3,
++	BYTE_MAX = 255U,
++	REPEAT_MIN = 4,
++	TAG_BYTES_MAX = 3,
++	TAG_BITS_MAX  = TAG_BYTES_MAX * 8,
++	BLOCK_4KB_LOG2  = 12,
++	BLOCK_8KB_LOG2  = 13,
++	NR_8KB_LOG2 = 5, /* for encoded_bytes_max */
++	NR_4KB_LOG2 = 6,
++	PATTERN_BYTES_MAX = 8 /* 1 bytes for header, 8 bytes for pattern */
++};
++
++inline static uint32_t mask(uint_fast32_t log2)
++{
++	return (1U << log2) - 1U;
++}
++
++inline static uint64_t mask64(uint_fast32_t log2)
++{
++	return (1ULL << log2) - 1ULL;
++}
++
++#if defined LZ4K_WITH_GCC_INTRINSICS
++inline static int most_significant_bit_of(uint64_t u)
++{
++	return (int)(__builtin_expect((u) == 0, false) ?
++		     -1 : (int)((WORD_BITS - 1) ^ (uint32_t)__builtin_clz((unsigned)(u))));
++}
++#else /* #!defined LZ4K_WITH_GCC_INTRINSICS */
++#error undefined most_significant_bit_of(unsigned u)
++#endif /* #if defined LZ4K_WITH_GCC_INTRINSICS */
++
++inline static uint64_t max_u64(uint64_t a, uint64_t b)
++{
++	return a > b ? a : b;
++}
++
++inline static uint64_t min_u64(uint64_t a, uint64_t b)
++{
++	return a < b ? a : b;
++}
++
++inline static void m_copy(void *dst, const void *src, size_t total)
++{
++#if defined(__STDC_LIB_EXT1__)
++	(void)memcpy_s(dst, total, src, (total * 2) >> 1); /* *2 >> 1 to avoid bot errors */
++#else
++	(void)__builtin_memcpy(dst, src, total);
++#endif
++}
++
++inline static void m_set(void *dst, uint8_t value, size_t total)
++{
++#if defined(__STDC_LIB_EXT1__)
++	(void)memset_s(dst, total, value, (total * 2) >> 1); /* *2 >> 1 to avoid bot errors */
++#else
++	(void)__builtin_memset(dst, value, total);
++#endif
++}
++
++inline static uint64_t round_down_to_log2(uint64_t u, uint8_t log2)
++{
++	return (uint64_t)(u & ~mask64(log2));
++}
++
++inline static uint64_t round_up_to_log2(uint64_t u, uint8_t log2)
++{
++	return (uint64_t)((u + mask64(log2)) & ~mask64(log2));
++}
++
++inline static uint64_t round_up_to_power_of2(uint64_t u)
++{
++	const int_fast32_t msb = most_significant_bit_of(u);
++	return round_up_to_log2(u, (uint8_t)msb);
++}
++
++inline static void *align_pointer_up_to_log2(const void *p, uint8_t log2)
++{
++	return (void*)round_up_to_log2((uint64_t)p, log2);
++}
++
++inline static uint32_t read3_at(const void *p)
++{
++	uint32_t result = 0;
++	m_copy(&result, p, 1 + 1 + 1);
++	return result;
++}
++
++inline static uint32_t read4_at(const void *p)
++{
++	uint32_t result;
++	m_copy(&result, p, sizeof(result));
++	return result;
++}
++
++inline static uint64_t read8_at(const void *p)
++{
++	uint64_t result;
++	m_copy(&result, p, sizeof(result));
++	return result;
++}
++
++inline static bool equal3(const uint8_t *const q, const uint8_t *const r)
++{
++	return (read4_at(q) << BYTE_BITS) == (read4_at(r) << BYTE_BITS);
++}
++
++inline static bool equal3pv(const uint8_t *const q, const uint64_t rv)
++{
++	return (read4_at(q) << BYTE_BITS) == ((uint32_t)rv << BYTE_BITS);
++}
++
++inline static bool equal4(const uint8_t *const q, const uint8_t *const r)
++{
++	return read4_at(q) == read4_at(r);
++}
++
++inline static bool equal4pv(const uint8_t *const q, const uint64_t rv)
++{
++	return read4_at(q) == (uint32_t)rv;
++}
++
++inline static bool equal8(const uint8_t *const q, const uint8_t *const r)
++{
++	return read8_at(q) == read8_at(r);
++}
++
++inline static uint_fast32_t hash24v(const uint64_t r, uint32_t shift)
++{
++	const uint32_t hash24_factor = 3266489917U;
++	return (((uint32_t)r << BYTE_BITS) * hash24_factor) >> (WORD_BITS - shift);
++}
++
++inline static uint_fast32_t hash24(const uint8_t *r, uint32_t shift)
++{
++	return hash24v(read4_at(r), shift);
++}
++
++inline static uint_fast32_t hash32v_2(const uint64_t r, uint32_t shift)
++{
++	const uint32_t hash32_2_factor = 3266489917U;
++	return ((uint32_t)r * hash32_2_factor) >> (WORD_BITS - shift);
++}
++
++inline static uint_fast32_t hash32_2(const uint8_t *r, uint32_t shift)
++{
++	return hash32v_2(read4_at(r), shift);
++}
++
++inline static uint_fast32_t hash32v(const uint64_t r, uint32_t shift)
++{
++	const uint32_t hash32_factor = 2654435761U;
++	return ((uint32_t)r * hash32_factor) >> (WORD_BITS - shift);
++}
++
++inline static uint_fast32_t hash32(const uint8_t *r, uint32_t shift)
++{
++	return hash32v(read4_at(r), shift);
++}
++
++inline static uint_fast32_t hash64v_5b(const uint64_t r, uint32_t shift)
++{
++	const uint64_t m = 889523592379ULL;
++	const uint64_t up_shift = 24;
++	return (uint32_t)(((r << up_shift) * m) >> (DWORD_BITS - shift));
++}
++
++inline static uint_fast32_t hash64_5b(const uint8_t *r, uint32_t shift)
++{
++	return hash64v_5b(read8_at(r), shift);
++}
++
++inline static uint_fast32_t hash64v_6b(const uint64_t r, uint32_t shift)
++{
++	const uint64_t m = 227718039650203ULL;
++	const uint64_t up_shift = 16;
++	return (uint32_t)(((r << up_shift) * m) >> (DWORD_BITS - shift));
++}
++
++inline static uint_fast32_t hash64_6b(const uint8_t *r, uint32_t shift)
++{
++	return hash64v_6b(read8_at(r), shift);
++}
++
++inline static uint_fast32_t hash64v_7b(const uint64_t r, uint32_t shift)
++{
++	const uint64_t m = 58295818150454627ULL;
++	const uint64_t up_shift = 8;
++	return (uint32_t)(((r << up_shift) * m) >> (DWORD_BITS - shift));
++}
++
++inline static uint_fast32_t hash64_7b(const uint8_t *r, uint32_t shift)
++{
++	return hash64v_7b(read8_at(r), shift);
++}
++
++inline static uint_fast32_t hash64v_8b(const uint64_t r, uint32_t shift)
++{
++	const uint64_t m = 2870177450012600261ULL;
++	return (uint32_t)((r * m) >> (DWORD_BITS - shift));
++}
++
++inline static uint_fast32_t hash64_8b(const uint8_t *r, uint32_t shift)
++{
++	return hash64v_8b(read8_at(r), shift);
++}
++
++inline static void while_lt_copy_x(
++	uint8_t *dst,
++	const uint8_t *src,
++	const uint8_t *dst_end,
++	const size_t copy_min)
++{
++	for (; dst < dst_end; dst += copy_min, src += copy_min)
++		m_copy(dst, src, copy_min);
++}
++
++inline static void copy_x_while_lt(
++	uint8_t *dst,
++	const uint8_t *src,
++	const uint8_t *dst_end,
++	const size_t copy_min)
++{
++	m_copy(dst, src, copy_min);
++	while (dst + copy_min < dst_end)
++		m_copy(dst += copy_min, src += copy_min, copy_min);
++}
++
++inline static void copy_x_while_total(
++	uint8_t *dst,
++	const uint8_t *src,
++	size_t total,
++	const size_t copy_min)
++{
++	m_copy(dst, src, copy_min);
++	for (; total > copy_min; total -= copy_min)
++		m_copy(dst += copy_min, src += copy_min, copy_min);
++}
++
++inline static void copy_2x(
++	uint8_t *dst,
++	const uint8_t *src,
++	const size_t copy_min)
++{
++	m_copy(dst, src, copy_min);
++	m_copy(dst + copy_min, src + copy_min, copy_min);
++}
++
++inline static void copy_2x_as_x2_while_lt(
++	uint8_t *dst,
++	const uint8_t *src,
++	const uint8_t *dst_end,
++	const size_t copy_min)
++{
++	copy_2x(dst, src, copy_min);
++	while (dst + (copy_min << 1) < dst_end)
++		copy_2x(dst += (copy_min << 1), src += (copy_min << 1), copy_min);
++}
++
++inline static void while_lt_copy_2x_as_x2(
++	uint8_t *dst,
++	const uint8_t *src,
++	const uint8_t *dst_end,
++	const size_t copy_min)
++{
++	for (; dst < dst_end; dst += (copy_min << 1), src += (copy_min << 1))
++		copy_2x(dst, src, copy_min);
++}
++
++#endif /* _LZ4KD_PRIVATE_H */
