@@ -8,6 +8,10 @@ runs:
         shell: bash
         run: |
           TIME=$(date +"%Y%m%d%H%M%S")
+          ROM_TAG=""
+          if [ -n "$ROM_TEXT" ]; then
+            ROM_TAG="-$ROM_TEXT"
+          fi
 
           cd $GITHUB_WORKSPACE/device_kernel/
           IMAGE_DIR="$GITHUB_WORKSPACE/device_kernel/out/arch/${{ env.KERNEL_ARCH }}/boot"
@@ -105,10 +109,10 @@ runs:
           cd tmp
           7za a -mx9 tmp.zip *
           cd ..
-          cp -fp tmp/tmp.zip ${{ env.DEVICE_CODENAME }}-${{ env.ROM_TEXT }}-$TIME-${{ env.PACK_METHOD }}.zip
+          cp -fp tmp/tmp.zip ${DEVICE_CODENAME}${ROM_TAG}-$TIME-${{ env.PACK_METHOD }}.zip
           rm -rf tmp
 
-          echo "PACK_NAME=${{ env.DEVICE_CODENAME }}-${{ env.ROM_TEXT }}-$TIME-${{ env.PACK_METHOD }}.zip" >> $GITHUB_ENV
+          echo "PACK_NAME=${DEVICE_CODENAME}${ROM_TAG}-$TIME-${{ env.PACK_METHOD }}.zip" >> $GITHUB_ENV
 
       - name: Make Latest Boot Image
         if: env.PACK_METHOD == 'MKBOOTIMG'
@@ -118,6 +122,10 @@ runs:
 
           IMAGE_DIR="$GITHUB_WORKSPACE/device_kernel/out/arch/${{ env.KERNEL_ARCH }}/boot"
           TIME=$(date +"%Y%m%d%H%M%S")
+          ROM_TAG=""
+          if [ -n "$ROM_TEXT" ]; then
+            ROM_TAG="-$ROM_TEXT"
+          fi
           FORMAT_MKBOOTING=$(echo `mkboottools/unpack_bootimg.py --boot_img=boot_source_${{ env.DEVICE_NAME }}.img --format mkbootimg`)
 
           mkdir -p tmp
@@ -188,13 +196,13 @@ runs:
             cd tmp
             7za a -mx9 tmp.zip *
             cd ..
-            cp -fp tmp/tmp.zip ${{ env.DEVICE_CODENAME }}-${{ env.ROM_TEXT }}-$TIME-image.zip
+            cp -fp tmp/tmp.zip ${DEVICE_CODENAME}${ROM_TAG}-$TIME-image.zip
             rm -rf tmp
-            echo "PACK_NAME=${{ env.DEVICE_CODENAME }}-${{ env.ROM_TEXT }}-$TIME-image.zip" >> $GITHUB_ENV
+            echo "PACK_NAME=${DEVICE_CODENAME}${ROM_TAG}-$TIME-image.zip" >> $GITHUB_ENV
 
           else
-            eval "mkboottools/mkbootimg.py $FORMAT_MKBOOTING -o ${{ env.DEVICE_CODENAME }}-${{ env.ROM_TEXT }}-$TIME-image.img"
-            echo "PACK_NAME=${{ env.DEVICE_CODENAME }}-${{ env.ROM_TEXT }}-$TIME-image.img" >> $GITHUB_ENV
+            eval "mkboottools/mkbootimg.py $FORMAT_MKBOOTING -o ${DEVICE_CODENAME}${ROM_TAG}-$TIME-image.img"
+            echo "PACK_NAME=${DEVICE_CODENAME}${ROM_TAG}-$TIME-image.img" >> $GITHUB_ENV
 
           fi
 

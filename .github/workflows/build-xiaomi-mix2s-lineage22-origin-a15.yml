@@ -18,6 +18,11 @@ on:
         required: false
         type: string
         default: "Mon JUL 5 11:45:14 UTC 2021"
+      rom_text:
+        description: "ROM tag used in the artifact file name (leave empty for none)"
+        required: false
+        type: string
+        default: ""
       patch_susfs:
         description: "Apply SUSFS (base + 4.9 fixed hooks)"
         required: false
@@ -79,6 +84,11 @@ on:
         description: "内核编译时间，即 uname -v 的日期部分 (默认: Mon JUL 5 11:45:14 UTC 2021)"
         required: false
         default: "Mon JUL 5 11:45:14 UTC 2021"
+        type: string
+      rom_text:
+        description: "ROM 标识，仅用于产物文件名（可留空，默认空）"
+        required: false
+        default: ""
         type: string
       patch_susfs:
         description: "SUSFS（基础补丁 + 4.9 fixed hooks）"
@@ -158,15 +168,13 @@ env:
 
   SUSFS_FIXED : false # The evox-a15 susfs_fixed patch targets another tree layout; our own 4.9 fixed patch is applied instead.
 
-  AK3_SOURCE : "https://github.com/osm0sis/AnyKernel3.git"
-  AK3_BRANCH : "master"
+  AK3_SOURCE : "https://github.com/imexplorer1/AnyKernel3.git"
+  AK3_BRANCH : "main"
 
   BOOT_SOURCE : ""
 
   NEED_DTBO : false
   NEED_SAFE_DTBO : false
-
-  ROM_TEXT : "lineageos22_a15"
 
   # Other env
   PYTHON_VERSION: "3" # Only 2(Ubuntu 22.04 and Ubuntu 20.04) or 3(Any OS Versions).
@@ -212,6 +220,7 @@ jobs:
     # container: archlinux/archlinux:latest # if u need use arch linux -> archlinux/archlinux:latest or ubuntu 20.04 -> ubuntu:focal
     env:
       KERNELSU_BRANCH: "${{ inputs.bakasu_branch || 'main' }}"
+      ROM_TEXT: "${{ inputs.rom_text }}"
       # Patch switches (rendered as checkboxes in the Run workflow UI)
       SUSFS_ENABLE: ${{ inputs.patch_susfs }}
       REKERNEL_ENABLE: ${{ inputs.patch_rekernel }}
