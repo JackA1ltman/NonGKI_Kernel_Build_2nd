@@ -13,8 +13,8 @@ runs:
 
             git clone https://github.com/aerath-stuff/fgetpriority.git fgetpriority
             ln -sfn ../fgetpriority/kernel drivers/fgetpriority
-            grep -q "fgetpriority" drivers/Makefile || echo 'obj-$(CONFIG_FGETPRIORITY) += fgetpriority/kernel/' >> drivers/Makefile
-            grep -q "drivers/fgetpriority/Kconfig" drivers/Kconfig || sed -i '/endmenu/i source "drivers/fgetpriority/kernel/Kconfig"' drivers/Kconfig
+            grep -q "fgetpriority" drivers/Makefile || echo 'obj-$(CONFIG_FGETPRIORITY) += fgetpriority/' >> drivers/Makefile
+            grep -q "drivers/fgetpriority/Kconfig" drivers/Kconfig || sed -i '/endmenu/i source "drivers/fgetpriority/Kconfig"' drivers/Kconfig
 
             echo "CONFIG_FGETPRIORITY=y" >> ./arch/${{ env.KERNEL_ARCH }}/configs/${{ env.DEFCONFIG_NAME }}
 
