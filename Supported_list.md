@@ -1,5 +1,5 @@
 | Device | Location | Codename | Kernel/Author/Name | OS | Android | Pack Method | KernelSU | SUSFS | Hook | KPM | Re:Kernel | BBG | NoMount | VPNHide | Status |  
-|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|  
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|  
 | Google Pixel 3a | All | bonito | [4.9/LineageOS/google msm-4.9](https://github.com/LineageOS/android_kernel_google_msm-4.9) | LineageOS 22.2 | 15 | AnyKernel3 | BakaSU | ✅ | Inline | ❌ | ❌ | ❌ | ✅ | ❌ | Stable |  
 | Google Pixel 4a | All | sunfish | [4.14/engstk/blu_spark](https://github.com/engstk/pxl4a) | AOSP Based | 13 | AnyKernel3 | BakaSU | ✅ | Inline | ❌ | ✅ | ✅ | ✅ | ❌ | Stable |  
 | Nothing Phone (1) | All | spacewar | [5.4/cyberc3dr/sm7325](https://github.com/cyberc3dr/android_kernel_nothing_sm7325) | LineageOS 23.2 | 16 | AnyKernel3 | BakaSU | ✅ | Inline | ❌ | ❌ | ❌ | ❌ | ❌ | Stable |  
