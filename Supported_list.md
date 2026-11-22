@@ -1,5 +1,5 @@
 | Device | Location | Codename | Kernel/Author/Name | OS | Android | Pack Method | KernelSU | SuSFS | Hook | KPM | Re:Kernel | BBG | NoMount | VPNHide | Status |  
-|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|  
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|  
 | Sample | All | sam | [5.4/author/kernelname](https://github.com/author/kernelname) | Custom OS | 15 | AnyKernel3 | KernelSU | ✅ | Syscall | ❌ | ❌ | ❌ | ❌ | ❌ | Stop |  
 
 **English**:  
