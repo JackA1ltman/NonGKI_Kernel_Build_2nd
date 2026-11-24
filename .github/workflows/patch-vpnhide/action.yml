@@ -7,30 +7,36 @@ runs:
         if: env.VPNHIDE_ENABLE == 'true'
         shell: bash
         run: |
-          cd $GITHUB_WORKSPACE/device_kernel/
+          cd "$GITHUB_WORKSPACE/device_kernel/"
 
-          if grep -q "fgetpriority" "drivers/Kconfig"; then
+          # Patch only if the VPNHIDE symbol is not already defined in any Kconfig
+          if ! grep -rqsE --include='Kconfig*' '^config[[:space:]]+VPNHIDE[[:space:]]*$' . ; then
 
-            git clone https://github.com/soranerai/vpnhide_next_backend.git vpnhide
+            # Clean up any leftover directory before cloning
+            rm -rf vpnhide
+            git clone --depth=1 https://github.com/soranerai/vpnhide_next_backend.git vpnhide
             chmod +x vpnhide/kpatch/scripts/apply.sh
 
-            if [[ "${{ env.KERNEL_VERSION }}" == "5.4" ]]; then
+            KVER="${{ env.KERNEL_VERSION }}"
+
+            case "$KVER" in
+              5.4)
                 ./vpnhide/kpatch/scripts/apply.sh . android12-5.4
+                ;;
+              4.19|4.14|4.9)
+                ./vpnhide/kpatch/scripts/apply.sh . "upstream-$KVER"
+                ;;
+              *)
+                echo "[-] Kernel version $KVER not supported!"
+                exit 1
+                ;;
+            esac
 
-            elif [[ "${{ env.KERNEL_VERSION }}" == "4.19" || "${{ env.KERNEL_VERSION }}" == "4.14" || "${{ env.KERNEL_VERSION }}" == "4.9" ]]; then
-                ./vpnhide/kpatch/scripts/apply.sh . upstream-"${{ env.KERNEL_VERSION }}"
-
-            else
-                echo "[-] Kernel version not supported!"
-                false
-
-            fi
-
-
+            # Enable the config flag in the target defconfig
             echo "CONFIG_VPNHIDE=y" >> ./arch/${{ env.KERNEL_ARCH }}/configs/${{ env.DEFCONFIG_NAME }}
 
             echo "[+] Patched VPNHide for your kernel successfully."
           else
 
-            echo "[-] Kernel has been embedded in VPNHide, Skipped."
+            echo "[-] Kernel already has VPNHide embedded, skipped."
           fi
