@@ -128,6 +128,13 @@ jobs:
     uses: ./.github/workflows/build-redmi-k20pro-miui-a11.yml
     secrets: inherit
 
+  build-redmi-k20pro-hyperos-a17-zundamon:
+    name: "Xiaomi Redmi K20 Pro (HyperOS 4.0 A17)"
+    strategy:
+      fail-fast: true
+    uses: ./.github/workflows/build-redmi-k20pro-hyperos-a17-zundamon.yml
+    secrets: inherit
+
   build-redmi-k30ultra-aosp-a14:
     name: "Xiaomi Redmi K30 Ultra (AOSP Based A14)"
     strategy:
