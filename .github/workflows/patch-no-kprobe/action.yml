@@ -58,7 +58,9 @@ runs:
 
             sed -i 's/static void context_struct_compute_av(struct policydb \*policydb,/void context_struct_compute_av(struct policydb *policydb,/' security/selinux/ss/services.c
 
-            echo "[+] Removed write_op, sel_handle_status_ops, security_dump_masked_av and context_struct_compute_av static state."
+            sed -i 's/static int inode_doinit_with_dentry(struct inode \*inode,/int inode_doinit_with_dentry(struct inode *inode,/' security/selinux/hooks.c
+
+            echo "[+] Removed write_op, sel_handle_status_ops, security_dump_masked_av, context_struct_compute_av and inode_doinit_with_dentry static state."
 
             if [ "$FIRST_VERSION" -lt 5 ] && [ "$SECOND_VERSION" -lt 15 ]; then
                 if grep -q "sel_mutex" "security/selinux/selinuxfs.c" >/dev/null 2>&1; then
