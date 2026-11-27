@@ -1769,10 +1769,10 @@ index 55cd884..c273ba6 100644
  		return -ENOMEM;
 diff --git a/fs/susfs.c b/fs/susfs.c
 new file mode 100644
-index 0000000..e5e0ace
+index 0000000..cff57fe
 --- /dev/null
 +++ b/fs/susfs.c
-@@ -0,0 +1,2642 @@
+@@ -0,0 +1,2698 @@
 +#include <linux/version.h>
 +#include <linux/cred.h>
 +#include <linux/fs.h>
@@ -1808,6 +1808,9 @@ index 0000000..e5e0ace
 +#include <linux/susfs.h>
 +#include "fuse/fuse_i.h"
 +#include "mount.h"
++#if IS_ENABLED(CONFIG_SDCARD_FS)
++#include "sdcardfs/sdcardfs.h"
++#endif
 +
 +#ifdef SUSFS_KERNEL_READ_NEW
 +static inline int susfs_kernel_read(struct file *fp, void *buf, size_t size, loff_t *pos)
@@ -2040,6 +2043,53 @@ index 0000000..e5e0ace
 +static LIST_HEAD(LH_SUS_PATH_LOOP);
 +const struct qstr susfs_fake_qstr_name = QSTR_INIT("..5.u.S", 7); // used to re-test the dcache lookup, make sure you don't have file named like this!!
 +
++bool susfs_is_uid_allowed_for_sus_path(uid_t uid);
++
++/*
++ * sdcardfs: on devices that still use it (old android, or Android/data and obb
++ * on some newer roms) every storage view (default/read/write/per app) has its
++ * own sdcardfs inode for the same folder, so the flag set on the inode root
++ * sees is never seen by apps. Put a separate flag on the lower (real) inode and
++ * check that one for any sdcardfs inode. Separate bit so the normal hooks
++ * never hide the lower inode itself, sdcardfs looks it up for the owner app too.
++ * Nothing here runs if CONFIG_SDCARD_FS is off or the path isn't on sdcardfs.
++ */
++#if IS_ENABLED(CONFIG_SDCARD_FS)
++static void susfs_flag_sdcardfs_lower_inode(struct inode *inode, const char *pathname) {
++	struct inode *lower;
++
++	if (inode->i_sb->s_magic != SDCARDFS_SUPER_MAGIC)
++		return;
++	lower = sdcardfs_lower_inode(inode);
++	if (!lower)
++		return;
++	set_bit(AS_FLAGS_SUS_PATH_SDCARDFS, &lower->i_state);
++	SUSFS_LOGI("flagged AS_FLAGS_SUS_PATH_SDCARDFS on the lower inode of '%s', lower ino: '%lu'\n",
++			pathname, lower->i_ino);
++}
++
++/* Returns true if it handled the inode (a sdcardfs one), the answer is in *hide. */
++static bool susfs_is_sdcardfs_inode_sus_path(struct inode *inode, uid_t uid, bool *hide) {
++	struct inode *lower;
++
++	if (inode->i_sb->s_magic != SDCARDFS_SUPER_MAGIC)
++		return false;
++	*hide = false;
++	lower = READ_ONCE(SDCARDFS_I(inode)->lower_inode);
++	if (!test_bit(AS_FLAGS_SUS_PATH, &inode->i_state) &&
++		(!lower || !test_bit(AS_FLAGS_SUS_PATH_SDCARDFS, &lower->i_state)))
++		return true;
++	/* sdcardfs gives Android/data/<pkg> the uid of its app: never hide it from the owner */
++	if (uid_eq(inode->i_uid, current_uid()))
++		return true;
++	*hide = !susfs_is_uid_allowed_for_sus_path(uid);
++	return true;
++}
++#else
++static inline void susfs_flag_sdcardfs_lower_inode(struct inode *inode, const char *pathname) {}
++static inline bool susfs_is_sdcardfs_inode_sus_path(struct inode *inode, uid_t uid, bool *hide) { return false; }
++#endif
++
 +void susfs_add_sus_path(void __user **user_info) {
 +	struct st_susfs_sus_path info = {0};
 +	struct path path;
@@ -2079,6 +2129,7 @@ index 0000000..e5e0ace
 +		goto out_path_put_path;
 +	}
 +
++	susfs_flag_sdcardfs_lower_inode(inode, info.target_pathname);
 +	set_bit(AS_FLAGS_SUS_PATH, &inode->i_state);
 +	SUSFS_LOGI("flagged AS_FLAGS_SUS_PATH on pathname: '%s', ino: '%lu', inode->i_state: 0x%lx\n",
 +				info.target_pathname, inode->i_ino, inode->i_state);
@@ -2156,6 +2207,7 @@ index 0000000..e5e0ace
 +				SUSFS_LOGI("re-flag AS_FLAGS_SUS_PATH on path '%s', fi->inode.i_ino: '%lu', fi->inode.i_state: 0x%lx\n",
 +						cursor->target_pathname, fi->inode.i_ino, fi->inode.i_state);
 +			} else {
++				susfs_flag_sdcardfs_lower_inode(inode, cursor->target_pathname);
 +				set_bit(AS_FLAGS_SUS_PATH, &inode->i_state);
 +				SUSFS_LOGI("re-flag AS_FLAGS_SUS_PATH on path '%s', inode->i_ino: '%lu', inode->i_state: 0x%lx\n",
 +						cursor->target_pathname, inode->i_ino, inode->i_state);
@@ -2168,12 +2220,11 @@ index 0000000..e5e0ace
 +}
 +
 +
-+bool susfs_is_uid_allowed_for_sus_path(uid_t uid);
-+
 +__attribute__((hot)) bool susfs_is_inode_sus_path(struct inode *inode)
 +{
 +	uid_t uid = current_uid().val % 100000;
 +	struct fuse_inode *fi = NULL;
++	bool hide_sdcardfs = false;
 +
 +	if (uid < 10000) {
 +		return false;
@@ -2199,6 +2250,9 @@ index 0000000..e5e0ace
 +		}
 +		return false;
 +	}
++
++	if (susfs_is_sdcardfs_inode_sus_path(inode, uid, &hide_sdcardfs))
++		return hide_sdcardfs;
 +
 +	if (unlikely(test_bit(AS_FLAGS_SUS_PATH, &inode->i_state) &&
 +		likely(!susfs_is_uid_allowed_for_sus_path(uid))))
@@ -4686,10 +4740,10 @@ index 0000000..a58550d
 +#endif
 diff --git a/include/linux/susfs_def.h b/include/linux/susfs_def.h
 new file mode 100644
-index 0000000..0d72bdf
+index 0000000..bcf7c28
 --- /dev/null
 +++ b/include/linux/susfs_def.h
-@@ -0,0 +1,229 @@
+@@ -0,0 +1,231 @@
 +#ifndef KSU_SUSFS_DEF_H
 +#define KSU_SUSFS_DEF_H
 +
@@ -4785,6 +4839,8 @@ index 0000000..0d72bdf
 +#define AS_FLAGS_SUS_KSTAT 35
 +#define AS_FLAGS_OPEN_REDIRECT 36
 +#define AS_FLAGS_SUS_MAP 39
++/* sdcardfs: set on the lower inode of a sus path that was added through sdcardfs */
++#define AS_FLAGS_SUS_PATH_SDCARDFS 41
 +
 +#define ND_STATE_LOOKUP_LAST 32
 +#define ND_STATE_OPEN_LAST 64
