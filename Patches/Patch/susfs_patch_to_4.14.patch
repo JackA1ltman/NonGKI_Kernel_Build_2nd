@@ -2038,10 +2038,10 @@ index e6019ed..f298278 100644
  		return -ENOMEM;
 diff --git a/fs/susfs.c b/fs/susfs.c
 new file mode 100644
-index 0000000..e5e0ace
+index 0000000..cff57fe
 --- /dev/null
 +++ b/fs/susfs.c
-@@ -0,0 +1,2697 @@
+@@ -0,0 +1,2698 @@
 +#include <linux/version.h>
 +#include <linux/cred.h>
 +#include <linux/fs.h>
@@ -2077,6 +2077,9 @@ index 0000000..e5e0ace
 +#include <linux/susfs.h>
 +#include "fuse/fuse_i.h"
 +#include "mount.h"
++#if IS_ENABLED(CONFIG_SDCARD_FS)
++#include "sdcardfs/sdcardfs.h"
++#endif
 +
 +#ifdef SUSFS_KERNEL_READ_NEW
 +static inline int susfs_kernel_read(struct file *fp, void *buf, size_t size, loff_t *pos)
@@ -2320,9 +2323,7 @@ index 0000000..e5e0ace
 + * never hide the lower inode itself, sdcardfs looks it up for the owner app too.
 + * Nothing here runs if CONFIG_SDCARD_FS is off or the path isn't on sdcardfs.
 + */
-+#ifdef CONFIG_SDCARD_FS
-+#include "sdcardfs/sdcardfs.h"
-+
++#if IS_ENABLED(CONFIG_SDCARD_FS)
 +static void susfs_flag_sdcardfs_lower_inode(struct inode *inode, const char *pathname) {
 +	struct inode *lower;
 +
@@ -2343,7 +2344,7 @@ index 0000000..e5e0ace
 +	if (inode->i_sb->s_magic != SDCARDFS_SUPER_MAGIC)
 +		return false;
 +	*hide = false;
-+	lower = sdcardfs_lower_inode(inode);
++	lower = READ_ONCE(SDCARDFS_I(inode)->lower_inode);
 +	if (!test_bit(AS_FLAGS_SUS_PATH, &inode->i_state) &&
 +		(!lower || !test_bit(AS_FLAGS_SUS_PATH_SDCARDFS, &lower->i_state)))
 +		return true;
@@ -2487,8 +2488,6 @@ index 0000000..e5e0ace
 +	revert_creds(saved);
 +}
 +
-+
-+bool susfs_is_uid_allowed_for_sus_path(uid_t uid);
 +
 +__attribute__((hot)) bool susfs_is_inode_sus_path(struct inode *inode)
 +{
@@ -5010,7 +5009,7 @@ index 0000000..a58550d
 +#endif
 diff --git a/include/linux/susfs_def.h b/include/linux/susfs_def.h
 new file mode 100644
-index 0000000..0d72bdf
+index 0000000..bcf7c28
 --- /dev/null
 +++ b/include/linux/susfs_def.h
 @@ -0,0 +1,231 @@
