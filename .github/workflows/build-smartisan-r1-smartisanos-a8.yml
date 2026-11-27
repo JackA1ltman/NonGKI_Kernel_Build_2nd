@@ -113,15 +113,13 @@ jobs:
         uses: ./.github/workflows/patch-susfs
 
       - name: 🔗 Patch for no-kprobe
-        run: |
-          # Needn't manual hook.
+        uses: ./.github/workflows/patch-no-kprobe
 
       - name: 🪛 Extra Kernel Options
         run: |
           # KernelSU
           cd $GITHUB_WORKSPACE/device_kernel
-          echo "CONFIG_KSU_TAMPER_SYSCALL_TABLE=y" >> ./arch/arm64/configs/trident_defconfig
-          sed -i 's/^static DEFINE_RWLOCK(policy_rwlock);$/DEFINE_RWLOCK(policy_rwlock);/' security/selinux/ss/services.c
+
           sed -i '/KBUILD_CFLAGS   :=/s//& -w/' Makefile
           # AnyKernel3
           sed -i '/^\. tools\/ak3-core\.sh;/a \
