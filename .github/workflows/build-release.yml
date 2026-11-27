@@ -54,8 +54,8 @@ jobs:
         | OnePlus 8 | instantnoodle | 4.19 | ColorOS 15 | 15 | AnyKernel3 | BakaSU | ✅ | ❌ | ✅ | ❌ |
         | Samsung Galaxy Note10 | d1 | 4.14 | OneUI 7 | 15 | AnyKernel3 | BakaSU | ✅ | ❌ | ❌ | ❌ |
         | Samsung Galaxy Note10+ | d2s | 4.14 | OneUI 7 | 15 | AnyKernel3 | BakaSU | ✅ | ❌ | ❌ | ❌ |
-        | Smartisan R1 | trident | 4.9 | Smartisan OS | 8.1 | AnyKernel3 | xxKSU | ❌ | ❌ | ❌ | ❌ |
-        | Smartisan U3 Pro | osborn | 4.4 | LineageOS 18 | 11 | AnyKernel3 | xxKSU | ❌ | ❌ | ❌ | ❌ |
+        | Smartisan R1 | trident | 4.9 | Smartisan OS | 8.1 | AnyKernel3 | BakaSU | ❌ | ❌ | ❌ | ❌ |
+        | Smartisan U3 Pro | osborn | 4.4 | LineageOS 18 | 11 | AnyKernel3 | BakaSU | ❌ | ❌ | ❌ | ❌ |
         | Xiaomi Mi 11 | venus | 5.4 | Evolution X 11.X | 16 | AnyKernel3 | BakaSU | ✅ | ✅ | ❌ | ❌ |
         | Xiaomi Mi MIX 2S | polaris | 4.9 | Evolution X 10.X | 15 | AnyKernel3 | BakaSU | ✅ | ✅ | ✅ | ❌ |
         | Xiaomi Mi MIX 2S | polaris | 4.19 | AOSP Based | 16 | AnyKernel3 | BakaSU | ✅ | ❌ | ❌ | ❌ |
